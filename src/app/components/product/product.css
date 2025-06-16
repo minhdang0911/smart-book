@@ -1,0 +1,13 @@
+.product-wrapper {
+  padding: 20px;
+}
+
+.book-card {
+  height: 100%;
+  text-align: center;
+}
+
+.book-image {
+  height: 200px;
+  object-fit: cover;
+}

@@ -5,7 +5,7 @@ import { SearchOutlined, UserOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
 import './Header.css';
 import { apiGetMe } from '../../../../apis/user';
-
+import Product from '../product/product'
 
 const { Search } = Input;
 
@@ -33,7 +33,7 @@ const Header = () => {
     }
   }, []);
   
-  console.log(user)
+ 
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -112,15 +112,7 @@ const Header = () => {
         <div className="content-wrapper">
           <h1 className="main-title">Chào mừng đến với Waka</h1>
           <p className="main-subtitle">Khám phá thế giới sách số với hàng ngàn đầu sách phong phú</p>
-          <div className="featured-grid">
-            {[1, 2, 3, 4].map((item) => (
-              <div key={item} className="book-card">
-                <div className="book-image"><span>Sách {item}</span></div>
-                <h3 className="book-title">Tiêu đề sách {item}</h3>
-                <p className="book-description">Mô tả ngắn về cuốn sách này...</p>
-              </div>
-            ))}
-          </div>
+               <Product />
         </div>
       </main>
     </div>
