@@ -1,0 +1,251 @@
+.waka-homepage {
+    min-height: 100vh;
+    background-color: #f9fafb;
+}
+
+.header {
+    background-color: #0d9488;
+    color: white;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+}
+
+.logo-section {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    background-color: white;
+    color: #0d9488;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.logo-star {
+    margin-left: 4px;
+    background-color: #ef4444;
+    color: white;
+    padding: 0 4px;
+    font-size: 12px;
+    border-radius: 2px;
+}
+
+.navigation {
+    display: none;
+    align-items: center;
+    flex: 1;
+    justify-content: center;
+    gap: 24px;
+}
+
+.nav-item {
+    color: white;
+    text-decoration: none;
+    transition: color 0.2s;
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.nav-item:hover {
+    color: #5eead4;
+}
+
+.right-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.search-desktop {
+    display: none;
+}
+
+.search-mobile {
+    display: block;
+    color: white;
+}
+
+.search-mobile:hover {
+    color: #5eead4;
+    background-color: transparent;
+}
+
+.package-btn {
+    display: none;
+    background-color: #eab308;
+    border-color: #eab308;
+    color: black;
+    font-weight: 500;
+}
+
+.package-btn:hover {
+    background-color: #facc15;
+    border-color: #facc15;
+}
+
+.user-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.register-text {
+    display: none;
+    font-size: 14px;
+}
+
+.login-btn {
+    background-color: #14b8a6;
+    border-color: #14b8a6;
+}
+
+.login-btn:hover {
+    background-color: #5eead4;
+    border-color: #5eead4;
+}
+
+.main-content {
+    padding: 32px 16px;
+}
+
+.content-wrapper {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.main-title {
+    font-size: 36px;
+    font-weight: bold;
+    color: #1f2937;
+    margin-bottom: 16px;
+}
+
+.main-subtitle {
+    font-size: 18px;
+    color: #6b7280;
+    margin-bottom: 32px;
+}
+
+.featured-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-top: 48px;
+}
+
+.book-card {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    padding: 24px;
+    transition: box-shadow 0.2s;
+}
+
+.book-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.book-image {
+    height: 128px;
+    background-color: #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+}
+
+.book-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 8px;
+}
+
+.book-description {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* Search Styling */
+.waka-search .ant-input {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.waka-search .ant-input::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.waka-search .ant-input:focus,
+.waka-search .ant-input:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+}
+
+.waka-search .ant-input-search-button {
+    background-color: transparent;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.waka-search .ant-input-search-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.waka-search .anticon {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Responsive Design */
+@media (min-width: 640px) {
+    .register-text {
+        display: inline;
+    }
+
+    .package-btn {
+        display: inline-flex;
+    }
+}
+
+@media (min-width: 768px) {
+    .search-desktop {
+        display: block;
+    }
+
+    .search-mobile {
+        display: none;
+    }
+
+    .featured-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .navigation {
+        display: flex;
+    }
+
+    .featured-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
