@@ -3,10 +3,13 @@ import React, { useEffect, useState } from 'react'
 import { apiGetAllBook } from '../../../../apis/allbook'
 import { Card, Row, Col } from 'antd'
 import './product.css'
+import { useRouter } from 'next/navigation';
 
 const Product = () => {
   const [ebooks, setEbooks] = useState([])
   const [paperBooks, setPaperBooks] = useState([])
+    const [notify, setNotify] = useState(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchAllBook = async () => {

@@ -1,121 +1,125 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Input, Button, Menu, Dropdown } from 'antd';
-import { SearchOutlined, UserOutlined } from '@ant-design/icons';
+import { MenuOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { Drawer, Button, Input, Dropdown, Space, Avatar } from 'antd';
 import { useRouter } from 'next/navigation';
 import './Header.css';
-import { apiGetMe } from '../../../../apis/user';
-import Product from '../product/product'
-
-const { Search } = Input;
-
+import {apiGetMe} from '../../../../apis/user'
 const Header = () => {
-  const [activeMenu, setActiveMenu] = useState('');
-  const [user, setUser] = useState(null); // ✅ thông tin user
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [user, setUser] = useState(null); // Dữ liệu người dùng
 
-  const navigationItems = [
-    'Sách điện tử', 'Sách hội viên', 'Sách hiệu số',
-    'Waka Shop', 'Sách nói', 'Sách mua lẻ',
-    'Sách ngoại văn', 'Sách tóm tắt', 'Podcast', 'Xem thêm'
+  const navItems = [
+    { label: 'Ebooks', path: '/ebooks' },
+    { label: 'Sách bán', path: '/buybooks' },
+    { label: 'Waka Shop', path: '/shop' },
   ];
 
-  // ✅ Gọi API lấy thông tin user nếu đã login
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      apiGetMe(token)
-        .then(data => setUser(data.user))
-        .catch(() => {
-          localStorage.removeItem('token');
-          setUser(null);
-        });
+    const getUserInfo = async () =>{
+      const response = await apiGetMe(token)
+      if(response?.status === true){
+        setUser(response?.user)
+      }
     }
+    getUserInfo()
   }, []);
-  
  
+  const handleNav = (path) => {
+    setOpen(false);
+    router.push(path);
+  };
+
+  const handleSearch = () => {
+    if (search.trim() !== '') {
+      router.push(`/search?keyword=${encodeURIComponent(search)}`);
+    }
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     router.push('/login');
   };
 
-  const userMenu = (
-    <Menu>
-      <Menu.Item key="profile">
-        <UserOutlined /> Hồ sơ
-      </Menu.Item>
-      <Menu.Item key="settings">Cài đặt</Menu.Item>
-      <Menu.Item key="logout" onClick={handleLogout}>
-        Đăng xuất
-      </Menu.Item>
-    </Menu>
-  );
-
+  const userMenu = {
+    items: [
+      {
+        key: 'logout',
+        icon: <LogoutOutlined />,
+        label: <span onClick={handleLogout}>Đăng xuất</span>,
+      },
+    ],
+  };
 
   return (
-    <div className="waka-homepage">
-      <header className="header">
-        <div className="container">
-          <div className="header-content">
-            {/* Logo */}
-            <div className="logo-section">
-              <div className="logo">WAKA <span className="logo-star">★</span></div>
-            </div>
-
-            {/* Navigation */}
-            <nav className="navigation">
-              {navigationItems.map((item, index) => (
-                <a key={index} href="#" className="nav-item"
-                   onMouseEnter={() => setActiveMenu(item)}
-                   onMouseLeave={() => setActiveMenu('')}>
-                  {item}
-                </a>
-              ))}
-            </nav>
-
-            {/* Right actions */}
-            <div className="right-actions">
-              <div className="search-desktop">
-                <Search placeholder="Tìm kiếm sách..." allowClear style={{ width: 200 }} className="waka-search" />
-              </div>
-
-              <Button type="text" icon={<SearchOutlined />} className="search-mobile" />
-
-              <Button type="default" className="package-btn" size="small">⚡ Gói cước</Button>
-
-              <div className="user-actions">
-                {user ? (
-                  <>
-                    <span className="register-text">Chào, {user.name || user.email}</span>
-                    <Dropdown overlay={userMenu}>
-                      <Button type="primary" size="small" className="login-btn">Tài khoản</Button>
-                    </Dropdown>
-                  </>
-                ) : (
-                  <>
-                    <span className="register-text">Đăng ký</span>
-                    <Button type="primary" size="small" className="login-btn" onClick={() => router.push('/login')}>
-                      Đăng nhập
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
+    <header className="header">
+      <div className="header-content">
+        <div className="logo" onClick={() => router.push('/')}>
+          WAKA <span className="logo-star">★</span>
         </div>
-      </header>
 
-      {/* Main content giữ nguyên */}
-      <main className="main-content">
-        <div className="content-wrapper">
-          <h1 className="main-title">Chào mừng đến với Waka</h1>
-          <p className="main-subtitle">Khám phá thế giới sách số với hàng ngàn đầu sách phong phú</p>
-               <Product />
+        <nav className="navigation">
+          {navItems.map((item) => (
+            <a key={item.path} onClick={() => handleNav(item.path)}>
+              {item.label}
+            </a>
+          ))}
+        </nav>
+
+        {/* Thanh tìm kiếm */}
+        <div className="search-bar">
+          <Input.Search
+            placeholder="Tìm sách..."
+            enterButton
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onSearch={handleSearch}
+            style={{ width: 300 }}
+          />
         </div>
-      </main>
-    </div>
+
+        {/* Hiển thị người dùng hoặc đăng nhập */}
+        <div className="auth-section">
+          {user ? (
+            <Dropdown menu={userMenu} placement="bottomRight">
+              <Space style={{ color: 'white', cursor: 'pointer' }}>
+                <Avatar icon={<UserOutlined />} />
+                {user.name}
+              </Space>
+            </Dropdown>
+          ) : (
+            <Button onClick={() => router.push('/login')}>Đăng nhập</Button>
+          )}
+        </div>
+
+        {/* Icon mở menu drawer */}
+        <div className="hamburger">
+          <Button
+            type="text"
+            icon={<MenuOutlined style={{ fontSize: '24px', color: 'white' }} />}
+            onClick={() => setOpen(true)}
+          />
+        </div>
+      </div>
+
+      {/* Drawer cho mobile */}
+      <Drawer
+        title="Danh mục"
+        placement="left"
+        onClose={() => setOpen(false)}
+        open={open}
+      >
+        {navItems.map((item) => (
+          <p key={item.path} onClick={() => handleNav(item.path)} className="drawer-item">
+            {item.label}
+          </p>
+        ))}
+      </Drawer>
+    </header>
   );
 };
 
