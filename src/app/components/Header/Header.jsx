@@ -1,7 +1,27 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { MenuOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
-import { Drawer, Button, Input, Dropdown, Space, Avatar } from 'antd';
+import { 
+  MenuOutlined, 
+  UserOutlined, 
+  LogoutOutlined, 
+  SearchOutlined,
+  BookOutlined,
+  ShoppingCartOutlined,
+  HomeOutlined,
+  ShopOutlined,
+  BellOutlined
+} from '@ant-design/icons';
+import { 
+  Drawer, 
+  Button, 
+  Input, 
+  Dropdown, 
+  Space, 
+  Avatar, 
+  Badge,
+  Tooltip,
+  Divider
+} from 'antd';
 import { useRouter } from 'next/navigation';
 import './Header.css';
 import { apiGetMe } from '../../../../apis/user';
@@ -11,13 +31,49 @@ const Header = () => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [user, setUser] = useState(null);
+  const [scrolled, setScrolled] = useState(false);
 
   const navItems = [
-    { label: 'Ebooks', path: '/ebooks' },
-    { label: 'Sách bán', path: '/buybooks' },
-    { label: 'Tất cả sách', path: '/search' },
-    { label: 'Waka Shop', path: '/shop' },
+    { 
+      label: 'Trang chủ', 
+      path: '/', 
+      icon: <HomeOutlined />,
+      color: '#1890ff'
+    },
+    { 
+      label: 'Ebooks', 
+      path: '/ebooks', 
+      icon: <BookOutlined />,
+      color: '#52c41a'
+    },
+    { 
+      label: 'Sách bán', 
+      path: '/buybooks', 
+      icon: <ShoppingCartOutlined />,
+      color: '#fa8c16'
+    },
+    { 
+      label: 'Tất cả sách', 
+      path: '/search', 
+      icon: <SearchOutlined />,
+      color: '#722ed1'
+    },
+    { 
+      label: 'Waka Shop', 
+      path: '/shop', 
+      icon: <ShopOutlined />,
+      color: '#eb2f96'
+    },
   ];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -30,7 +86,6 @@ const Header = () => {
           }
         } catch (error) {
           console.error('Error getting user info:', error);
-          // Token có thể đã hết hạn, xóa token
           localStorage.removeItem('token');
         }
       };
@@ -45,9 +100,8 @@ const Header = () => {
 
   const handleSearch = () => {
     if (search.trim() !== '') {
-      // Điều hướng đến trang search với keyword
       router.push(`/search?keyword=${encodeURIComponent(search.trim())}`);
-      setSearch(''); // Clear search input sau khi search
+      setSearch('');
     }
   };
 
@@ -76,119 +130,204 @@ const Header = () => {
         label: <span onClick={() => router.push('/profile')}>Thông tin cá nhân</span>,
       },
       {
+        key: 'notifications',
+        icon: <BellOutlined />,
+        label: <span onClick={() => router.push('/notifications')}>Thông báo</span>,
+      },
+      {
+        type: 'divider',
+      },
+      {
         key: 'logout',
         icon: <LogoutOutlined />,
         label: <span onClick={handleLogout}>Đăng xuất</span>,
+        danger: true,
       },
     ],
   };
 
   return (
-    <header className="header">
-      <div className="header-content">
-        <div className="logo" onClick={() => router.push('/')}>
-          WAKA <span className="logo-star">★</span>
-        </div>
+    <header className={`header ${scrolled ? 'header-scrolled' : ''}`}>
+      <div className="header-container">
+        <div className="header-content">
+          {/* Logo Section */}
+          <div className="logo-section" onClick={() => router.push('/')}>
+            <div className="logo">
+              <BookOutlined className="logo-icon" />
+              <span className="logo-text">
+                WAKA<span className="logo-accent">★</span>
+              </span>
+            </div>
+          </div>
 
-        <nav className="navigation">
-          {navItems.map((item) => (
-            <a key={item.path} onClick={() => handleNav(item.path)}>
-              {item.label}
-            </a>
-          ))}
-        </nav>
+          {/* Navigation Desktop */}
+          <nav className="navigation-desktop">
+            {navItems.map((item) => (
+              <Tooltip key={item.path} title={item.label} placement="bottom">
+                <div 
+                  className="nav-item"
+                  onClick={() => handleNav(item.path)}
+                  style={{'--item-color': item.color}}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-label">{item.label}</span>
+                </div>
+              </Tooltip>
+            ))}
+          </nav>
 
-        {/* Thanh tìm kiếm */}
-        <div className="search-bar">
-          <Input.Search
-            placeholder="Tìm sách theo tên, tác giả..."
-            enterButton="Tìm kiếm"
-            value={search}
-            onChange={handleSearchInputChange}
-            onSearch={handleSearch}
-            onPressEnter={handleSearchKeyPress}
-            style={{ width: 300 }}
-            allowClear
-          />
-        </div>
+          {/* Search Bar */}
+          <div className="search-section">
+            <div className="search-wrapper">
+              <Input
+                placeholder="Tìm sách theo tên, tác giả..."
+                value={search}
+                onChange={handleSearchInputChange}
+                onPressEnter={handleSearchKeyPress}
+                className="search-input"
+                prefix={<SearchOutlined className="search-icon" />}
+                suffix={
+                  <Button 
+                    type="text" 
+                    size="small"
+                    onClick={handleSearch}
+                    className="search-button"
+                  >
+                    Tìm
+                  </Button>
+                }
+                allowClear
+              />
+            </div>
+          </div>
 
-        {/* Hiển thị người dùng hoặc đăng nhập */}
-        <div className="auth-section">
-          {user ? (
-            <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
-              <Space style={{ color: 'white', cursor: 'pointer' }}>
-                <Avatar 
-                  icon={<UserOutlined />} 
-                  src={user.avatar}
-                  size="small"
-                />
-                <span className="user-name">{user.name}</span>
+          {/* Auth Section */}
+          <div className="auth-section">
+            {user ? (
+              <div className="user-section">
+                <Badge count={3} size="small" className="notification-badge">
+                  <Button 
+                    type="text" 
+                    icon={<BellOutlined />} 
+                    className="notification-btn"
+                    onClick={() => router.push('/notifications')}
+                  />
+                </Badge>
+                
+                <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
+                  <div className="user-profile">
+                    <Avatar 
+                      icon={<UserOutlined />} 
+                      src={user.avatar}
+                      size="default"
+                      className="user-avatar"
+                    />
+                    <div className="user-info">
+                      <span className="user-name">{user.name}</span>
+                      <span className="user-role">Thành viên</span>
+                    </div>
+                  </div>
+                </Dropdown>
+              </div>
+            ) : (
+              <Space size="middle" className="auth-buttons">
+                <Button 
+                  type="text" 
+                  onClick={() => router.push('/register')}
+                  className="register-btn"
+                >
+                  Đăng ký
+                </Button>
+                <Button 
+                  type="primary" 
+                  onClick={() => router.push('/login')}
+                  className="login-btn"
+                >
+                  Đăng nhập
+                </Button>
               </Space>
-            </Dropdown>
-          ) : (
-            <Space>
-              <Button type="text" onClick={() => router.push('/register')} style={{ color: 'white' }}>
-                Đăng ký
-              </Button>
-              <Button type="primary" onClick={() => router.push('/login')}>
-                Đăng nhập
-              </Button>
-            </Space>
-          )}
-        </div>
+            )}
+          </div>
 
-        {/* Icon mở menu drawer cho mobile */}
-        <div className="hamburger">
-          <Button
-            type="text"
-            icon={<MenuOutlined style={{ fontSize: '24px', color: 'white' }} />}
-            onClick={() => setOpen(true)}
-          />
+          {/* Mobile Menu Button */}
+          <div className="mobile-menu">
+            <Button
+              type="text"
+              icon={<MenuOutlined />}
+              onClick={() => setOpen(true)}
+              className="hamburger-btn"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Drawer cho mobile */}
+      {/* Mobile Drawer */}
       <Drawer
-        title="Menu"
+        title={
+          <div className="drawer-header">
+            <BookOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+            <span>WAKA Menu</span>
+          </div>
+        }
         placement="left"
         onClose={() => setOpen(false)}
         open={open}
-        width={280}
+        width={320}
+        className="mobile-drawer"
       >
         <div className="drawer-content">
-          {/* Search trong drawer */}
+          {/* Mobile Search */}
           <div className="drawer-search">
-            <Input.Search
+            <Input
               placeholder="Tìm sách..."
-              enterButton
               value={search}
               onChange={handleSearchInputChange}
-              onSearch={handleSearch}
-              style={{ marginBottom: 20 }}
+              onPressEnter={handleSearch}
+              prefix={<SearchOutlined />}
+              suffix={
+                <Button type="link" size="small" onClick={handleSearch}>
+                  Tìm
+                </Button>
+              }
+              allowClear
             />
           </div>
 
-          {/* Navigation items */}
-          <div className="drawer-nav">
+          <Divider />
+
+          {/* Mobile Navigation */}
+          <div className="drawer-navigation">
             {navItems.map((item) => (
               <div 
                 key={item.path} 
                 onClick={() => handleNav(item.path)} 
-                className="drawer-item"
+                className="drawer-nav-item"
+                style={{'--item-color': item.color}}
               >
-                {item.label}
+                <span className="drawer-nav-icon">{item.icon}</span>
+                <span className="drawer-nav-label">{item.label}</span>
               </div>
             ))}
           </div>
 
-          {/* User section trong drawer */}
-          <div className="drawer-user">
+          <Divider />
+
+          {/* Mobile User Section */}
+          <div className="drawer-user-section">
             {user ? (
-              <div>
-                <div className="drawer-user-info">
-                  <Avatar icon={<UserOutlined />} src={user.avatar} />
-                  <span>{user.name}</span>
+              <div className="drawer-user-logged">
+                <div className="drawer-user-profile">
+                  <Avatar 
+                    icon={<UserOutlined />} 
+                    src={user.avatar}
+                    size="large"
+                  />
+                  <div className="drawer-user-info">
+                    <div className="drawer-user-name">{user.name}</div>
+                    <div className="drawer-user-role">Thành viên</div>
+                  </div>
                 </div>
+
                 <div className="drawer-user-actions">
                   <Button 
                     type="text" 
@@ -198,8 +337,21 @@ const Header = () => {
                       router.push('/profile');
                     }}
                     block
+                    className="drawer-action-btn"
                   >
                     Thông tin cá nhân
+                  </Button>
+                  <Button 
+                    type="text" 
+                    icon={<BellOutlined />}
+                    onClick={() => {
+                      setOpen(false);
+                      router.push('/notifications');
+                    }}
+                    block
+                    className="drawer-action-btn"
+                  >
+                    Thông báo
                   </Button>
                   <Button 
                     type="text" 
@@ -207,13 +359,14 @@ const Header = () => {
                     onClick={handleLogout}
                     block
                     danger
+                    className="drawer-action-btn logout-btn"
                   >
                     Đăng xuất
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="drawer-auth">
+              <div className="drawer-auth-section">
                 <Button 
                   type="default" 
                   onClick={() => {
@@ -221,7 +374,8 @@ const Header = () => {
                     router.push('/register');
                   }}
                   block
-                  style={{ marginBottom: 8 }}
+                  size="large"
+                  className="drawer-register-btn"
                 >
                   Đăng ký
                 </Button>
@@ -232,6 +386,8 @@ const Header = () => {
                     router.push('/login');
                   }}
                   block
+                  size="large"
+                  className="drawer-login-btn"
                 >
                   Đăng nhập
                 </Button>

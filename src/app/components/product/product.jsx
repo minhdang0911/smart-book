@@ -32,6 +32,7 @@ const Product = () => {
     books.slice(0, 10).map((book) => (
       <Col key={book.id} span={4}>
         <Card
+        onClick={() => router.push(`/book/${book.id}`)}
           hoverable
           className="book-card"
           cover={

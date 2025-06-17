@@ -175,7 +175,7 @@ const SearchPage = () => {
     };
 
     const handleBookClick = (bookId) => {
-        router.push(`/books/${bookId}`);
+        router.push(`/book/${bookId}`);
     };
 
     console.log('authors', authors)
