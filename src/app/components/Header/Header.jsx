@@ -59,8 +59,8 @@ const Header = () => {
       color: '#722ed1'
     },
     { 
-      label: 'Waka Shop', 
-      path: '/shop', 
+      label: 'Bài viết', 
+      path: '/blog', 
       icon: <ShopOutlined />,
       color: '#eb2f96'
     },
