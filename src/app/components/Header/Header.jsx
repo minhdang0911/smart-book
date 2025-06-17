@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { 
-  MenuOutlined, 
-  UserOutlined, 
-  LogoutOutlined, 
+import {
+  MenuOutlined,
+  UserOutlined,
+  LogoutOutlined,
   SearchOutlined,
   BookOutlined,
   ShoppingCartOutlined,
@@ -11,13 +11,13 @@ import {
   ShopOutlined,
   BellOutlined
 } from '@ant-design/icons';
-import { 
-  Drawer, 
-  Button, 
-  Input, 
-  Dropdown, 
-  Space, 
-  Avatar, 
+import {
+  Drawer,
+  Button,
+  Input,
+  Dropdown,
+  Space,
+  Avatar,
   Badge,
   Tooltip,
   Divider
@@ -34,33 +34,33 @@ const Header = () => {
   const [scrolled, setScrolled] = useState(false);
 
   const navItems = [
-    { 
-      label: 'Trang chủ', 
-      path: '/', 
+    {
+      label: 'Trang chủ',
+      path: '/',
       icon: <HomeOutlined />,
       color: '#1890ff'
     },
-    { 
-      label: 'Ebooks', 
-      path: '/ebooks', 
+    {
+      label: 'Ebooks',
+      path: '/ebooks',
       icon: <BookOutlined />,
       color: '#52c41a'
     },
-    { 
-      label: 'Sách bán', 
-      path: '/buybooks', 
+    {
+      label: 'Sách bán',
+      path: '/buybooks',
       icon: <ShoppingCartOutlined />,
       color: '#fa8c16'
     },
-    { 
-      label: 'Tất cả sách', 
-      path: '/search', 
+    {
+      label: 'Tất cả sách',
+      path: '/search',
       icon: <SearchOutlined />,
       color: '#722ed1'
     },
-    { 
-      label: 'Bài viết', 
-      path: '/blog', 
+    {
+      label: 'Bài viết',
+      path: '/blog',
       icon: <ShopOutlined />,
       color: '#eb2f96'
     },
@@ -92,7 +92,7 @@ const Header = () => {
       getUserInfo();
     }
   }, []);
- 
+
   const handleNav = (path) => {
     setOpen(false);
     router.push(path);
@@ -155,7 +155,8 @@ const Header = () => {
             <div className="logo">
               <BookOutlined className="logo-icon" />
               <span className="logo-text">
-                WAKA<span className="logo-accent">★</span>
+
+                SmartBook<span className="logo-accent">★</span>
               </span>
             </div>
           </div>
@@ -164,10 +165,10 @@ const Header = () => {
           <nav className="navigation-desktop">
             {navItems.map((item) => (
               <Tooltip key={item.path} title={item.label} placement="bottom">
-                <div 
+                <div
                   className="nav-item"
                   onClick={() => handleNav(item.path)}
-                  style={{'--item-color': item.color}}
+                  style={{ '--item-color': item.color }}
                 >
                   <span className="nav-icon">{item.icon}</span>
                   <span className="nav-label">{item.label}</span>
@@ -187,8 +188,8 @@ const Header = () => {
                 className="search-input"
                 prefix={<SearchOutlined className="search-icon" />}
                 suffix={
-                  <Button 
-                    type="text" 
+                  <Button
+                    type="text"
                     size="small"
                     onClick={handleSearch}
                     className="search-button"
@@ -206,18 +207,18 @@ const Header = () => {
             {user ? (
               <div className="user-section">
                 <Badge count={3} size="small" className="notification-badge">
-                  <Button 
-                    type="text" 
-                    icon={<BellOutlined />} 
+                  <Button
+                    type="text"
+                    icon={<BellOutlined />}
                     className="notification-btn"
                     onClick={() => router.push('/notifications')}
                   />
                 </Badge>
-                
+
                 <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
                   <div className="user-profile">
-                    <Avatar 
-                      icon={<UserOutlined />} 
+                    <Avatar
+                      icon={<UserOutlined />}
                       src={user.avatar}
                       size="default"
                       className="user-avatar"
@@ -231,15 +232,15 @@ const Header = () => {
               </div>
             ) : (
               <Space size="middle" className="auth-buttons">
-                <Button 
-                  type="text" 
+                <Button
+                  type="text"
                   onClick={() => router.push('/register')}
                   className="register-btn"
                 >
                   Đăng ký
                 </Button>
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   onClick={() => router.push('/login')}
                   className="login-btn"
                 >
@@ -298,11 +299,11 @@ const Header = () => {
           {/* Mobile Navigation */}
           <div className="drawer-navigation">
             {navItems.map((item) => (
-              <div 
-                key={item.path} 
-                onClick={() => handleNav(item.path)} 
+              <div
+                key={item.path}
+                onClick={() => handleNav(item.path)}
                 className="drawer-nav-item"
-                style={{'--item-color': item.color}}
+                style={{ '--item-color': item.color }}
               >
                 <span className="drawer-nav-icon">{item.icon}</span>
                 <span className="drawer-nav-label">{item.label}</span>
@@ -317,8 +318,8 @@ const Header = () => {
             {user ? (
               <div className="drawer-user-logged">
                 <div className="drawer-user-profile">
-                  <Avatar 
-                    icon={<UserOutlined />} 
+                  <Avatar
+                    icon={<UserOutlined />}
                     src={user.avatar}
                     size="large"
                   />
@@ -329,8 +330,8 @@ const Header = () => {
                 </div>
 
                 <div className="drawer-user-actions">
-                  <Button 
-                    type="text" 
+                  <Button
+                    type="text"
                     icon={<UserOutlined />}
                     onClick={() => {
                       setOpen(false);
@@ -341,8 +342,8 @@ const Header = () => {
                   >
                     Thông tin cá nhân
                   </Button>
-                  <Button 
-                    type="text" 
+                  <Button
+                    type="text"
                     icon={<BellOutlined />}
                     onClick={() => {
                       setOpen(false);
@@ -353,8 +354,8 @@ const Header = () => {
                   >
                     Thông báo
                   </Button>
-                  <Button 
-                    type="text" 
+                  <Button
+                    type="text"
                     icon={<LogoutOutlined />}
                     onClick={handleLogout}
                     block
@@ -367,8 +368,8 @@ const Header = () => {
               </div>
             ) : (
               <div className="drawer-auth-section">
-                <Button 
-                  type="default" 
+                <Button
+                  type="default"
                   onClick={() => {
                     setOpen(false);
                     router.push('/register');
@@ -379,8 +380,8 @@ const Header = () => {
                 >
                   Đăng ký
                 </Button>
-                <Button 
-                  type="primary" 
+                <Button
+                  type="primary"
                   onClick={() => {
                     setOpen(false);
                     router.push('/login');

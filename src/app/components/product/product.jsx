@@ -88,12 +88,12 @@ const Product = () => {
       </Row>
 
 
-      <h2>Ebooks</h2>
+      <h2>buy books</h2>
       <Row gutter={[16, 16]}>
         {renderBooks(ebooks)}
       </Row>
 
-      <h2 style={{ marginTop: '40px' }}>Paper Books</h2>
+      <h2 style={{ marginTop: '40px' }}>EBooks</h2>
       <Row gutter={[16, 16]}>
         {renderBooks(paperBooks)}
       </Row>
