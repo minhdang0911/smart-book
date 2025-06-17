@@ -95,3 +95,55 @@ export const apiResetPassword = async ({ email, token, password, password_confir
     }
   }
 };
+
+
+const BASE_URL = 'http://127.0.0.1:8000/api';
+
+export const apiSearchBooks = async (params = {}) => {
+  try {
+    const queryString = new URLSearchParams();
+    
+    // Thêm các tham số tìm kiếm
+    if (params.name) queryString.append('name', params.name);
+    if (params.author) queryString.append('author', params.author);
+    if (params.category) queryString.append('category', params.category);
+    if (params.price_min) queryString.append('price_min', params.price_min);
+    if (params.price_max) queryString.append('price_max', params.price_max);
+    if (params.type) queryString.append('type', params.type);
+    if (params.available) queryString.append('available', params.available);
+    if (params.sort) queryString.append('sort', params.sort);
+    if (params.page) queryString.append('page', params.page);
+    if (params.limit) queryString.append('limit', params.limit);
+
+    const response = await axios.get(`${BASE_URL}/books/search?${queryString.toString()}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error searching books:', error);
+    return {
+      status: 'error',
+      message: error.response?.data?.message || 'Có lỗi xảy ra khi tìm kiếm sách'
+    };
+  }
+};
+
+
+export const apiGetAuthors = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/authors`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching authors:', error);
+    return { status: 'error', data: [] };
+  }
+};
+
+// API lấy danh sách thể loại
+export const apiGetCategories = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/categories`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return { status: 'error', data: [] };
+  }
+};
