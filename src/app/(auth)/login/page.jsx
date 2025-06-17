@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Modal, Card, Typography, Space, Divider, Progress, Tooltip, List } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeInvisibleOutlined, EyeTwoTone, KeyOutlined, CheckCircleOutlined, CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
-import { apiLoginUser, apiForgotPassword, apiRegisterUser } from '../../../../apis/user';
+import { Form, Input, Button, Modal, Card, Typography, Space, Divider } from 'antd';
+import { UserOutlined, LockOutlined, MailOutlined, EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
+import { apiLoginUser,apiForgotPassword,apiRegisterUser } from '../../../../apis/user';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const { Title, Text } = Typography;
 
@@ -14,120 +15,20 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [passwordStrength, setPasswordStrength] = useState({ score: 0, suggestions: [] });
-  const [showPasswordGenerator, setShowPasswordGenerator] = useState(false);
-  const [generatedPasswords, setGeneratedPasswords] = useState([]);
-  const [form] = Form.useForm();
+const router = useRouter();
+const searchParams = useSearchParams();
+  
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+useEffect(() => {
+  const mode = searchParams.get('mode');
+  if (mode === 'register') {
+    setIsLogin(false);
+  } else if (mode === 'login') {
+    setIsLogin(true);
+  }
+}, [searchParams]);
 
-  // Hàm kiểm tra độ mạnh mật khẩu
-  const checkPasswordStrength = (password) => {
-    if (!password) return { score: 0, suggestions: [] };
-
-    let score = 0;
-    const suggestions = [];
-    const checks = {
-      length: password.length >= 8,
-      lowercase: /[a-z]/.test(password),
-      uppercase: /[A-Z]/.test(password),
-      number: /\d/.test(password),
-      special: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-      noCommon: !['password', '123456', 'qwerty', 'admin'].includes(password.toLowerCase())
-    };
-
-    // Tính điểm
-    if (checks.length) score += 20;
-    else suggestions.push('Ít nhất 8 ký tự');
-
-    if (checks.lowercase) score += 15;
-    else suggestions.push('Ít nhất 1 chữ thường');
-
-    if (checks.uppercase) score += 15;
-    else suggestions.push('Ít nhất 1 chữ hoa');
-
-    if (checks.number) score += 15;
-    else suggestions.push('Ít nhất 1 số');
-
-    if (checks.special) score += 20;
-    else suggestions.push('Ít nhất 1 ký tự đặc biệt (!@#$%^&*)');
-
-    if (checks.noCommon) score += 15;
-    else suggestions.push('Tránh mật khẩu phổ biến');
-
-    return { score, suggestions };
-  };
-
-  // Hàm tạo mật khẩu ngẫu nhiên
-  const generatePassword = (length = 12, includeSpecial = true) => {
-    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const numbers = '0123456789';
-    const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
-    
-    let chars = lowercase + uppercase + numbers;
-    if (includeSpecial) chars += special;
-    
-    let password = '';
-    
-    // Đảm bảo có ít nhất 1 ký tự từ mỗi loại
-    password += lowercase[Math.floor(Math.random() * lowercase.length)];
-    password += uppercase[Math.floor(Math.random() * uppercase.length)];
-    password += numbers[Math.floor(Math.random() * numbers.length)];
-    if (includeSpecial) {
-      password += special[Math.floor(Math.random() * special.length)];
-    }
-    
-    // Tạo phần còn lại
-    for (let i = password.length; i < length; i++) {
-      password += chars[Math.floor(Math.random() * chars.length)];
-    }
-    
-    // Trộn ngẫu nhiên
-    return password.split('').sort(() => Math.random() - 0.5).join('');
-  };
-
-  // Tạo danh sách mật khẩu gợi ý
-  const generatePasswordSuggestions = () => {
-    const passwords = [
-      generatePassword(12, true),
-      generatePassword(14, true),
-      generatePassword(16, true),
-      generatePassword(10, false),
-    ];
-    setGeneratedPasswords(passwords);
-  };
-
-  // Xử lý thay đổi mật khẩu
-  const handlePasswordChange = (e) => {
-    const password = e.target.value;
-    const strength = checkPasswordStrength(password);
-    setPasswordStrength(strength);
-  };
-
-  // Áp dụng mật khẩu được chọn
-  const applyPassword = (password) => {
-    form.setFieldsValue({ password, password_confirmation: '' });
-    setPasswordStrength(checkPasswordStrength(password));
-    setShowPasswordGenerator(false);
-  };
-
-  // Lấy màu và text cho thanh tiến trình
-  const getPasswordStrengthColor = (score) => {
-    if (score < 30) return '#ff4d4f';
-    if (score < 60) return '#faad14';
-    if (score < 80) return '#1890ff';
-    return '#52c41a';
-  };
-
-  const getPasswordStrengthText = (score) => {
-    if (score < 30) return 'Yếu';
-    if (score < 60) return 'Trung bình';
-    if (score < 80) return 'Mạnh';
-    return 'Rất mạnh';
-  };
+  // Function để switch mode và update URL
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -137,6 +38,7 @@ export default function AuthPage() {
         localStorage.setItem('token', data.access_token);
         setNotify({ type: 'success', message: 'Đăng nhập thành công!' });
         
+        // Redirect after showing success message
         setTimeout(() => {
           window.location.href = '/';
         }, 1500);
@@ -166,19 +68,10 @@ export default function AuthPage() {
   };
 
   const switchMode = () => {
-    setIsLogin(!isLogin);
-    setPasswordStrength({ score: 0, suggestions: [] });
-    form.resetFields();
-  };
-
-  useEffect(() => {
-    if (notify) {
-      const timer = setTimeout(() => {
-        setNotify(null);
-      }, 4000);
-      return () => clearTimeout(timer);
-    }
-  }, [notify]);
+  const newMode = isLogin ? 'register' : 'login';
+  setIsLogin(!isLogin);
+  router.push(`/login?mode=${newMode}`);
+};
 
   return (
     <>
@@ -192,7 +85,7 @@ export default function AuthPage() {
           padding: 20px;
           position: relative;
           overflow: hidden;
-          width: 100%;
+          width:100%
         }
 
         .auth-container::before {
@@ -206,7 +99,7 @@ export default function AuthPage() {
                       radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
                       radial-gradient(circle at 40% 80%, rgba(120, 219, 255, 0.3) 0%, transparent 50%);
           animation: backgroundFloat 20s ease-in-out infinite;
-          width: 100%;
+           width:100%
         }
 
         @keyframes backgroundFloat {
@@ -280,7 +173,7 @@ export default function AuthPage() {
           border-radius: 24px;
           box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
           width: 100%;
-          max-width: 450px;
+          max-width: 420px;
           padding: 40px;
           position: relative;
           z-index: 1;
@@ -497,85 +390,15 @@ export default function AuthPage() {
           }
         }
 
-        .password-strength-container {
-          margin-top: 8px;
-          padding: 12px;
-          background: rgba(102, 126, 234, 0.05);
-          border-radius: 8px;
-          border: 1px solid rgba(102, 126, 234, 0.1);
-        }
-
-        .password-generator-btn {
-          background: linear-gradient(135deg, #52c41a, #389e0d);
-          border: none;
-          border-radius: 8px;
-          color: white;
-          padding: 8px 16px;
-          font-size: 14px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          margin-top: 8px;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-
-        .password-generator-btn:hover {
-          background: linear-gradient(135deg, #389e0d, #237804);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
-        }
-
-        .generated-password-item {
-          background: #f8f9fa;
-          border: 1px solid #e9ecef;
-          border-radius: 8px;
-          padding: 12px;
-          margin-bottom: 8px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .generated-password-item:hover {
-          background: #e3f2fd;
-          border-color: #667eea;
-          transform: translateX(4px);
-        }
-
-        .password-text {
-          font-family: 'Courier New', monospace;
-          font-weight: 600;
-          color: #1a1a1a;
-        }
-
-        .password-strength-label {
-          font-size: 12px;
-          color: #666;
-          margin-bottom: 4px;
-        }
-
-        .suggestions-list {
-          margin-top: 8px;
-        }
-
-        .suggestion-item {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          font-size: 12px;
-          color: #666;
-          margin-bottom: 4px;
-        }
-
-        .suggestion-item.met {
-          color: #52c41a;
-        }
-
-        .suggestion-item.not-met {
-          color: #ff4d4f;
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
         }
       `}</style>
 
@@ -607,7 +430,6 @@ export default function AuthPage() {
           <div className="form-container">
             <div className="form-transition">
               <Form 
-                form={form}
                 name="auth_form" 
                 onFinish={onFinish} 
                 layout="vertical"
@@ -645,17 +467,7 @@ export default function AuthPage() {
                   name="password" 
                   rules={[
                     { required: true, message: 'Vui lòng nhập mật khẩu!' },
-                    { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' },
-                    ...(isLogin ? [] : [
-                      () => ({
-                        validator(_, value) {
-                          if (!value || passwordStrength.score >= 60) {
-                            return Promise.resolve();
-                          }
-                          return Promise.reject(new Error('Mật khẩu chưa đủ mạnh!'));
-                        },
-                      })
-                    ])
+                    { min: 6, message: 'Mật khẩu phải có ít nhất 6 ký tự!' }
                   ]}
                 >
                   <Input.Password 
@@ -663,78 +475,32 @@ export default function AuthPage() {
                     placeholder="Mật khẩu"
                     iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                     autoComplete={isLogin ? "current-password" : "new-password"}
-                    onChange={handlePasswordChange}
                   />
                 </Form.Item>
 
                 {!isLogin && (
-                  <>
-                    {/* Hiển thị độ mạnh mật khẩu */}
-                    <div className="password-strength-container">
-                      <div className="password-strength-label">
-                        Độ mạnh mật khẩu: <strong style={{ color: getPasswordStrengthColor(passwordStrength.score) }}>
-                          {getPasswordStrengthText(passwordStrength.score)}
-                        </strong>
-                      </div>
-                      <Progress 
-                        percent={passwordStrength.score} 
-                        strokeColor={getPasswordStrengthColor(passwordStrength.score)}
-                        showInfo={false}
-                        size="small"
-                      />
-                      
-                      {/* Danh sách yêu cầu */}
-                      <div className="suggestions-list">
-                        {[
-                          { text: 'Ít nhất 8 ký tự', met: form.getFieldValue('password')?.length >= 8 },
-                          { text: 'Chữ thường (a-z)', met: /[a-z]/.test(form.getFieldValue('password') || '') },
-                          { text: 'Chữ hoa (A-Z)', met: /[A-Z]/.test(form.getFieldValue('password') || '') },
-                          { text: 'Số (0-9)', met: /\d/.test(form.getFieldValue('password') || '') },
-                          { text: 'Ký tự đặc biệt (!@#$%^&*)', met: /[!@#$%^&*(),.?":{}|<>]/.test(form.getFieldValue('password') || '') }
-                        ].map((req, index) => (
-                          <div key={index} className={`suggestion-item ${req.met ? 'met' : 'not-met'}`}>
-                            {req.met ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                            {req.text}
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Nút tạo mật khẩu */}
-                      <button 
-                        type="button"
-                        className="password-generator-btn"
-                        onClick={() => {
-                          generatePasswordSuggestions();
-                          setShowPasswordGenerator(true);
-                        }}
-                      >
-                        <KeyOutlined /> Tạo mật khẩu mạnh
-                      </button>
-                    </div>
-
-                    <Form.Item
-                      name="password_confirmation"
-                      dependencies={['password']}
-                      rules={[
-                        { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
-                        ({ getFieldValue }) => ({
-                          validator(_, value) {
-                            if (!value || getFieldValue('password') === value) {
-                              return Promise.resolve();
-                            }
-                            return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
-                          },
-                        }),
-                      ]}
-                    >
-                      <Input.Password 
-                        prefix={<LockOutlined style={{ color: '#667eea' }} />}
-                        placeholder="Xác nhận mật khẩu"
-                        iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                        autoComplete="new-password"
-                      />
-                    </Form.Item>
-                  </>
+                  <Form.Item
+                    name="password_confirmation"
+                    dependencies={['password']}
+                    rules={[
+                      { required: true, message: 'Vui lòng xác nhận mật khẩu!' },
+                      ({ getFieldValue }) => ({
+                        validator(_, value) {
+                          if (!value || getFieldValue('password') === value) {
+                            return Promise.resolve();
+                          }
+                          return Promise.reject(new Error('Mật khẩu xác nhận không khớp!'));
+                        },
+                      }),
+                    ]}
+                  >
+                    <Input.Password 
+                      prefix={<LockOutlined style={{ color: '#667eea' }} />}
+                      placeholder="Xác nhận mật khẩu"
+                      iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
+                      autoComplete="new-password"
+                    />
+                  </Form.Item>
                 )}
 
                 {isLogin && (
@@ -782,7 +548,6 @@ export default function AuthPage() {
           </div>
         </div>
 
-        {/* Modal quên mật khẩu */}
         <Modal
           title="🔐 Khôi phục mật khẩu"
           open={showForgot}
@@ -816,76 +581,6 @@ export default function AuthPage() {
               </Button>
             </Form.Item>
           </Form>
-        </Modal>
-
-        {/* Modal tạo mật khẩu */}
-        <Modal
-          title={
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <KeyOutlined style={{ color: '#667eea' }} />
-              🔐 Chọn mật khẩu mạnh
-            </div>
-          }
-          open={showPasswordGenerator}
-          onCancel={() => setShowPasswordGenerator(false)}
-          footer={[
-            <Button 
-              key="regenerate" 
-              icon={<ReloadOutlined />} 
-              onClick={generatePasswordSuggestions}
-            >
-              Tạo lại
-            </Button>,
-            <Button key="cancel" onClick={() => setShowPasswordGenerator(false)}>
-              Đóng
-            </Button>
-          ]}
-          width={600}
-          centered
-        >
-          <div style={{ marginBottom: '16px' }}>
-            <Text type="secondary">
-              Chọn một trong các mật khẩu được tạo tự động bên dưới. Các mật khẩu này đều đảm bảo độ bảo mật cao.
-            </Text>
-          </div>
-
-          <Space direction="vertical" style={{ width: '100%' }}>
-            {generatedPasswords.map((password, index) => {
-              const strength = checkPasswordStrength(password);
-              return (
-                <div
-                  key={index}
-                  className="generated-password-item"
-                  onClick={() => applyPassword(password)}
-                >
-                  <div>
-                    <div className="password-text">{password}</div>
-                    <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-                      Độ mạnh: <span style={{ color: getPasswordStrengthColor(strength.score), fontWeight: 'bold' }}>
-                        {getPasswordStrengthText(strength.score)} ({strength.score}%)
-                      </span>
-                    </div>
-                  </div>
-                  <Button 
-                    type="primary" 
-                    size="small"
-                    style={{ 
-                      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                      border: 'none'
-                    }}
-                  >
-                    Chọn
-                  </Button>
-                </div>
-              );
-            })}
-          </Space>
-
-          <div style={{ marginTop: '16px', padding: '12px', background: '#f8f9fa', borderRadius: '8px' }}>
-            <Text style={{ fontSize: '12px', color: '#666' }}>
-              💡 <strong>Lưu ý:</strong> Hãy lưu mật khẩu ở nơi an toàn. Các mật khẩu này được tạo ngẫu nhiên và có độ bảo mật cao.
-            </Text>
-          </div>
         </Modal>
       </div>
     </>

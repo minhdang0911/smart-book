@@ -232,13 +232,14 @@ const Header = () => {
               </div>
             ) : (
               <Space size="middle" className="auth-buttons">
-                <Button
-                  type="text"
-                  onClick={() => router.push('/register')}
-                  className="register-btn"
-                >
-                  Đăng ký
-                </Button>
+               <Button
+  type="text"
+  onClick={() => router.push('/login?mode=register')}
+  className="register-btn"
+>
+  Đăng ký
+</Button>
+
                 <Button
                   type="primary"
                   onClick={() => router.push('/login')}
