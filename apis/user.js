@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const apiLoginUser = async (email, password) => {
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/login', {
+    const response = await axios.post(`${BASE_URL}/login`, {
       email,
       password,
     });
@@ -25,7 +25,7 @@ export const apiLoginUser = async (email, password) => {
 export const apiGetMe = async (token) => {
 
   try {
-    const response = await axios.get('http://127.0.0.1:8000/api/me', {
+    const response = await axios.get(`${BASE_URL}/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
@@ -43,7 +43,7 @@ export const apiGetMe = async (token) => {
  
 
 export const apiRegisterUser = async (name, email, password, password_confirmation) => {
-  const res = await axios.post('http://127.0.0.1:8000/api/register', {
+  const res = await axios.post(`${BASE_URL}/api/register`, {
     name,
     email,
     password,
@@ -55,7 +55,7 @@ export const apiRegisterUser = async (name, email, password, password_confirmati
 
 export const apiForgotPassword = async (email) => {
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/forgot-password', {
+    const response = await axios.post(`${BASE_URL}/forgot-password`, {
       email,
     });
 
@@ -76,7 +76,7 @@ export const apiForgotPassword = async (email) => {
 
 export const apiResetPassword = async ({ email, token, password, password_confirmation }) => {
   try {
-    const response = await axios.post('http://127.0.0.1:8000/api/reset-password', {
+    const response = await axios.post(`${BASE_URL}/reset-password`, {
       email,
       token,
       password,
@@ -97,7 +97,7 @@ export const apiResetPassword = async ({ email, token, password, password_confir
 };
 
 
-const BASE_URL = 'http://127.0.0.1:8000/api';
+const BASE_URL = 'http://localhost:8000/api';
 
 export const apiSearchBooks = async (params = {}) => {
   try {

@@ -53,7 +53,7 @@ const Header = () => {
       color: '#fa8c16'
     },
     {
-      label: 'Tất cả sách',
+      label: 'Bộ lọc',
       path: '/search',
       icon: <SearchOutlined />,
       color: '#722ed1'
@@ -86,7 +86,7 @@ const Header = () => {
           }
         } catch (error) {
           console.error('Error getting user info:', error);
-          localStorage.removeItem('token');
+       
         }
       };
       getUserInfo();
@@ -121,7 +121,7 @@ const Header = () => {
     setUser(null);
     router.push('/login');
   };
-
+ 
   const userMenu = {
     items: [
       {
@@ -145,6 +145,8 @@ const Header = () => {
       },
     ],
   };
+
+ 
 
   return (
     <header className={`header ${scrolled ? 'header-scrolled' : ''}`}>

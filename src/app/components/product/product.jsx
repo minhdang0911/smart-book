@@ -21,7 +21,7 @@ const Product = () => {
         // Lấy đúng mảng từ object trả về
         setEbooks(response.latest_ebooks || [])
         setPaperBooks(response.latest_paper_books || [])
-        setTopLikeBook(response.top_liked_books || [])
+        setTopLikeBook(response.top_rated_books || [])
         setTopViewBook(response.top_viewed_books || [])
       }
     }

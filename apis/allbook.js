@@ -1,7 +1,9 @@
+
+const BASE_URL = 'http://localhost:8000/api';
 export const apiGetAllBook = async () => {
     try {
         
-        const url = `http://127.0.0.1:8000/api/books`;
+        const url = `${BASE_URL}/books`;
 
         const response = await fetch(url, {
             method: 'GET',
