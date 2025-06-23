@@ -32,6 +32,7 @@ const Header = () => {
   const [search, setSearch] = useState('');
   const [user, setUser] = useState(null);
   const [scrolled, setScrolled] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
 
   const navItems = [
     {
@@ -75,6 +76,47 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Fetch cart count từ API count
+  const fetchCartCount = async () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const response = await fetch('http://localhost:8000/api/cart/count', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json(); // ✅ Thiếu dòng này
+
+      if (data) {
+        setCartCount(data?.data?.count); // sẽ là 7 như kỳ vọng
+      }
+    } catch (error) {
+      console.error('Error fetching cart count:', error);
+    }
+  }
+};
+
+
+  console.log(cartCount)
+
+ 
+
+  // Tạo function để update cart count từ component khác
+  const updateCartCount = () => {
+    fetchCartCount();
+  };
+
+  // Expose updateCartCount function globally
+  useEffect(() => {
+    window.updateCartCount = updateCartCount;
+    return () => {
+      delete window.updateCartCount;
+    };
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
@@ -83,14 +125,27 @@ const Header = () => {
           const response = await apiGetMe(token);
           if (response?.status === true) {
             setUser(response?.user);
+            // Fetch cart count when user is logged in
+            fetchCartCount();
           }
         } catch (error) {
           console.error('Error getting user info:', error);
-       
         }
       };
       getUserInfo();
     }
+  }, []);
+
+  // Listen for cart update events
+  useEffect(() => {
+    const handleCartUpdate = () => {
+      fetchCartCount();
+    };
+
+    window.addEventListener('cartUpdated', handleCartUpdate);
+    return () => {
+      window.removeEventListener('cartUpdated', handleCartUpdate);
+    };
   }, []);
 
   const handleNav = (path) => {
@@ -119,6 +174,7 @@ const Header = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setCartCount(0);
     router.push('/login');
   };
  
@@ -146,8 +202,6 @@ const Header = () => {
     ],
   };
 
- 
-
   return (
     <header className={`header ${scrolled ? 'header-scrolled' : ''}`}>
       <div className="header-container">
@@ -157,7 +211,6 @@ const Header = () => {
             <div className="logo">
               <BookOutlined className="logo-icon" />
               <span className="logo-text">
-
                 SmartBook<span className="logo-accent">★</span>
               </span>
             </div>
@@ -208,6 +261,18 @@ const Header = () => {
           <div className="auth-section">
             {user ? (
               <div className="user-section">
+                {/* Cart Icon */}
+                <Badge count={cartCount} size="small" className="cart-badge">
+                  <Tooltip title="Giỏ hàng">
+                    <Button
+                      type="text"
+                      icon={<ShoppingCartOutlined />}
+                      className="cart-btn"
+                      onClick={() => router.push('/cart')}
+                    />
+                  </Tooltip>
+                </Badge>
+
                 <Badge count={3} size="small" className="notification-badge">
                   <Button
                     type="text"
@@ -234,13 +299,13 @@ const Header = () => {
               </div>
             ) : (
               <Space size="middle" className="auth-buttons">
-               <Button
-  type="text"
-  onClick={() => router.push('/login?mode=register')}
-  className="register-btn"
->
-  Đăng ký
-</Button>
+                <Button
+                  type="text"
+                  onClick={() => router.push('/login?mode=register')}
+                  className="register-btn"
+                >
+                  Đăng ký
+                </Button>
 
                 <Button
                   type="primary"
@@ -312,6 +377,22 @@ const Header = () => {
                 <span className="drawer-nav-label">{item.label}</span>
               </div>
             ))}
+            
+            {/* Cart in mobile menu */}
+            {user && (
+              <div
+                onClick={() => handleNav('/cart')}
+                className="drawer-nav-item"
+                style={{ '--item-color': '#fa541c' }}
+              >
+                <span className="drawer-nav-icon">
+                  <Badge count={cartCount} size="small">
+                    <ShoppingCartOutlined />
+                  </Badge>
+                </span>
+                <span className="drawer-nav-label">Giỏ hàng</span>
+              </div>
+            )}
           </div>
 
           <Divider />

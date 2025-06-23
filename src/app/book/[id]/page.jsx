@@ -46,13 +46,15 @@ import {
   MessageOutlined,
   InfoCircleOutlined,
   PlusOutlined,
-  HeartFilled
+  HeartFilled,
+  MinusOutlined
 } from '@ant-design/icons'
 
 
 import BookList from './BookList'
 import './BookDetail.css'
 import { apiGetMe } from '../../../../apis/user'
+import { toast } from 'react-toastify';
 
 const { Title, Paragraph, Text } = Typography
 const { TextArea } = Input
@@ -79,6 +81,8 @@ const BookDetailPage = () => {
   const [selectedStarFilter, setSelectedStarFilter] = useState('all')
   const [reviewsLoading, setReviewsLoading] = useState(false)
   const [wishlist, setWishlist] = useState([]);
+  const [quantity, setQuantity] = useState(1)
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
 
   useEffect(() => {
@@ -700,8 +704,20 @@ const BookDetailPage = () => {
   const renderActionButtons = () => {
     if (book.format === 'paper') {
       return (
+
         <Space className="action-buttons">
-          <Button type="primary" size="large" icon={<ShoppingCartOutlined />}>
+          <Button
+            type="primary"
+            size="large"
+            icon={<ShoppingCartOutlined />}
+            onClick={handleAddToCart}
+            loading={isAddingToCart}
+            style={{
+              height: '48px',
+              padding: '0 32px',
+              fontSize: '16px'
+            }}
+          >
             Thêm vào giỏ hàng
           </Button>
           <Button size="large" icon={<DollarOutlined />} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}>
@@ -729,51 +745,142 @@ const BookDetailPage = () => {
     }
   }
 
-  const renderStats = () => {
-    const baseStats = [
-      {
-        title: "Lượt xem",
-        value: book.views,
-        prefix: <EyeOutlined />,
-        color: '#3f8600'
-      },
-      {
-
-        value: (
-          <Button
-            type="text"
-            icon={
-              wishlist.includes(book.id) ? (
-                <HeartFilled style={{ color: 'red', fontSize: 20 }} />
-              ) : (
-                <HeartOutlined style={{ fontSize: 20 }} />
-              )
-            }
-            onClick={toggleWishlist}
-            style={{ padding: 0 }}
-          >
-            {wishlist.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
-          </Button>
-        ),
-        prefix: null,
-        color: '#cf1322'
-      }
-    ];
-
-    if (book.format === 'ebook') {
-      baseStats.push({
-        title: "Số chương",
-        value: book.chapters,
-        prefix: <NumberOutlined />,
-        color: '#1890ff'
-      });
-    }
-
-    return baseStats;
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('vi-VN').format(price);
   };
+
+  const renderStats = () => {
+  const baseStats = [
+    {
+      title: "Lượt xem",
+      value: book.views,
+      prefix: <EyeOutlined />,
+      color: '#3f8600'
+    },
+    {
+      title: "Giá",
+      value: (
+        <span style={{ color: 'red' }}>
+          <DollarOutlined /> {formatPrice(book.price)}₫
+        </span>
+      ),
+      color: 'red'
+    },
+    {
+      title: "",
+      value: (
+        <Button
+          type="text"
+          icon={
+            wishlist.includes(book.id) ? (
+              <HeartFilled style={{ color: 'red', fontSize: 20 }} />
+            ) : (
+              <HeartOutlined style={{ fontSize: 20 }} />
+            )
+          }
+          onClick={toggleWishlist}
+          style={{ padding: 0 }}
+        >
+          {wishlist.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
+        </Button>
+      ),
+      prefix: null,
+      color: '#cf1322'
+    }
+  ];
+
+  if (book.format === 'ebook') {
+    baseStats.push({
+      title: "Số chương",
+      value: book.chapters,
+      prefix: <NumberOutlined />,
+      color: '#1890ff'
+    });
+  }
+
+  return baseStats;
+};
+
   if (loading) return <Spin size="large" className="loading-spinner" />
 
   if (!book) return <div className="error-message">Không tìm thấy thông tin sách</div>
+
+  // State cho quantity
+
+
+  // Hàm xử lý tăng/giảm quantity
+  const handleQuantityChange = (action) => {
+    if (action === 'increase' && quantity < 99) {
+      setQuantity(prev => prev + 1);
+    } else if (action === 'decrease' && quantity > 1) {
+      setQuantity(prev => prev - 1);
+    }
+  };
+
+  // Hàm xử lý khi nhập trực tiếp
+  const handleQuantityInputChange = (value) => {
+    const numValue = parseInt(value) || 1;
+    if (numValue >= 1 && numValue <= 99) {
+      setQuantity(numValue);
+    }
+  };
+
+  const addToCart = async (bookId, quantity) => {
+    try {
+      const response = await fetch('http://localhost:8000/api/cart/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Thêm authorization header nếu cần
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          book_id: bookId,
+          quantity: quantity
+        })
+      });
+
+      // Kiểm tra response status
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data: data
+      };
+    } catch (error) {
+      console.error('Lỗi khi thêm vào giỏ hàng:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  };
+ 
+const handleAddToCart = async () => {
+  try {
+    setIsAddingToCart(true);
+
+    const result = await addToCart(book.id, quantity);
+
+    if (result.success) {
+      toast.success('🎉 Đã thêm sách vào giỏ hàng!');
+
+      window.updateCartCount?.();
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+    } else {
+      // Nếu có message từ server, hiển thị nó
+      toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
+    }
+  } catch (error) {
+    toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
+    console.error('Lỗi khi gọi API addToCart:', error);
+  } finally {
+    setIsAddingToCart(false);
+  }
+};
 
   return (
     <div className="book-detail-container">
@@ -828,6 +935,7 @@ const BookDetailPage = () => {
                   {book.category.name}
                 </Tag>
               </div>
+
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
                 {renderStats().map((stat, index) => (
                   <div
@@ -846,8 +954,64 @@ const BookDetailPage = () => {
                 ))}
               </div>
 
-
-
+              {/* Quantity Selector Section */}
+              <div className="quantity-selector-section" style={{ margin: '24px 0' }}>
+                <Space size="middle" align="center">
+                  <Text strong style={{ fontSize: '16px' }}>Số lượng:</Text>
+                  <div className="quantity-controls" style={{ display: 'flex', alignItems: 'center', border: '1px solid #d9d9d9', borderRadius: '6px' }}>
+                    <Button
+                      type="text"
+                      icon={<MinusOutlined />}
+                      onClick={() => handleQuantityChange('decrease')}
+                      disabled={quantity <= 1}
+                      style={{
+                        border: 'none',
+                        borderRadius: '6px 0 0 6px',
+                        height: '40px',
+                        width: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                    <Input
+                      value={quantity}
+                      onChange={(e) => handleQuantityInputChange(e.target.value)}
+                      style={{
+                        width: '60px',
+                        textAlign: 'center',
+                        border: 'none',
+                        borderLeft: '1px solid #d9d9d9',
+                        borderRight: '1px solid #d9d9d9',
+                        borderRadius: '0',
+                        height: '40px'
+                      }}
+                      min={1}
+                      max={99}
+                    />
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => handleQuantityChange('increase')}
+                      disabled={quantity >= 99}
+                      style={{
+                        border: 'none',
+                        borderRadius: '0 6px 6px 0',
+                        height: '40px',
+                        width: '40px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                    />
+                  </div>
+                  {book.stock_quantity && (
+                    <Text type="secondary" style={{ fontSize: '14px' }}>
+                      (Còn lại: {book.stock_quantity} sản phẩm)
+                    </Text>
+                  )}
+                </Space>
+              </div>
 
               {renderActionButtons()}
             </div>
@@ -987,4 +1151,4 @@ const BookDetailPage = () => {
   )
 }
 
-export default BookDetailPage
+export default BookDetailPage;
