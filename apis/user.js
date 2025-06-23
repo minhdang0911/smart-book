@@ -43,7 +43,7 @@ export const apiGetMe = async (token) => {
  
 
 export const apiRegisterUser = async (name, email, password, password_confirmation) => {
-  const res = await axios.post(`${BASE_URL}/api/register`, {
+  const res = await axios.post(`${BASE_URL}/register`, {
     name,
     email,
     password,
@@ -146,4 +146,39 @@ export const apiGetCategories = async () => {
     console.error('Error fetching categories:', error);
     return { status: 'error', data: [] };
   }
+};
+
+// New OTP API functions
+export const apiSendOtp = async (email) => {
+  const response = await fetch(`${BASE_URL}/send-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Gửi mã OTP thất bại');
+  }
+  
+  return response.json();
+};
+
+export const apiVerifyOtp = async (email, otp) => {
+  const response = await fetch(`${BASE_URL}/verify-otp`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ email, otp }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Xác thực OTP thất bại');
+  }
+  
+  return response.json();
 };

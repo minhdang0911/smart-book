@@ -3,6 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { Form, Input, Button, Typography, Progress, Alert } from 'antd';
 import { LockOutlined, EyeInvisibleOutlined, EyeTwoTone, CheckCircleOutlined, SafetyOutlined } from '@ant-design/icons';
+import { apiResetPassword } from '../../../apis/user';
+import { useSearchParams, useRouter } from 'next/navigation';
+
 
 const { Title, Text } = Typography;
 
@@ -14,8 +17,11 @@ export default function ResetPasswordPage() {
   const [form] = Form.useForm();
 
   // Simulate getting email and token from URL params
-  const email = "user@example.com";
-  const token = "demo-token";
+const searchParams = useSearchParams();
+const router = useRouter();
+
+const email = searchParams.get('email');
+const token = searchParams.get('token');
 
   useEffect(() => {
     setMounted(true);
@@ -58,21 +64,25 @@ export default function ResetPasswordPage() {
 
   const onFinish = async (values) => {
     setLoading(true);
-    try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      setNotify({ type: 'success', message: 'Đặt lại mật khẩu thành công!' });
-      
-      // Simulate redirect after success
-      setTimeout(() => {
-        setNotify({ type: 'info', message: 'Đang chuyển hướng đến trang đăng nhập...' });
-      }, 2000);
-    } catch (err) {
-      setNotify({ type: 'error', message: 'Có lỗi xảy ra, vui lòng thử lại!' });
-    } finally {
-      setLoading(false);
-    }
+try {
+  const res = await apiResetPassword({
+    email,
+    token,
+    password: values.password,
+    password_confirmation: values.password_confirmation
+  });
+
+  setNotify({ type: 'success', message: res.message || 'Đặt lại mật khẩu thành công!' });
+
+  setTimeout(() => {
+    setNotify({ type: 'info', message: 'Đang chuyển hướng đến trang đăng nhập...' });
+    router.push('/login?mode=login');
+  }, 2500);
+
+} catch (err) {
+  setNotify({ type: 'error', message: err.message || 'Có lỗi xảy ra, vui lòng thử lại!' });
+}
+
   };
 
   const handlePasswordChange = (e) => {
