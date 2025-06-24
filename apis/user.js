@@ -42,12 +42,13 @@ export const apiGetMe = async (token) => {
 
  
 
-export const apiRegisterUser = async (name, email, password, password_confirmation) => {
+export const apiRegisterUser = async (name, email, password, password_confirmation,phone) => {
   const res = await axios.post(`${BASE_URL}/register`, {
     name,
     email,
     password,
     password_confirmation,
+    phone
   });
   return res.data;
 };

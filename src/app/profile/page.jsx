@@ -17,6 +17,7 @@ import {
     Col,
     Space,
     Divider,
+    Tabs,
 } from "antd";
 import {
     UserOutlined,
@@ -241,7 +242,122 @@ console.log("Token:", token);
         </div>
     );
 
-    const renderFavoriteBooks = () => (
+const renderFavoriteBooks = () => {
+    // Phân loại sách theo is_physical
+    const physicalBooks = favoriteBooks.filter(book => book.is_physical === 1);
+    const digitalBooks = favoriteBooks.filter(book => book.is_physical === 0);
+
+    const renderBookGrid = (books, emptyMessage) => {
+        if (books.length === 0) {
+            return (
+                <div className="empty-container">
+                    <Empty
+                        description={emptyMessage}
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                </div>
+            );
+        }
+
+        return (
+            <Row gutter={[24, 24]} style={{ marginTop: "24px" }}>
+                {books.map((book) => (
+                    <Col xs={24} sm={12} lg={8} key={book.id}>
+                        <Card
+                            hoverable
+                            className="book-card"
+                            cover={
+                                <div className="book-cover">
+                                    <img
+                                        alt={book.title}
+                                        src={book.cover_image}
+                                        className="cover-image"
+                                    />
+                                    <div className="book-tag">
+                                        {book.is_physical ? (
+                                            <Tag color="blue">Sách vật lý</Tag>
+                                        ) : (
+                                            <Tag color="green">Sách điện tử</Tag>
+                                        )}
+                                    </div>
+                                </div>
+                            }
+                        >
+                            <Meta
+                                title={
+                                    <div className="book-title">
+                                        {book.title}
+                                    </div>
+                                }
+                                description={
+                                    <div className="book-content">
+                                        <Paragraph
+                                            ellipsis={{ rows: 2 }}
+                                            style={{ color: "#666", marginBottom: "16px" }}
+                                        >
+                                            {book.description}
+                                        </Paragraph>
+
+                                        <div className="book-stats">
+                                            <div className="rating-section">
+                                                <Rate
+                                                    disabled
+                                                    defaultValue={parseFloat(book.rating_avg)}
+                                                    allowHalf
+                                                    style={{ fontSize: "14px" }}
+                                                />
+                                                <Text style={{ marginLeft: "8px", color: "#666" }}>
+                                                    {book.rating_avg}
+                                                </Text>
+                                            </div>
+                                            <div className="views-section">
+                                                <EyeOutlined style={{ color: "#666" }} />
+                                                <Text style={{ marginLeft: "4px", color: "#666" }}>
+                                                    {book.views.toLocaleString()}
+                                                </Text>
+                                            </div>
+                                        </div>
+
+                                        <div className="book-footer">
+                                            <div className="price-section">
+                                                {parseFloat(book.price) > 0 ? (
+                                                    <Text strong style={{ color: "#ff4d4f", fontSize: "18px" }}>
+                                                        {parseFloat(book.price).toLocaleString("vi-VN")} VNĐ
+                                                    </Text>
+                                                ) : (
+                                                    <Text strong style={{ color: "#52c41a", fontSize: "18px" }}>
+                                                        Miễn phí
+                                                    </Text>
+                                                )}
+                                            </div>
+                                            <Button type="primary" size="small">
+                                                Xem chi tiết
+                                            </Button>
+                                        </div>
+                                    </div>
+                                }
+                            />
+                        </Card>
+                    </Col>
+                ))}
+            </Row>
+        );
+    };
+
+    const tabItems = [
+        {
+            key: 'physical',
+            label: `Sách mua (${physicalBooks.length})`,
+            children: renderBookGrid(physicalBooks, "Chưa có sách mua yêu thích nào")
+        },
+        {
+            key: 'digital',
+            label: `Sách bán (${digitalBooks.length})`,
+            children: renderBookGrid(digitalBooks, "Chưa có sách bán yêu thích nào")
+        }
+    ];
+
+    return (
         <div style={{ padding: "24px" }}>
             <div className="section-header">
                 <Title level={3} style={{ margin: 0 }}>
@@ -254,98 +370,16 @@ console.log("Token:", token);
                     <Spin size="large" />
                     <div style={{ marginTop: "16px", color: "#666" }}>Đang tải...</div>
                 </div>
-            ) : favoriteBooks.length === 0 ? (
-                <div className="empty-container">
-                    <Empty
-                        description="Chưa có sách yêu thích nào"
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    />
-                </div>
             ) : (
-                <Row gutter={[24, 24]} style={{ marginTop: "24px" }}>
-                    {favoriteBooks.map((book) => (
-                        <Col xs={24} sm={12} lg={8} key={book.id}>
-                            <Card
-                                hoverable
-                                className="book-card"
-                                cover={
-                                    <div className="book-cover">
-                                        <img
-                                            alt={book.title}
-                                            src={book.cover_image}
-                                            className="cover-image"
-                                        />
-                                        <div className="book-tag">
-                                            {book.is_physical ? (
-                                                <Tag color="blue">Sách vật lý</Tag>
-                                            ) : (
-                                                <Tag color="green">Sách điện tử</Tag>
-                                            )}
-                                        </div>
-                                    </div>
-                                }
-                            >
-                                <Meta
-                                    title={
-                                        <div className="book-title">
-                                            {book.title}
-                                        </div>
-                                    }
-                                    description={
-                                        <div className="book-content">
-                                            <Paragraph
-                                                ellipsis={{ rows: 2 }}
-                                                style={{ color: "#666", marginBottom: "16px" }}
-                                            >
-                                                {book.description}
-                                            </Paragraph>
-
-                                            <div className="book-stats">
-                                                <div className="rating-section">
-                                                    <Rate
-                                                        disabled
-                                                        defaultValue={parseFloat(book.rating_avg)}
-                                                        allowHalf
-                                                        style={{ fontSize: "14px" }}
-                                                    />
-                                                    <Text style={{ marginLeft: "8px", color: "#666" }}>
-                                                        {book.rating_avg}
-                                                    </Text>
-                                                </div>
-                                                <div className="views-section">
-                                                    <EyeOutlined style={{ color: "#666" }} />
-                                                    <Text style={{ marginLeft: "4px", color: "#666" }}>
-                                                        {book.views.toLocaleString()}
-                                                    </Text>
-                                                </div>
-                                            </div>
-
-                                            <div className="book-footer">
-                                                <div className="price-section">
-                                                    {parseFloat(book.price) > 0 ? (
-                                                        <Text strong style={{ color: "#ff4d4f", fontSize: "18px" }}>
-                                                            {parseFloat(book.price).toLocaleString("vi-VN")} VNĐ
-                                                        </Text>
-                                                    ) : (
-                                                        <Text strong style={{ color: "#52c41a", fontSize: "18px" }}>
-                                                            Miễn phí
-                                                        </Text>
-                                                    )}
-                                                </div>
-                                                <Button type="primary" size="small">
-                                                    Xem chi tiết
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    }
-                                />
-                            </Card>
-                        </Col>
-                    ))}
-                </Row>
+                <Tabs 
+                    defaultActiveKey="physical" 
+                    items={tabItems}
+                    style={{ marginTop: "24px" }}
+                />
             )}
         </div>
     );
+};
 
     const renderEmptyState = (title, description) => (
         <div style={{ padding: "24px" }}>

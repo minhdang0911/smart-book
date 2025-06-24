@@ -99,9 +99,7 @@ const Header = () => {
   }
 };
 
-
-  console.log(cartCount)
-
+ 
  
 
   // Tạo function để update cart count từ component khác

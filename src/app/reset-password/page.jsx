@@ -73,11 +73,7 @@ try {
   });
 
   setNotify({ type: 'success', message: res.message || 'Đặt lại mật khẩu thành công!' });
-
-  setTimeout(() => {
-    setNotify({ type: 'info', message: 'Đang chuyển hướng đến trang đăng nhập...' });
-    router.push('/login?mode=login');
-  }, 2500);
+ 
 
 } catch (err) {
   setNotify({ type: 'error', message: err.message || 'Có lỗi xảy ra, vui lòng thử lại!' });

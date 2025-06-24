@@ -34,7 +34,7 @@ const BannerSlider = () => {
   const intervalRef = useRef(null)
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/banners')
+    fetch('http://localhost:8000/api/banners/get')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
@@ -90,10 +90,10 @@ const BannerSlider = () => {
           ref={el => panelsRef.current[index] = el}
           onClick={() => handleClick(index)}
         >
-          <img src={banner.link} alt={bannerContent[index]?.title || `Banner ${index + 1}`} />
+          <img src={banner.link || banner.image} alt={bannerContent[index]?.title || `Banner ${index + 1}`} />
           <div className="slide-overlay">
-            <h2 className="slide-title">{bannerContent[index]?.title || 'Tiêu đề'}</h2>
-            <p className="slide-description">{bannerContent[index]?.description || ''}</p>
+            <h2 className="slide-title">{banner?.title || 'Tiêu đề'}</h2>
+            <p className="slide-description">{banner?.description || ''}</p>
             <a
               href={banner.link}
               className="slide-button"
