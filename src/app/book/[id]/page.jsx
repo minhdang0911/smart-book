@@ -720,9 +720,17 @@ const BookDetailPage = () => {
           >
             Thêm vào giỏ hàng
           </Button>
-          <Button size="large" icon={<DollarOutlined />} style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}>
+          <Button
+            size="large"
+            icon={<DollarOutlined />}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
+            onClick={() => {
+              window.location.href = '/payment';
+            }}
+          >
             Mua ngay
           </Button>
+
           <Tooltip title="Chia sẻ">
             <Button size="large" icon={<ShareAltOutlined />} />
           </Tooltip>
@@ -745,61 +753,64 @@ const BookDetailPage = () => {
     }
   }
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('vi-VN').format(price);
-  };
+  const formatPrice = (price, is_physical) => {
+    if (book.is_physical === 1) {
+        return new Intl.NumberFormat('vi-VN').format(price);
+    }
+    return 'miễn phí';
+};
 
   const renderStats = () => {
-  const baseStats = [
-    {
-      title: "Lượt xem",
-      value: book.views,
-      prefix: <EyeOutlined />,
-      color: '#3f8600'
-    },
-    {
-      title: "Giá",
-      value: (
-        <span style={{ color: 'red' }}>
-          <DollarOutlined /> {formatPrice(book.price)}₫
-        </span>
-      ),
-      color: 'red'
-    },
-    {
-      title: "",
-      value: (
-        <Button
-          type="text"
-          icon={
-            wishlist.includes(book.id) ? (
-              <HeartFilled style={{ color: 'red', fontSize: 20 }} />
-            ) : (
-              <HeartOutlined style={{ fontSize: 20 }} />
-            )
-          }
-          onClick={toggleWishlist}
-          style={{ padding: 0 }}
-        >
-          {wishlist.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
-        </Button>
-      ),
-      prefix: null,
-      color: '#cf1322'
+    const baseStats = [
+      {
+        title: "Lượt xem",
+        value: book.views,
+        prefix: <EyeOutlined />,
+        color: '#3f8600'
+      },
+      {
+        title: "Giá",
+        value: (
+          <span style={{ color: 'red' }}>
+            <DollarOutlined /> {formatPrice(book.price)} {book?.is_physical === 1 ?'vnd' :''}
+          </span>
+        ),
+        color: 'red'
+      },
+      {
+        title: "",
+        value: (
+          <Button
+            type="text"
+            icon={
+              wishlist.includes(book.id) ? (
+                <HeartFilled style={{ color: 'red', fontSize: 20 }} />
+              ) : (
+                <HeartOutlined style={{ fontSize: 20 }} />
+              )
+            }
+            onClick={toggleWishlist}
+            style={{ padding: 0 }}
+          >
+            {wishlist.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
+          </Button>
+        ),
+        prefix: null,
+        color: '#cf1322'
+      }
+    ];
+
+    if (book.format === 'ebook') {
+      baseStats.push({
+        title: "Số chương",
+        value: book.chapters,
+        prefix: <NumberOutlined />,
+        color: '#1890ff'
+      });
     }
-  ];
 
-  if (book.format === 'ebook') {
-    baseStats.push({
-      title: "Số chương",
-      value: book.chapters,
-      prefix: <NumberOutlined />,
-      color: '#1890ff'
-    });
-  }
-
-  return baseStats;
-};
+    return baseStats;
+  };
 
   if (loading) return <Spin size="large" className="loading-spinner" />
 
@@ -858,29 +869,29 @@ const BookDetailPage = () => {
       };
     }
   };
- 
-const handleAddToCart = async () => {
-  try {
-    setIsAddingToCart(true);
 
-    const result = await addToCart(book.id, quantity);
+  const handleAddToCart = async () => {
+    try {
+      setIsAddingToCart(true);
 
-    if (result.success) {
-      toast.success('🎉 Đã thêm sách vào giỏ hàng!');
+      const result = await addToCart(book.id, quantity);
 
-      window.updateCartCount?.();
-      window.dispatchEvent(new CustomEvent('cartUpdated'));
-    } else {
-      // Nếu có message từ server, hiển thị nó
-      toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
+      if (result.success) {
+        toast.success('🎉 Đã thêm sách vào giỏ hàng!');
+
+        window.updateCartCount?.();
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+      } else {
+        // Nếu có message từ server, hiển thị nó
+        toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
+      }
+    } catch (error) {
+      toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
+      console.error('Lỗi khi gọi API addToCart:', error);
+    } finally {
+      setIsAddingToCart(false);
     }
-  } catch (error) {
-    toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
-    console.error('Lỗi khi gọi API addToCart:', error);
-  } finally {
-    setIsAddingToCart(false);
-  }
-};
+  };
 
   return (
     <div className="book-detail-container">

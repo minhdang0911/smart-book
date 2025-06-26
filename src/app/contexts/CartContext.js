@@ -188,11 +188,11 @@ export const CartProvider = ({ children }) => {
       };
 
       wsRef.current.onerror = (error) => {
-        console.error('Cart WebSocket error:', error);
+         
       };
 
     } catch (error) {
-      console.error('Error connecting to WebSocket:', error);
+       
     }
   }, [fetchCartData]);
 

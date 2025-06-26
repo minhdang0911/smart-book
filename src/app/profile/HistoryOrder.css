@@ -1,0 +1,249 @@
+/* HistoryOrder.css */
+.history-order-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.history-order-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.order-card {
+  margin-bottom: 16px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.order-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.order-card-header {
+  background: linear-gradient(135deg, #1890ff, #096dd9);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  padding: 12px 16px;
+  font-weight: 600;
+}
+
+.order-info {
+  padding: 16px;
+}
+
+.order-info p {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.order-info strong {
+  color: #262626;
+  font-weight: 600;
+}
+
+.order-status {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.order-status.pending {
+  background-color: #fff7e6;
+  color: #d48806;
+  border: 1px solid #ffd591;
+}
+
+.order-status.confirmed {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.order-status.shipped {
+  background-color: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.order-status.delivered {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.order-status.cancelled {
+  background-color: #fff2f0;
+  color: #f5222d;
+  border: 1px solid #ffccc7;
+}
+
+.order-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f5222d;
+}
+
+.order-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-detail {
+  background: #1890ff;
+  border: 1px solid #1890ff;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-detail:hover {
+  background: #096dd9;
+  border-color: #096dd9;
+  transform: translateY(-1px);
+}
+
+.btn-cancel {
+  background: #ff4d4f;
+  border: 1px solid #ff4d4f;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: #d9363e;
+  border-color: #d9363e;
+  transform: translateY(-1px);
+}
+
+/* Modal Styles */
+.order-modal {
+  border-radius: 8px;
+}
+
+.order-modal .ant-modal-header {
+  background: linear-gradient(135deg, #1890ff, #096dd9);
+  border-radius: 8px 8px 0 0;
+}
+
+.order-modal .ant-modal-title {
+  color: white;
+  font-weight: 600;
+}
+
+.order-modal .ant-modal-close {
+  color: white;
+}
+
+.order-modal .ant-modal-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.order-detail-content {
+  padding: 20px 0;
+}
+
+.order-detail-content p {
+  margin: 12px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.order-detail-content strong {
+  color: #262626;
+  font-weight: 600;
+  min-width: 120px;
+  display: inline-block;
+}
+
+.order-items-list {
+  background: #fafafa;
+  border-radius: 6px;
+  padding: 16px;
+  margin: 12px 0;
+}
+
+.order-items-list ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.order-items-list li {
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.order-total-final {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f5222d;
+  text-align: right;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .history-order-container {
+    padding: 16px;
+  }
+  
+  .history-order-title {
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+  
+  .order-actions {
+    flex-direction: column;
+  }
+  
+  .btn-detail,
+  .btn-cancel {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  
+  .order-modal {
+    margin: 16px;
+    width: calc(100% - 32px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .history-order-container {
+    padding: 12px;
+  }
+  
+  .order-card-header {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .order-info {
+    padding: 12px;
+  }
+  
+  .order-info p {
+    font-size: 13px;
+  }
+}

@@ -254,7 +254,9 @@ const handleSubmit = async (values) => {
       payment: paymentMethod,
       cart_item_ids: selectedItems || [],
       shipping_fee: shippingFee,
-      total_price: total
+      total_price: total,
+      note: values.note,
+
     };
     
     console.log('Submitting order data:', orderData);
@@ -574,42 +576,7 @@ const handleSubmit = async (values) => {
                     </Radio>
                   </div>
                   
-                  <div className="payment-option">
-                    <Radio value="atm" className="payment-radio">
-                      <div className="payment-content">
-                        <BankOutlined className="payment-icon" />
-                        <div>
-                          <Text strong>Thẻ ATM có Internet Banking</Text>
-                          <br />
-                          <Text className="payment-desc">Thẻ ngân hàng nội địa</Text>
-                        </div>
-                      </div>
-                    </Radio>
-                  </div>
-                  
-                  <div className="payment-option">
-                    <Radio value="visa" className="payment-radio">
-                      <div className="payment-content">
-                        <CreditCardOutlined className="payment-icon" />
-                        <div>
-                          <Text strong>Thẻ quốc tế Visa/Master/JBC</Text>
-                        </div>
-                      </div>
-                    </Radio>
-                  </div>
-                  
-                  <div className="payment-option">
-                    <Radio value="wallet" className="payment-radio">
-                      <div className="payment-content">
-                        <WalletOutlined className="payment-icon" />
-                        <div>
-                          <Text strong>Ví điện tử</Text>
-                          <br />
-                          <Text className="payment-desc">MoMo, ZaloPay</Text>
-                        </div>
-                      </div>
-                    </Radio>
-                  </div>
+               
                 </Radio.Group>
               </Card>
             </div>
@@ -680,7 +647,7 @@ const handleSubmit = async (values) => {
       </div>
 
       {/* Footer */}
-      <footer className="checkout-footer">
+      {/* <footer className="checkout-footer">
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">
@@ -725,7 +692,7 @@ const handleSubmit = async (values) => {
             </div>
           </div>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 };
