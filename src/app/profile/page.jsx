@@ -60,6 +60,7 @@ const ProfilePage = () => {
 
     const [activeTab, setActiveTab] = useState("all");
     const cardRefs = useRef([]);
+    const [syncedStatus, setSyncedStatus] = useState(null);
 
 
     const fetchFavoriteBooks = async () => {
@@ -335,13 +336,41 @@ const ProfilePage = () => {
         </div>
     );
 
-       useEffect(() => {
-            gsap.fromTo(
-                cardRefs.current,
-                { opacity: 0, y: 30 },
-                { opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: "power3.out" }
-            );
-        }, [favoriteBooks]);
+    useEffect(() => {
+        gsap.fromTo(
+            cardRefs.current,
+            { opacity: 0, y: 30 },
+            { opacity: 1, y: 0, stagger: 0.1, duration: 0.6, ease: "power3.out" }
+        );
+    }, [favoriteBooks]);
+
+    useEffect(() => {
+        if (selectedOrder?.id) {
+            const fetchStatus = async () => {
+                try {
+                    const token = localStorage.getItem('token');
+                    const response = await fetch(`http://localhost:8000/api/orders/${selectedOrder.id}/sync-status`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                        },
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success && result.status) {
+                        setSyncedStatus(result.status); // có thể là chuỗi "pending", "shipping", ...
+                    } else {
+                        console.warn("Không lấy được trạng thái đơn hàng");
+                    }
+                } catch (err) {
+                    console.error("Lỗi khi gọi API trạng thái:", err);
+                }
+            };
+
+            fetchStatus();
+        }
+    }, [selectedOrder]);
+
 
 
     const renderFavoriteBooks = () => {
@@ -349,7 +378,7 @@ const ProfilePage = () => {
         const digitalBooks = favoriteBooks.filter((book) => book.is_physical === 0);
 
 
-     
+
         const renderBookGrid = (books, emptyMessage) => {
             if (books.length === 0) {
                 return (
@@ -686,6 +715,15 @@ const ProfilePage = () => {
                                     }}>
                                         {Number(order.total_price).toLocaleString("vi-VN")}₫
                                     </span>
+
+                                    <span style={{
+                                        fontSize: "1.125rem",
+                                        fontWeight: "700",
+                                        color: "#059669",
+                                        marginLeft: "auto"
+                                    }}>
+                                        {order.shipping_code}
+                                    </span>
                                 </div>
 
                                 <div style={{
@@ -717,6 +755,48 @@ const ProfilePage = () => {
                                             lineHeight: "1.5"
                                         }}>
                                             {order.address}
+                                        </span>
+                                    </div>
+                                </div>
+
+
+                                <div style={{
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    gap: "8px"
+                                }}>
+                                    <div style={{
+                                        width: "8px",
+                                        height: "8px",
+                                        borderRadius: "50%",
+                                        background: "linear-gradient(45deg, #667eea, #764ba2)",
+                                        marginTop: "6px",
+                                        flexShrink: 0
+                                    }}></div>
+                                    <div>
+                                        <span
+
+
+                                            style={{
+                                                fontSize: "0.875rem",
+                                                color: "#64748b",
+                                                fontWeight: "500",
+                                                display: "block",
+                                                marginBottom: "4px"
+                                            }}>
+                                            Mã đơn hàng
+                                        </span>
+                                        <span
+                                            onClick={() => {
+                                                window.location.href = `https://donhang.ghn.vn/?order_code=${order?.shipping_code}`;
+                                            }}
+                                            style={{
+                                                fontSize: "1.125rem",
+                                                fontWeight: "700",
+                                                color: "#059669",
+                                                marginLeft: "auto"
+                                            }}>
+                                            {order.shipping_code}
                                         </span>
                                     </div>
                                 </div>
@@ -903,7 +983,7 @@ const ProfilePage = () => {
                                         fontWeight: "600",
                                         color: "#0c4a6e"
                                     }}>
-                                        {orderStatusMap[selectedOrder.status]}
+                                      {orderStatusMap[syncedStatus] || 'Đang cập nhật...'}
                                     </div>
                                 </div>
 

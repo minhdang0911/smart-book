@@ -1,14 +1,14 @@
 'use client'
 import React, { useState, useContext, useEffect } from 'react';
-import { 
-  Form, 
-  Input, 
-  Select, 
-  Button, 
-  Card, 
-  Radio, 
-  Divider, 
-  Typography, 
+import {
+  Form,
+  Input,
+  Select,
+  Button,
+  Card,
+  Radio,
+  Divider,
+  Typography,
   Space,
   Row,
   Col,
@@ -17,9 +17,9 @@ import {
   message,
   Spin
 } from 'antd';
-import { 
-  ShoppingCartOutlined, 
-  BellOutlined, 
+import {
+  ShoppingCartOutlined,
+  BellOutlined,
   UserOutlined,
   CreditCardOutlined,
   QrcodeOutlined,
@@ -29,14 +29,15 @@ import {
 } from '@ant-design/icons';
 import './CheckoutPage.css';
 import './responsive.css';
-import { CartContext} from '../../app/contexts/CartContext';
-import { 
-  apiGetProvinces, 
-  apiGetDistricts, 
-  apiGetWardsByDistrict, 
-  apiGetShippingFee 
+import { CartContext } from '../../app/contexts/CartContext';
+import {
+  apiGetProvinces,
+  apiGetDistricts,
+  apiGetWardsByDistrict,
+  apiGetShippingFee
 } from '../../../apis/ghtk';
 import { toast } from 'react-toastify';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -45,9 +46,11 @@ const CheckoutPage = () => {
   const [form] = Form.useForm();
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const { cartData, selectedItems, calculateTotal, clearCart } = useContext(CartContext);
+  const [checkoutData, setCheckoutData] = useState(null);
 
-  console.log(cartData)
-  
+const searchParams = useSearchParams();
+  const router = useRouter();
+
   // States for address data
   const [provinces, setProvinces] = useState([]);
   const [districts, setDistricts] = useState([]);
@@ -57,25 +60,26 @@ const CheckoutPage = () => {
   const [selectedWard, setSelectedWard] = useState(null);
   const [shippingFee, setShippingFee] = useState(0);
   const [shippingService, setShippingService] = useState('Chưa xác định');
-  
+
   // Loading states
   const [isLoadingShippingFee, setIsLoadingShippingFee] = useState(false);
   const [isLoadingProvinces, setIsLoadingProvinces] = useState(false);
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+   const [loading, setLoading] = useState(true);
 
   console.log(cartData)
 
   // Get actual cart data
- const getSelectedCartItems = () => {
-  if (!cartData || !selectedItems || selectedItems.length === 0) {
-    return [];
-  }
+  const getSelectedCartItems = () => {
+    if (!cartData || !selectedItems || selectedItems.length === 0) {
+      return [];
+    }
 
-  // Giả sử bạn lấy từ "items" (trong response trả về)
-  return cartData.items.filter(item => selectedItems.includes(item.id));
-};
+    // Giả sử bạn lấy từ "items" (trong response trả về)
+    return cartData.items.filter(item => selectedItems.includes(item.id));
+  };
 
 
   const selectedCartItems = getSelectedCartItems();
@@ -93,6 +97,33 @@ const CheckoutPage = () => {
       return 'Unknown District';
     }
   };
+
+  useEffect(() => {
+    try {
+      // Lấy dữ liệu từ URL params
+      const dataParam = searchParams.get('data');
+
+      if (dataParam) {
+        const data = JSON.parse(decodeURIComponent(dataParam));
+        console.log('Received checkout data:', data);
+        setCheckoutData(data);
+      } else {
+        // Không có dữ liệu, redirect về cart
+        message.warning('Không có thông tin đơn hàng. Vui lòng thử lại.');
+        router.push('/cart');
+        return;
+      }
+    } catch (error) {
+      console.error('Error parsing checkout data:', error);
+      message.error('Dữ liệu không hợp lệ. Vui lòng thử lại.');
+      router.push('/cart');
+      return;
+    } finally {
+      setLoading(false);
+    }
+  }, [searchParams, router]);
+
+  console.log(checkoutData)
 
   const getWardNameById = async (wardId) => {
     try {
@@ -225,98 +256,102 @@ const CheckoutPage = () => {
     const ward = wards.find(w => w.WardCode === value);
     setSelectedWard(ward);
   };
-const handleSubmit = async (values) => {
-  const token = localStorage.getItem('token');
-  
-  if (selectedCartItems.length === 0) {
-    message.error('Không có sản phẩm nào được chọn');
-    return;
-  }
-  
-  if (!selectedProvince || !selectedDistrict || !selectedWard) {
-    message.error('Vui lòng chọn đầy đủ địa chỉ giao hàng');
-    return;
-  }
-  
-  setIsSubmitting(true);
-  
-  try {
-    // Prepare order data
-    const orderData = {
-      address: `${values.houseNumber || ''}, ${values.street || ''}, ${selectedWard.WardName}, ${selectedDistrict.DistrictName}, ${selectedProvince.ProvinceName}`.replace(/^,\s*/, ''),
-      sonha: values.houseNumber || '',
-      street: values.street || '',
-      district_id: selectedDistrict.DistrictID,
-      ward_id: selectedWard.WardCode,
-      district_name: selectedDistrict.DistrictName,
-      ward_name: selectedWard.WardName,
-      card_id: 1,
-      payment: paymentMethod,
-      cart_item_ids: selectedItems || [],
-      shipping_fee: shippingFee,
-      total_price: total,
-      note: values.note,
+  const handleSubmit = async (values) => {
+    const token = localStorage.getItem('token');
 
-    };
-    
-    console.log('Submitting order data:', orderData);
-    
-    // Call the API
-    const response = await fetch('http://localhost:8000/api/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(orderData)
-    });
-    
-    // Parse the JSON response
-    const result = await response.json();
-    
-    // Check if the request was successful
-    if (!response.ok) {
-      throw new Error(result.message || `HTTP error! status: ${response.status}`);
+    if (selectedCartItems.length === 0) {
+      message.error('Không có sản phẩm nào được chọn');
+      return;
     }
-    
-    // Check the success flag from the API response
-    if (result.success === true) {
-      // Success notifications
-      message.success('Đặt hàng thành công!');
-      toast.success('Đặt hàng thành công!');
-           window.updateCartCount?.();
-      window.dispatchEvent(new CustomEvent('cartUpdated'));
-      
-      console.log('Order created successfully:', result);
-      console.log('Order ID:', result.order_id);
-      
-      // Clear cart after successful order
-      if (clearCart) {
-        clearCart();
+
+    if (!selectedProvince || !selectedDistrict || !selectedWard) {
+      message.error('Vui lòng chọn đầy đủ địa chỉ giao hàng');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const priceOrder = checkoutData?.totalAmount + shippingFee; // cả 2 đều là số
+
+
+
+    try {
+      // Prepare order data
+      const orderData = {
+        address: `${values.houseNumber || ''}, ${values.street || ''}, ${selectedWard.WardName}, ${selectedDistrict.DistrictName}, ${selectedProvince.ProvinceName}`.replace(/^,\s*/, ''), 
+        sonha: values.houseNumber || '',
+        street: values.street || '',
+        district_id: selectedDistrict.DistrictID,
+        ward_id: selectedWard.WardCode,
+        district_name: selectedDistrict.DistrictName,
+        ward_name: selectedWard.WardName,
+        card_id: 1,
+        payment: paymentMethod,
+        cart_item_ids: selectedItems || [],
+        shipping_fee: shippingFee,
+        total_price: priceOrder,
+        note: values.note,
+        price:checkoutData?.totalAmount
+
+      };
+
+      console.log('Submitting order data:', orderData);
+
+      // Call the API
+      const response = await fetch('http://localhost:8000/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(orderData)
+      });
+
+      // Parse the JSON response
+      const result = await response.json();
+
+      // Check if the request was successful
+      if (!response.ok) {
+        throw new Error(result.message || `HTTP error! status: ${response.status}`);
       }
-      
-      // Reset form
-      form.resetFields();
-      
-      // Optional: Redirect to order confirmation page
-      // navigate(`/order-confirmation/${result.order_id}`);
-      
-    } else {
-      // API returned success: false
-      throw new Error(result.message || 'Đặt hàng thất bại');
+
+      // Check the success flag from the API response
+      if (result.success === true) {
+        // Success notifications
+        message.success('Đặt hàng thành công!');
+        toast.success('Đặt hàng thành công!');
+        window.updateCartCount?.();
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+
+        console.log('Order created successfully:', result);
+        console.log('Order ID:', result.order_id);
+
+        // Clear cart after successful order
+        if (clearCart) {
+          clearCart();
+        }
+
+        // Reset form
+        form.resetFields();
+
+        // Optional: Redirect to order confirmation page
+        // navigate(`/order-confirmation/${result.order_id}`);
+
+      } else {
+        // API returned success: false
+        throw new Error(result.message || 'Đặt hàng thất bại');
+      }
+
+    } catch (error) {
+      console.error('Error creating order:', error);
+
+      // Error notifications
+      message.error(error.message || 'Đặt hàng thất bại. Vui lòng thử lại!');
+      toast.error(error.message || 'Đặt hàng thất bại. Vui lòng thử lại!');
+
+    } finally {
+      setIsSubmitting(false);
     }
-    
-  } catch (error) {
-    console.error('Error creating order:', error);
-    
-    // Error notifications
-    message.error(error.message || 'Đặt hàng thất bại. Vui lòng thử lại!');
-    toast.error(error.message || 'Đặt hàng thất bại. Vui lòng thử lại!');
-    
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   // Check if cart is empty
   if (!selectedCartItems || selectedCartItems.length === 0) {
@@ -329,27 +364,10 @@ const handleSubmit = async (values) => {
       </div>
     );
   }
+ 
 
   return (
     <div className="checkout-container">
-      {/* Header */}
-      <header className="checkout-header">
-        <div className="header-content">
-          <div className="logo">
-            <span className="logo-waka">WAKA</span>
-            <span className="logo-shop">SHOP</span>
-            <span className="divider">|</span>
-            <span className="page-title">Thanh toán</span>
-          </div>
-          <div className="header-actions">
-            <ShoppingCartOutlined className="header-icon" />
-            <BellOutlined className="header-icon" />
-            <div className="user-avatar">
-              <UserOutlined />
-            </div>
-          </div>
-        </div>
-      </header>
 
       <div className="checkout-content">
         <Row gutter={24}>
@@ -357,7 +375,7 @@ const handleSubmit = async (values) => {
           <Col xs={24} lg={16}>
             <div className="checkout-form-section">
               <Title level={3} className="section-title">Xác nhận thanh toán</Title>
-              
+
               {/* Delivery Address */}
               <Card className="form-card">
                 <Title level={4} className="card-title">Địa chỉ nhận hàng</Title>
@@ -379,7 +397,7 @@ const handleSubmit = async (values) => {
                       </Form.Item>
                     </Col>
                   </Row>
-                  
+
                   <Row gutter={16}>
                     <Col xs={24} md={8}>
                       <Form.Item label="Số nhà" name="houseNumber">
@@ -393,7 +411,7 @@ const handleSubmit = async (values) => {
                     </Col>
                     <Col xs={24} md={8}>
                       <Form.Item label="Tỉnh/Thành Phố" name="province" rules={[{ required: true, message: 'Vui lòng chọn tỉnh/thành phố' }]}>
-                        <Select 
+                        <Select
                           placeholder="Chọn tỉnh/thành phố"
                           loading={isLoadingProvinces}
                           onChange={handleProvinceChange}
@@ -411,11 +429,11 @@ const handleSubmit = async (values) => {
                       </Form.Item>
                     </Col>
                   </Row>
-                  
+
                   <Row gutter={16}>
                     <Col xs={24} md={12}>
                       <Form.Item label="Quận/Huyện" name="district" rules={[{ required: true, message: 'Vui lòng chọn quận/huyện' }]}>
-                        <Select 
+                        <Select
                           placeholder="Chọn quận/huyện"
                           loading={isLoadingDistricts}
                           onChange={handleDistrictChange}
@@ -435,7 +453,7 @@ const handleSubmit = async (values) => {
                     </Col>
                     <Col xs={24} md={12}>
                       <Form.Item label="Phường/Xã/Thị Trấn" name="ward" rules={[{ required: true, message: 'Vui lòng chọn phường/xã' }]}>
-                        <Select 
+                        <Select
                           placeholder="Chọn phường/xã"
                           loading={isLoadingWards}
                           onChange={handleWardChange}
@@ -454,11 +472,11 @@ const handleSubmit = async (values) => {
                       </Form.Item>
                     </Col>
                   </Row>
-                  
+
                   <Form.Item label="Địa chỉ chi tiết" name="address">
                     <Input placeholder="Nhập địa chỉ chi tiết (tùy chọn)" />
                   </Form.Item>
-                  
+
                   <Form.Item label="Ghi chú" name="note">
                     <Input.TextArea rows={3} placeholder="Nhập ghi chú (không bắt buộc)" />
                   </Form.Item>
@@ -473,8 +491,8 @@ const handleSubmit = async (values) => {
                 <div className="product-section">
                   {selectedCartItems.map(item => (
                     <div key={item.id} className="product-item">
-                      <Image 
-                        src={item.image || '/api/placeholder/80/100'} 
+                      <Image
+                        src={item.image || '/api/placeholder/80/100'}
                         alt={item.name || item.title}
                         width={60}
                         height={80}
@@ -492,7 +510,7 @@ const handleSubmit = async (values) => {
                     </div>
                   ))}
                 </div>
-                
+
                 <div className="shipping-info">
                   <Row>
                     <Col span={12}>
@@ -529,7 +547,7 @@ const handleSubmit = async (values) => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="total-section">
                   <Row justify="space-between" align="middle">
                     <Col>
@@ -547,8 +565,8 @@ const handleSubmit = async (values) => {
               {/* Payment Methods */}
               <Card className="form-card">
                 <Title level={4} className="card-title">Chọn phương thức thanh toán</Title>
-                <Radio.Group 
-                  value={paymentMethod} 
+                <Radio.Group
+                  value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
                   className="payment-methods"
                 >
@@ -564,7 +582,7 @@ const handleSubmit = async (values) => {
                       </div>
                     </Radio>
                   </div>
-                  
+
                   <div className="payment-option">
                     <Radio value="qr" className="payment-radio">
                       <div className="payment-content">
@@ -575,8 +593,8 @@ const handleSubmit = async (values) => {
                       </div>
                     </Radio>
                   </div>
-                  
-               
+
+
                 </Radio.Group>
               </Card>
             </div>
@@ -588,27 +606,31 @@ const handleSubmit = async (values) => {
               {/* Order Summary */}
               <Card className="summary-card">
                 <Title level={4} className="card-title">Thông tin thanh toán</Title>
-                
+
                 <div className="summary-row">
                   <Text>Số sản phẩm</Text>
                   <Text>{selectedCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} sản phẩm</Text>
                 </div>
-                
+
                 <div className="summary-row">
                   <Text>Tổng tiền hàng</Text>
                   <Text>{subtotal.toLocaleString()}đ</Text>
                 </div>
-                
+
                 <div className="summary-row">
-                  <Text>Voucher của Waka</Text>
-                  <Text>0đ</Text>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <Text>Tạm tính:</Text>
+                    <Text>{checkoutData?.totalAmount?.toLocaleString('vi-VN')}đ</Text>
+                  </div>
+                  <Text>Voucher </Text>
+                  <Text>{checkoutData?.totalDiscount?.toLocaleString('vi-VN')}đ</Text>
                 </div>
-                
+
                 <div className="summary-row">
                   <Text>Giảm giá vận chuyển</Text>
                   <Text>0đ</Text>
                 </div>
-                
+
                 <div className="summary-row">
                   <Text>Phí vận chuyển</Text>
                   <Text className="highlight">
@@ -619,20 +641,21 @@ const handleSubmit = async (values) => {
                     )}
                   </Text>
                 </div>
-                
+
                 <Divider />
-                
+
                 <div className="summary-row total-row">
                   <Text strong>Tổng cộng</Text>
                   <Text strong className="total-price">
-                    {total.toLocaleString()}đ
+                 {(checkoutData?.totalAmount + shippingFee).toLocaleString()}đ
+
                   </Text>
                 </div>
-                
-                <Button 
-                  type="primary" 
-                  size="large" 
-                  className="checkout-btn" 
+
+                <Button
+                  type="primary"
+                  size="large"
+                  className="checkout-btn"
                   block
                   loading={isSubmitting}
                   onClick={() => form.submit()}
@@ -646,53 +669,6 @@ const handleSubmit = async (values) => {
         </Row>
       </div>
 
-      {/* Footer */}
-      {/* <footer className="checkout-footer">
-        <div className="footer-content">
-          <div className="footer-section">
-            <div className="footer-logo">
-              <span className="logo-waka">WAKA</span>
-            </div>
-            <Text className="footer-desc">
-              Công ty Cổ phần Sách điện tử Waka
-            </Text>
-            <div className="contact-info">
-              <Text>📞 0877736269</Text>
-              <Text>✉️ Support@waka.vn</Text>
-            </div>
-          </div>
-          
-          <div className="footer-section">
-            <Title level={5} className="footer-title">Về chúng tôi</Title>
-            <div className="footer-links">
-              <Text>Giới thiệu</Text>
-              <Text>Cơ cấu tổ chức</Text>
-              <Text>Liên hệ hoạt động</Text>
-            </div>
-          </div>
-          
-          <div className="footer-section">
-            <Title level={5} className="footer-title">Thông tin hỗ trợ</Title>
-            <div className="footer-links">
-              <Text>Thẻ thanh toán ứng dụng dịch vụ</Text>
-              <Text>Quyền lợi</Text>
-              <Text>Quy định riêng tư</Text>
-              <Text>Câu hỏi thường gặp</Text>
-            </div>
-          </div>
-          
-          <div className="footer-section">
-            <Title level={5} className="footer-title">Tải ứng dụng</Title>
-            <div className="app-downloads">
-              <div className="qr-code">📱</div>
-              <div className="download-buttons">
-                <div className="download-btn">App Store</div>
-                <div className="download-btn">Google Play</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer> */}
     </div>
   );
 };

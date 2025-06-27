@@ -27,17 +27,19 @@ import {
 import { useRouter } from 'next/navigation';
 import './Cart.css';
 import { useCart } from '../../app/contexts/CartContext';
+import { toast } from 'react-toastify';
 
 const { Title, Text } = Typography;
 
 // Tách CartItem thành component riêng để tối ưu re-render
-const CartItem = memo(({ 
-  item, 
-  isSelected, 
-  onSelect, 
-  onUpdateQuantity, 
-  onRemove, 
-  isUpdating 
+const CartItem = memo(({
+  item,
+  isSelected,
+  onSelect,
+  onUpdateQuantity,
+  onRemove,
+  isUpdating,
+  appliedCoupon
 }) => {
   const handleQuantityChange = useCallback((newQuantity) => {
     if (newQuantity && newQuantity !== item.quantity) {
@@ -46,7 +48,7 @@ const CartItem = memo(({
   }, [item.id, item.quantity, onUpdateQuantity]);
 
   const handleSelect = useCallback((e) => {
-    console.log('Item selected:', item.id, e.target.checked); // Debug log
+    console.log('Item selected:', item.id, e.target.checked);
     onSelect(item.id, e.target.checked);
   }, [item.id, onSelect]);
 
@@ -56,9 +58,68 @@ const CartItem = memo(({
     window.dispatchEvent(new CustomEvent('cartUpdated'));
   }, [item.id, onRemove]);
 
+  // Tính giá sau khi áp dụng mã giảm giá
+  const calculateDiscountedPrice = useCallback((originalPrice) => {
+    console.log('=== CALCULATING DISCOUNTED PRICE ===');
+    console.log('Original Price:', originalPrice);
+    console.log('Applied Coupon:', appliedCoupon);
+    console.log('Item Book ID:', item.book.id);
+
+    if (!appliedCoupon) {
+      console.log('No coupon applied');
+      return originalPrice;
+    }
+
+    // Kiểm tra xem sản phẩm có áp dụng được mã giảm giá không
+    const isApplicable = appliedCoupon.books.some(book => {
+      console.log('Checking book ID:', book.id, 'vs item book ID:', item.book.id);
+      // Thử cả 2 cách so sánh để đảm bảo
+      return book.id === item.book.id || parseInt(book.id) === parseInt(item.book.id) || String(book.id) === String(item.book.id);
+    });
+
+    console.log('Is Applicable:', isApplicable);
+    if (!isApplicable) {
+      console.log('Coupon not applicable for this item');
+      return originalPrice;
+    }
+
+    // Tính giá sau giảm
+    if (appliedCoupon.discount_type === 'percent') {
+      const discountAmount = (originalPrice * parseFloat(appliedCoupon.discount_value)) / 100;
+      const finalPrice = originalPrice - discountAmount;
+      console.log('Percent discount:', appliedCoupon.discount_value + '%');
+      console.log('Discount amount:', discountAmount);
+      console.log('Final price:', finalPrice);
+      return finalPrice;
+    } else if (appliedCoupon.discount_type === 'fixed') {
+      const finalPrice = Math.max(0, originalPrice - parseFloat(appliedCoupon.discount_value));
+      console.log('Fixed discount:', appliedCoupon.discount_value);
+      console.log('Final price:', finalPrice);
+      return finalPrice;
+    }
+
+    console.log('Unknown discount type, returning original price');
+    return originalPrice;
+  }, [appliedCoupon, item.book.id]);
+
+  const originalPrice = parseFloat(item.book.price);
+  const discountedPrice = calculateDiscountedPrice(originalPrice);
+  const hasDiscount = discountedPrice < originalPrice;
+
+  console.log('=== ITEM RENDER INFO ===');
+  console.log('Item ID:', item.id, 'Book ID:', item.book.id);
+  console.log('Original Price:', originalPrice);
+  console.log('Discounted Price:', discountedPrice);
+  console.log('Has Discount:', hasDiscount);
+  console.log('Applied Coupon in render:', appliedCoupon);
+
   const itemTotal = useMemo(() => {
-    return (parseFloat(item.book.price) * item.quantity).toLocaleString('vi-VN');
-  }, [item.book.price, item.quantity]);
+    return (discountedPrice * item.quantity).toLocaleString('vi-VN');
+  }, [discountedPrice, item.quantity]);
+
+  const originalTotal = useMemo(() => {
+    return (originalPrice * item.quantity).toLocaleString('vi-VN');
+  }, [originalPrice, item.quantity]);
 
   return (
     <div className={`cart-item ${isSelected ? 'selected' : ''}`}>
@@ -93,7 +154,19 @@ const CartItem = memo(({
 
         <div className="cart-item-price">
           <span className="mobile-label">Đơn giá:</span>
-          <Text strong>{parseFloat(item.book.price).toLocaleString('vi-VN')}đ</Text>
+          {hasDiscount ? (
+            <div>
+              <Text delete type="secondary" style={{ fontSize: '12px' }}>
+                {originalPrice.toLocaleString('vi-VN')}đ
+              </Text>
+              <br />
+              <Text strong style={{ color: '#ff4d4f' }}>
+                {discountedPrice.toLocaleString('vi-VN')}đ
+              </Text>
+            </div>
+          ) : (
+            <Text strong>{originalPrice.toLocaleString('vi-VN')}đ</Text>
+          )}
         </div>
 
         <div className="cart-item-quantity">
@@ -125,9 +198,21 @@ const CartItem = memo(({
 
         <div className="cart-item-total">
           <span className="mobile-label">Thành tiền:</span>
-          <Text strong className="total-price">
-            {itemTotal}đ
-          </Text>
+          {hasDiscount ? (
+            <div>
+              <Text delete type="secondary" style={{ fontSize: '12px' }}>
+                {originalTotal}đ
+              </Text>
+              <br />
+              <Text strong className="total-price" style={{ color: '#ff4d4f' }}>
+                {itemTotal}đ
+              </Text>
+            </div>
+          ) : (
+            <Text strong className="total-price">
+              {itemTotal}đ
+            </Text>
+          )}
         </div>
 
         <div className="cart-item-actions">
@@ -168,61 +253,156 @@ const Cart = () => {
 
   const [voucherModalVisible, setVoucherModalVisible] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
-
- 
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [checkingCoupon, setCheckingCoupon] = useState(false);
 
   // Ensure selectedItems is always an array
   const safeSelectedItems = useMemo(() => {
     return Array.isArray(selectedItems) ? selectedItems : [];
   }, [selectedItems]);
 
-const handleItemSelect = useCallback((itemId, checked) => {
-  console.log('handleItemSelect called:', itemId, checked);
-  console.log('Current selectedItems:', selectedItems);
-  
-  // Ensure selectedItems is always an array
-  const currentSelected = Array.isArray(selectedItems) ? selectedItems : [];
-  
-  let newSelected;
-  if (checked) {
-    if (!currentSelected.includes(itemId)) {
-      newSelected = [...currentSelected, itemId];
-    } else {
-      newSelected = currentSelected;
+  // API để kiểm tra mã giảm giá
+  const checkCoupon = async (couponCode) => {
+    try {
+      setCheckingCoupon(true);
+      const response = await fetch('http://localhost:8000/api/coupons/check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: couponCode
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.coupon) {
+        return {
+          success: true,
+          coupon: data.coupon,
+          message: data.message
+        };
+      } else {
+        return {
+          success: false,
+          message: data.message || 'Mã giảm giá không hợp lệ'
+        };
+      }
+    } catch (error) {
+      console.error('Error checking coupon:', error);
+      return {
+        success: false,
+        message: 'Có lỗi xảy ra khi kiểm tra mã giảm giá'
+      };
+    } finally {
+      setCheckingCoupon(false);
     }
-  } else {
-    newSelected = currentSelected.filter(id => id !== itemId);
-  }
-  
-  console.log('Setting new selectedItems:', newSelected);
-  setSelectedItems(newSelected);
-}, [selectedItems, setSelectedItems]);
+  };
+
+  // Xử lý áp dụng mã giảm giá
+  const handleApplyCoupon = async () => {
+    if (!voucherCode.trim()) {
+      toast.error('Vui lòng nhập mã giảm giá');
+      return;
+    }
+
+    const result = await checkCoupon(voucherCode.trim());
+    console.log('=== COUPON CHECK RESULT ===');
+    console.log('Result:', result);
+
+    if (result.success) {
+      console.log('Coupon details:', result.coupon);
+      console.log('Coupon books:', result.coupon.books);
+      console.log('Cart items:', cartData?.items);
+
+      // Kiểm tra xem có sản phẩm nào trong giỏ hàng áp dụng được mã giảm giá không
+      const applicableItems = cartData?.items?.filter(item => {
+        const isApplicable = result.coupon.books.some(book => {
+          console.log('Comparing:', book.id, 'with', item.book.id, 'Type:', typeof book.id, typeof item.book.id);
+          return parseInt(book.id) === parseInt(item.book.id); // Đảm bảo so sánh đúng kiểu dữ liệu
+        });
+        console.log('Item', item.book.id, 'is applicable:', isApplicable);
+        return isApplicable;
+      }) || [];
+
+      console.log('Applicable items:', applicableItems);
+
+      if (applicableItems.length === 0) {
+        toast.warning('Mã giảm giá này không áp dụng cho sản phẩm nào trong giỏ hàng');
+        return;
+      }
+
+      // Kiểm tra giá trị đơn hàng tối thiểu
+      const totalValue = calculateSelectedTotalWithCoupon(result.coupon);
+      console.log('Total value:', totalValue, 'Min order:', result.coupon.min_order_value);
+
+      if (totalValue < parseFloat(result.coupon.min_order_value)) {
+        toast.error(`Đơn hàng phải có giá trị tối thiểu ${parseFloat(result.coupon.min_order_value).toLocaleString('vi-VN')}đ`);
+        return;
+      }
+
+      console.log('Setting applied coupon:', result.coupon);
+      setAppliedCoupon(result.coupon);
+      toast.success(`${result.message} Áp dụng thành công cho ${applicableItems.length} sản phẩm`);
+      setVoucherModalVisible(false);
+    } else {
+      toast.error(result.message);
+    }
+  };
+
+  // Xóa mã giảm giá
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setVoucherCode('');
+    toast.success('Đã xóa mã giảm giá');
+  };
+
+  const handleItemSelect = useCallback((itemId, checked) => {
+    console.log('handleItemSelect called:', itemId, checked);
+    console.log('Current selectedItems:', selectedItems);
+
+    const currentSelected = Array.isArray(selectedItems) ? selectedItems : [];
+
+    let newSelected;
+    if (checked) {
+      if (!currentSelected.includes(itemId)) {
+        newSelected = [...currentSelected, itemId];
+      } else {
+        newSelected = currentSelected;
+      }
+    } else {
+      newSelected = currentSelected.filter(id => id !== itemId);
+    }
+
+    console.log('Setting new selectedItems:', newSelected);
+    setSelectedItems(newSelected);
+  }, [selectedItems, setSelectedItems]);
 
   const handleSelectAll = useCallback((checked) => {
-    console.log('handleSelectAll called:', checked); // Debug log
-    
+    console.log('handleSelectAll called:', checked);
+
     if (checked && cartData?.items) {
       const allItemIds = cartData.items.map(item => item.id);
-      console.log('Selecting all items:', allItemIds); // Debug log
+      console.log('Selecting all items:', allItemIds);
       setSelectedItems(allItemIds);
     } else {
-      console.log('Deselecting all items'); // Debug log
+      console.log('Deselecting all items');
       setSelectedItems([]);
     }
   }, [cartData?.items, setSelectedItems]);
 
   const handleRemoveSelected = useCallback(() => {
     if (safeSelectedItems.length > 0) {
-      console.log('Removing selected items:', safeSelectedItems); // Debug log
+      console.log('Removing selected items:', safeSelectedItems);
       removeItems(safeSelectedItems);
-      // Reset selected items after removal
       setSelectedItems([]);
     }
   }, [safeSelectedItems, removeItems, setSelectedItems]);
 
   const isAllSelected = useMemo(() => {
     const result = cartData?.items?.length > 0 && safeSelectedItems.length === cartData.items.length;
-    console.log('isAllSelected:', result, 'selectedItems:', safeSelectedItems.length, 'totalItems:', cartData?.items?.length); // Debug log
+    console.log('isAllSelected:', result, 'selectedItems:', safeSelectedItems.length, 'totalItems:', cartData?.items?.length);
     return result;
   }, [cartData?.items?.length, safeSelectedItems.length]);
 
@@ -230,8 +410,32 @@ const handleItemSelect = useCallback((itemId, checked) => {
     return safeSelectedItems.length > 0 && safeSelectedItems.length < (cartData?.items?.length || 0);
   }, [safeSelectedItems.length, cartData?.items?.length]);
 
-  // Fixed calculation function
-  const calculateSelectedTotal = useCallback(() => {
+  // Tính tổng tiền sau khi áp dụng mã giảm giá
+  const calculateSelectedTotalWithCoupon = useCallback((coupon = appliedCoupon) => {
+    if (!cartData || !safeSelectedItems.length) return 0;
+
+    return cartData.items
+      .filter(item => safeSelectedItems.includes(item.id))
+      .reduce((total, item) => {
+        const originalPrice = parseFloat(item.book.price) || 0;
+        let finalPrice = originalPrice;
+
+        // Áp dụng giảm giá nếu có và sản phẩm được áp dụng
+        if (coupon && coupon.books.some(book => book.id === item.book.id)) {
+          if (coupon.discount_type === 'percent') {
+            const discountAmount = (originalPrice * parseFloat(coupon.discount_value)) / 100;
+            finalPrice = originalPrice - discountAmount;
+          } else if (coupon.discount_type === 'fixed') {
+            finalPrice = Math.max(0, originalPrice - parseFloat(coupon.discount_value));
+          }
+        }
+
+        return total + finalPrice * item.quantity;
+      }, 0);
+  }, [cartData, safeSelectedItems, appliedCoupon]);
+
+  // Tính tổng tiền gốc (trước khi giảm giá)
+  const calculateOriginalTotal = useCallback(() => {
     if (!cartData || !safeSelectedItems.length) return 0;
 
     return cartData.items
@@ -243,8 +447,18 @@ const handleItemSelect = useCallback((itemId, checked) => {
   }, [cartData, safeSelectedItems]);
 
   const totalAmount = useMemo(() => {
-    return calculateSelectedTotal().toLocaleString('vi-VN');
-  }, [calculateSelectedTotal]);
+    return calculateSelectedTotalWithCoupon().toLocaleString('vi-VN');
+  }, [calculateSelectedTotalWithCoupon]);
+
+  const originalTotalAmount = useMemo(() => {
+    return calculateOriginalTotal().toLocaleString('vi-VN');
+  }, [calculateOriginalTotal]);
+
+  const totalDiscount = useMemo(() => {
+    const original = calculateOriginalTotal();
+    const discounted = calculateSelectedTotalWithCoupon();
+    return original - discounted;
+  }, [calculateOriginalTotal, calculateSelectedTotalWithCoupon]);
 
   // Debug effect to monitor selectedItems changes
   React.useEffect(() => {
@@ -274,6 +488,27 @@ const handleItemSelect = useCallback((itemId, checked) => {
     );
   }
 
+  const handleCheckout = () => {
+    const checkoutData = {
+      selectedItems: safeSelectedItems,
+      totalAmount: calculateSelectedTotalWithCoupon(),
+      originalAmount: calculateOriginalTotal(),
+      totalDiscount: totalDiscount,
+      appliedCoupon: appliedCoupon ? {
+        id: appliedCoupon.id,
+        name: appliedCoupon.name,
+        discount_type: appliedCoupon.discount_type,
+        discount_value: appliedCoupon.discount_value
+      } : null
+    };
+
+    // Encode dữ liệu thành URL params
+    const params = new URLSearchParams({
+      data: JSON.stringify(checkoutData)
+    });
+
+    router.push(`/payment?${params.toString()}`);
+  };
   return (
     <div className="cart-container">
       <div className="cart-header">
@@ -337,6 +572,7 @@ const handleItemSelect = useCallback((itemId, checked) => {
                   onUpdateQuantity={updateItemQuantity}
                   onRemove={removeItems}
                   isUpdating={updatingItems.has(item.id)}
+                  appliedCoupon={appliedCoupon}
                 />
               ))}
             </div>
@@ -348,10 +584,32 @@ const handleItemSelect = useCallback((itemId, checked) => {
             <div className="cart-summary">
               <div className="cart-voucher-row">
                 <Text>Mã giảm giá:</Text>
-                <Button type="link" onClick={() => setVoucherModalVisible(true)}>
-                  Nhập mã
-                </Button>
+                {appliedCoupon ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Text strong style={{ color: '#52c41a' }}>
+                      {appliedCoupon.name}
+                    </Text>
+                    <Button type="link" size="small" onClick={handleRemoveCoupon}>
+                      Xóa
+                    </Button>
+                  </div>
+                ) : (
+                  <Button type="link" onClick={() => setVoucherModalVisible(true)}>
+                    Nhập mã
+                  </Button>
+                )}
               </div>
+
+              {appliedCoupon && (
+                <div style={{ marginTop: '8px' }}>
+                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                    Giảm {appliedCoupon.discount_type === 'percent'
+                      ? `${appliedCoupon.discount_value}%`
+                      : `${parseFloat(appliedCoupon.discount_value).toLocaleString('vi-VN')}đ`
+                    } cho các sản phẩm áp dụng
+                  </Text>
+                </div>
+              )}
 
               <Divider />
 
@@ -363,10 +621,20 @@ const handleItemSelect = useCallback((itemId, checked) => {
                   <Text>{safeSelectedItems.length}</Text>
                 </div>
 
-                <div className="cart-summary-row">
-                  <Text>Voucher đã dùng:</Text>
-                  <Text>{voucherCode || 'Không có'}</Text>
-                </div>
+                {appliedCoupon && totalDiscount > 0 && (
+                  <>
+                    <div className="cart-summary-row">
+                      <Text>Tạm tính:</Text>
+                      <Text>{originalTotalAmount}đ</Text>
+                    </div>
+                    <div className="cart-summary-row">
+                      <Text>Giảm giá:</Text>
+                      <Text style={{ color: '#52c41a' }}>
+                        -{totalDiscount.toLocaleString('vi-VN')}đ
+                      </Text>
+                    </div>
+                  </>
+                )}
 
                 <Divider />
 
@@ -383,7 +651,7 @@ const handleItemSelect = useCallback((itemId, checked) => {
                   block
                   className="cart-checkout-btn"
                   disabled={safeSelectedItems.length === 0}
-                  onClick={() => window.location.href = '/payment'}
+                  onClick={handleCheckout}
                 >
                   Mua hàng ({safeSelectedItems.length} sản phẩm)
                 </Button>
@@ -396,18 +664,17 @@ const handleItemSelect = useCallback((itemId, checked) => {
       <Modal
         title="Nhập mã giảm giá"
         open={voucherModalVisible}
-        onOk={() => {
-          message.success(`Đã áp dụng mã: ${voucherCode}`);
-          setVoucherModalVisible(false);
-        }}
+        onOk={handleApplyCoupon}
         onCancel={() => setVoucherModalVisible(false)}
         okText="Áp dụng"
         cancelText="Hủy"
+        confirmLoading={checkingCoupon}
       >
         <Input
           placeholder="Nhập mã giảm giá..."
           value={voucherCode}
           onChange={(e) => setVoucherCode(e.target.value)}
+          onPressEnter={handleApplyCoupon}
         />
       </Modal>
     </div>

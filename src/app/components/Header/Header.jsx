@@ -333,7 +333,7 @@ const Header = () => {
         title={
           <div className="drawer-header">
             <BookOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-            <span>WAKA Menu</span>
+            <span>SmarkBook</span>
           </div>
         }
         placement="left"

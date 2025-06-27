@@ -49,6 +49,7 @@ import {
   HeartFilled,
   MinusOutlined
 } from '@ant-design/icons'
+import { useRouter } from 'next/navigation'
 
 
 import BookList from './BookList'
@@ -60,6 +61,7 @@ const { Title, Paragraph, Text } = Typography
 const { TextArea } = Input
 
 const BookDetailPage = () => {
+    const router = useRouter()
   const params = useParams()
   const { id } = params
   const [book, setBook] = useState(null)
@@ -651,6 +653,8 @@ const BookDetailPage = () => {
     )
   }
 
+ 
+
   const renderChaptersAccordion = () => {
     if (book.format !== 'ebook' || !book.chaptersData) return null
 
@@ -720,16 +724,35 @@ const BookDetailPage = () => {
           >
             Thêm vào giỏ hàng
           </Button>
-          <Button
-            size="large"
-            icon={<DollarOutlined />}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
-            onClick={() => {
-              window.location.href = '/payment';
-            }}
-          >
-            Mua ngay
-          </Button>
+  <Button
+  size="large"
+  icon={<DollarOutlined />}
+  style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
+  onClick={() => {
+    // Tạo dữ liệu checkout cho sản phẩm hiện tại
+    const checkoutData = {
+      items: [{
+        id: book.id, // ID sản phẩm hiện tại
+        name: book.name,
+        price: book.price,
+        quantity: 1, // hoặc lấy từ state quantity
+        image: book?.cover_image,
+        // ... các thông tin khác của sản phẩm
+      }],
+      // totalAmount: product, // hoặc productPrice * quantity
+      totalDiscount: 0, // nếu có giảm giá
+    };
+    
+    // Chuyển đến trang checkout với dữ liệu
+    const encodedData = encodeURIComponent(JSON.stringify(checkoutData));
+    router.push(`/payment?data=${encodedData}`);
+    
+    // Hoặc nếu không dùng Next.js router:
+    // window.location.href = `/checkout?data=${encodedData}`;
+  }}
+>
+  Mua ngay
+</Button>
 
           <Tooltip title="Chia sẻ">
             <Button size="large" icon={<ShareAltOutlined />} />
