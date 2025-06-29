@@ -45,72 +45,108 @@ export default function AuthPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-  const onFinish = async (values) => {
-    if (loading) return; // 🔒 Chặn double submit
+const onFinish = async (values) => {
+  if (loading) return; // 🔒 Chặn double submit
 
-    setLoading(true);
-    try {
-      if (isLogin) {
-        const data = await apiLoginUser(values.email, values.password);
+  setLoading(true);
+  try {
+    if (isLogin) {
+      const data = await apiLoginUser(values.email, values.password);
 
-        if (!data.email_verified) {
-          setOtpEmail(values.email);
-          setNotifContent({
-            message: '⚠️ Chưa xác thực email',
-            description: 'Vui lòng kiểm tra email và nhập mã OTP!'
-          });
-          setShowNotif(true);
-
-          console.log('📩 Gửi OTP đến:', values.email);
-          await handleSendOtp(values.email);
-          setShowOtp(true);
-        } else {
-          localStorage.setItem('token', data.access_token);
-          setNotifContent({
-            message: '🎉 Đăng nhập thành công!',
-            description: `Chào mừng trở lại, ${data.user?.name || 'người dùng'}!`
-          });
-          setShowNotif(true);
-          setTimeout(() => window.location.href = '/', 1500);
-        }
-      } else {
-        // 🔥 REGISTER - Kiểm tra xem API có tự gửi OTP không
-        const registerResult = await apiRegisterUser(
-          values.name,
-          values.email,
-          values.password,
-          values.password_confirmation,
-          values.phone
-        );
-
+      if (!data.email_verified) {
         setOtpEmail(values.email);
         setNotifContent({
-          message: '🎉 Đăng ký thành công!',
-          description: 'Vui lòng kiểm tra email và nhập mã OTP để xác thực.'
+          message: '⚠️ Chưa xác thực email',
+          description: 'Vui lòng kiểm tra email và nhập mã OTP!'
         });
         setShowNotif(true);
 
-        // ✅ CHỈ GỬI OTP NÉU API REGISTER CHƯA TỰ GỬI
-        if (!registerResult?.otp_sent && !registerResult?.otp_already_sent) {
-          console.log('📩 Gửi OTP đến:', values.email);
-          await handleSendOtp(values.email);
-        } else {
-          console.log('📩 OTP đã được gửi tự động từ API register');
-          setCountdown(60); // Set countdown ngay cả khi không gọi handleSendOtp
-        }
-        
+        console.log('📩 Gửi OTP đến:', values.email);
+        await handleSendOtp(values.email);
         setShowOtp(true);
+      } else {
+        localStorage.setItem('token', data.access_token);
+        setNotifContent({
+          message: '🎉 Đăng nhập thành công!',
+          description: `Chào mừng trở lại, ${data.user?.name || 'người dùng'}!`
+        });
+        setShowNotif(true);
+        setTimeout(() => window.location.href = '/', 1500);
       }
-    } catch (err) {
+    } else {
+      // 🔥 REGISTER - Kiểm tra xem API có tự gửi OTP không
+      const registerResult = await apiRegisterUser(
+        values.name,
+        values.email,
+        values.password,
+        values.password_confirmation,
+        values.phone
+      );
+
+      setOtpEmail(values.email);
       setNotifContent({
-        message: '❌ Lỗi',
-        description: err.message || 'Có lỗi xảy ra, vui lòng thử lại!'
+        message: '🎉 Đăng ký thành công!',
+        description: 'Vui lòng kiểm tra email và nhập mã OTP để xác thực.'
       });
       setShowNotif(true);
-    } finally {
-      setLoading(false);
+
+      // ✅ CHỈ GỬI OTP NÉU API REGISTER CHƯA TỰ GỬI
+      if (!registerResult?.otp_sent && !registerResult?.otp_already_sent) {
+        console.log('📩 Gửi OTP đến:', values.email);
+        await handleSendOtp(values.email);
+      } else {
+        console.log('📩 OTP đã được gửi tự động từ API register');
+        setCountdown(60); // Set countdown ngay cả khi không gọi handleSendOtp
+      }
+      
+      setShowOtp(true);
     }
-  };
+  } catch (err) {
+    console.log('❌ Error caught:', err); // Debug log
+    
+    let errorMessage = '❌ Lỗi';
+    let errorDescription = 'Có lỗi xảy ra, vui lòng thử lại!';
+
+    // 🔥 XỬ LÝ LỖI VALIDATION TỪ API
+    if (err.response && err.response.data) {
+      const errorData = err.response.data;
+      
+      // Kiểm tra format lỗi validation: { status: false, errors: {...} }
+      if (errorData.status === false && errorData.errors) {
+        const errors = errorData.errors;
+        const errorMessages = [];
+        
+        // Lấy tất cả lỗi từ object errors
+        Object.keys(errors).forEach(field => {
+          if (Array.isArray(errors[field])) {
+            errorMessages.push(...errors[field]);
+          } else {
+            errorMessages.push(errors[field]);
+          }
+        });
+        
+        errorMessage = '❌ Lỗi xác thực';
+        errorDescription = errorMessages.join('\n');
+      } 
+      // Kiểm tra các format lỗi khác
+      else if (errorData.message) {
+        errorDescription = errorData.message;
+      }
+    } 
+    // Fallback cho lỗi network hoặc không có response
+    else if (err.message) {
+      errorDescription = err.message;
+    }
+
+    setNotifContent({
+      message: errorMessage,
+      description: errorDescription
+    });
+    setShowNotif(true);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleSendOtp = async (email) => {
     // 🔒 Chặn gửi duplicate trong thời gian ngắn

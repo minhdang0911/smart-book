@@ -472,11 +472,6 @@ const searchParams = useSearchParams();
                       </Form.Item>
                     </Col>
                   </Row>
-
-                  <Form.Item label="Địa chỉ chi tiết" name="address">
-                    <Input placeholder="Nhập địa chỉ chi tiết (tùy chọn)" />
-                  </Form.Item>
-
                   <Form.Item label="Ghi chú" name="note">
                     <Input.TextArea rows={3} placeholder="Nhập ghi chú (không bắt buộc)" />
                   </Form.Item>
