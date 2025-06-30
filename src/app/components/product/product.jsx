@@ -534,7 +534,7 @@ const BookStore = () => {
 
       {/* EBooks Section */}
       <section className="romance-section">
-        <h2>📚 EBooks Mới Nhất</h2>
+        <h2>📖 Sách Giấy Mới Nhất</h2>
         <div className="romance-grid">
           {books.ebooks.slice(0, 6).map(book => (
             <BookCard key={book.id} book={book} />
@@ -544,7 +544,7 @@ const BookStore = () => {
 
       {/* Paper Books Section */}
       <section className="romance-section">
-        <h2>📖 Sách Giấy Mới Nhất</h2>
+        <h2>📚 EBooks Mới Nhất</h2>
         <div className="romance-grid">
           {books.paperBooks.slice(0, 6).map(book => (
             <BookCard key={book.id} book={book} showPrice={true} />
