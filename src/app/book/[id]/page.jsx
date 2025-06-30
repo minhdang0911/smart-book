@@ -50,6 +50,7 @@ import {
   MinusOutlined
 } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
+import { marked } from 'marked';
 
 
 import BookList from './BookList'
@@ -385,7 +386,7 @@ const BookDetailPage = () => {
     }
   }
 
-   const handleSubmitReview = async (values) => {
+  const handleSubmitReview = async (values) => {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -556,13 +557,13 @@ const BookDetailPage = () => {
                 → Xem tất cả đánh giá
               </Button>
 
-           
+
               <Button
                 type="primary"
                 icon={<EditOutlined />}
                 onClick={async () => {
                   if (!isLoggedIn) {
-                   toast.warning('Vui lòng đăng nhập để viết đánh giá!')
+                    toast.warning('Vui lòng đăng nhập để viết đánh giá!')
                     return
                   }
 
@@ -700,7 +701,7 @@ const BookDetailPage = () => {
             borderRadius: '8px'
           }}
         >
-         
+
         </div>
       </Card>
     )
@@ -1108,19 +1109,20 @@ const BookDetailPage = () => {
 
       {/* Description Section */}
       <Card
-        title={
-          <Space>
-            <FileTextOutlined />
-            <span>Mô tả sách</span>
-          </Space>
-        }
-        className="description-card"
-        bordered={false}
-      >
-        <Paragraph className="book-description">
-          {book.description}
-        </Paragraph>
-      </Card>
+      title={
+        <Space>
+          <FileTextOutlined />
+          <span>Mô tả sách</span>
+        </Space>
+      }
+      className="description-card"
+      bordered={false}
+    >
+      <div
+        className="book-description"
+        dangerouslySetInnerHTML={{  __html: marked(book.description) }}
+      />
+    </Card>
 
       {/* Reviews Section */}
       <div className="reviews-section">
