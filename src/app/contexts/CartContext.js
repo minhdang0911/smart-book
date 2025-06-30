@@ -67,7 +67,7 @@ export const CartProvider = ({ children }) => {
 
     const token = localStorage.getItem('token');
     if (!token) {
-      router.push('/login');
+      // router.push('/login');
       return;
     }
 
@@ -235,7 +235,7 @@ export const CartProvider = ({ children }) => {
   const addToCart = useCallback(async (bookId, quantity = 1) => {
     const token = localStorage.getItem('token');
     if (!token) {
-      router.push('/login');
+      // router.push('/login');
       return false;
     }
 

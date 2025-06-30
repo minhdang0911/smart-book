@@ -61,7 +61,7 @@ const { Title, Paragraph, Text } = Typography
 const { TextArea } = Input
 
 const BookDetailPage = () => {
-    const router = useRouter()
+  const router = useRouter()
   const params = useParams()
   const { id } = params
   const [book, setBook] = useState(null)
@@ -338,7 +338,54 @@ const BookDetailPage = () => {
     }
   }
 
-  const handleSubmitReview = async (values) => {
+  // Hàm kiểm tra xem user có thể đánh giá sách này không
+  const checkCanReview = async (bookId) => {
+    try {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        return { canReview: false, message: 'Vui lòng đăng nhập để đánh giá!' }
+      }
+
+      // Gọi API lấy danh sách đơn hàng
+      const response = await fetch('http://localhost:8000/api/orders', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+
+      const data = await response.json()
+
+      if (!data.success) {
+        return { canReview: false, message: 'Không thể lấy thông tin đơn hàng!' }
+      }
+
+      // Kiểm tra xem có đơn hàng nào chứa sách này và có shipping code không
+      const canReview = data.data.orders.some(order => {
+        // Chỉ kiểm tra các đơn hàng có shipping code (đã được giao)
+        if (!order.shipping_code) return false
+
+        // Kiểm tra xem trong đơn hàng có chứa sách với bookId không
+        return order.items.some(item => item.book.id === parseInt(bookId))
+      })
+
+      if (!canReview) {
+        return {
+          canReview: false,
+          message: 'Bạn cần mua và nhận được sản phẩm này để có thể đánh giá!'
+        }
+      }
+
+      return { canReview: true, message: 'Có thể đánh giá sản phẩm' }
+
+    } catch (error) {
+      console.error('Error checking review permission:', error)
+      return { canReview: false, message: 'Có lỗi xảy ra khi kiểm tra quyền đánh giá!' }
+    }
+  }
+
+   const handleSubmitReview = async (values) => {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -509,14 +556,25 @@ const BookDetailPage = () => {
                 → Xem tất cả đánh giá
               </Button>
 
+           
               <Button
                 type="primary"
                 icon={<EditOutlined />}
-                onClick={() => {
+                onClick={async () => {
                   if (!isLoggedIn) {
-                    message.warning('Vui lòng đăng nhập để viết đánh giá!')
+                   toast.warning('Vui lòng đăng nhập để viết đánh giá!')
                     return
                   }
+
+                  // Kiểm tra điều kiện đánh giá
+                  const checkResult = await checkCanReview(id) // id là bookId từ trang detail
+
+                  if (!checkResult.canReview) {
+                    toast.warning(checkResult.message)
+                    return
+                  }
+
+                  // Nếu pass tất cả điều kiện thì mở modal đánh giá
                   setShowReviewModal(true)
                 }}
                 style={{
@@ -642,18 +700,13 @@ const BookDetailPage = () => {
             borderRadius: '8px'
           }}
         >
-          <Text style={{ marginRight: '16px' }}>
-            Bạn cần đăng nhập để có thể viết đánh giá
-          </Text>
-          <Button type="primary">
-            Đăng nhập
-          </Button>
+         
         </div>
       </Card>
     )
   }
 
- 
+
 
   const renderChaptersAccordion = () => {
     if (book.format !== 'ebook' || !book.chaptersData) return null
@@ -724,35 +777,35 @@ const BookDetailPage = () => {
           >
             Thêm vào giỏ hàng
           </Button>
-  <Button
-  size="large"
-  icon={<DollarOutlined />}
-  style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
-  onClick={() => {
-    // Tạo dữ liệu checkout cho sản phẩm hiện tại
-    const checkoutData = {
-      items: [{
-        id: book.id, // ID sản phẩm hiện tại
-        name: book.name,
-        price: book.price,
-        quantity: 1, // hoặc lấy từ state quantity
-        image: book?.cover_image,
-        // ... các thông tin khác của sản phẩm
-      }],
-      // totalAmount: product, // hoặc productPrice * quantity
-      totalDiscount: 0, // nếu có giảm giá
-    };
-    
-    // Chuyển đến trang checkout với dữ liệu
-    const encodedData = encodeURIComponent(JSON.stringify(checkoutData));
-    router.push(`/payment?data=${encodedData}`);
-    
-    // Hoặc nếu không dùng Next.js router:
-    // window.location.href = `/checkout?data=${encodedData}`;
-  }}
->
-  Mua ngay
-</Button>
+          <Button
+            size="large"
+            icon={<DollarOutlined />}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
+            onClick={() => {
+              // Tạo dữ liệu checkout cho sản phẩm hiện tại
+              const checkoutData = {
+                items: [{
+                  id: book.id, // ID sản phẩm hiện tại
+                  name: book.name,
+                  price: book.price,
+                  quantity: 1, // hoặc lấy từ state quantity
+                  image: book?.cover_image,
+                  // ... các thông tin khác của sản phẩm
+                }],
+                // totalAmount: product, // hoặc productPrice * quantity
+                totalDiscount: 0, // nếu có giảm giá
+              };
+
+              // Chuyển đến trang checkout với dữ liệu
+              const encodedData = encodeURIComponent(JSON.stringify(checkoutData));
+              router.push(`/payment?data=${encodedData}`);
+
+              // Hoặc nếu không dùng Next.js router:
+              // window.location.href = `/checkout?data=${encodedData}`;
+            }}
+          >
+            Mua ngay
+          </Button>
 
           <Tooltip title="Chia sẻ">
             <Button size="large" icon={<ShareAltOutlined />} />
@@ -778,10 +831,10 @@ const BookDetailPage = () => {
 
   const formatPrice = (price, is_physical) => {
     if (book.is_physical === 1) {
-        return new Intl.NumberFormat('vi-VN').format(price);
+      return new Intl.NumberFormat('vi-VN').format(price);
     }
     return 'miễn phí';
-};
+  };
 
   const renderStats = () => {
     const baseStats = [
@@ -795,7 +848,7 @@ const BookDetailPage = () => {
         title: "Giá",
         value: (
           <span style={{ color: 'red' }}>
-            <DollarOutlined /> {formatPrice(book.price)} {book?.is_physical === 1 ?'vnd' :''}
+            <DollarOutlined /> {formatPrice(book.price)} {book?.is_physical === 1 ? 'vnd' : ''}
           </span>
         ),
         color: 'red'
