@@ -47,23 +47,23 @@ const ContactPage = () => {
 
   const validateForm = () => {
     if (!formData.name.trim()) {
-      message.error('Vui lòng nhập tên của bạn');
+      message.error('Xin hãy cho chúng tôi biết tên quý danh của bạn');
       return false;
     }
     if (!formData.email.trim()) {
-      message.error('Vui lòng nhập email của bạn');
+      message.error('Xin hãy để lại địa chỉ email để chúng tôi có thể liên hệ');
       return false;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      message.error('Vui lòng nhập email hợp lệ');
+      message.error('Xin hãy nhập một địa chỉ email hợp lệ');
       return false;
     }
     if (!formData.subject.trim()) {
-      message.error('Vui lòng nhập tiêu đề');
+      message.error('Xin hãy cho chúng tôi biết chủ đề bạn muốn trao đổi');
       return false;
     }
     if (!formData.message.trim()) {
-      message.error('Vui lòng nhập nội dung tin nhắn');
+      message.error('Xin hãy chia sẻ những suy nghĩ của bạn với chúng tôi');
       return false;
     }
     return true;
@@ -76,7 +76,7 @@ const ContactPage = () => {
 
     try {
       if (!window.emailjs) {
-        throw new Error('EmailJS chưa được tải');
+        throw new Error('Hệ thống email chưa sẵn sàng');
       }
 
       const templateParams = {
@@ -84,7 +84,7 @@ const ContactPage = () => {
         from_email: formData.email,
         subject: formData.subject,
         message: formData.message,
-        to_name: 'Millennium Tower San Francisco',
+        to_name: 'Tháp Thiên Niên Kỷ San Francisco',
       };
 
       const result = await window.emailjs.send(
@@ -94,7 +94,7 @@ const ContactPage = () => {
       );
 
       if (result.status === 200) {
-        message.success('Tin nhắn đã được gửi thành công!');
+        message.success('Thư của bạn đã được gửi đi như cánh chim bay xa! Chúng tôi sẽ phản hồi sớm nhất có thể.');
         // Reset form
         setFormData({
           name: '',
@@ -103,11 +103,11 @@ const ContactPage = () => {
           message: ''
         });
       } else {
-        throw new Error('Gửi email thất bại');
+        throw new Error('Gửi thư thất bại');
       }
     } catch (error) {
       console.error('EmailJS Error:', error);
-      message.error('Có lỗi xảy ra khi gửi tin nhắn. Vui lòng thử lại sau.');
+      message.error('Có chút trục trặc trong quá trình gửi thư. Xin hãy thử lại sau một chút nhé.');
     } finally {
       setLoading(false);
     }
@@ -162,12 +162,12 @@ const ContactPage = () => {
         {/* Navigation */}
         <div style={navStyle}>
           <div style={logoStyle}>
-            <div style={{ fontWeight: 'bold' }}>MILLENNIUM TOWER</div>
+            <div style={{ fontWeight: 'bold' }}>THÁP THIÊN NIÊN KỶ</div>
             <div style={{ fontSize: '12px', marginTop: '2px' }}>SAN FRANCISCO</div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <Button type="text" style={{ color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
-              RESIDENT LOGIN
+              ĐĂNG NHẬP CƯ DÂN
             </Button>
             <MenuOutlined style={{ color: 'white', fontSize: '20px' }} />
           </div>
@@ -176,11 +176,12 @@ const ContactPage = () => {
         {/* Hero Content */}
         <div style={{ maxWidth: '600px', padding: '0 20px' }}>
           <Title level={1} style={{ color: 'white', fontSize: '64px', fontWeight: '300', margin: 0, letterSpacing: '4px' }}>
-            CONTACT
+            LIÊN HỆ
           </Title>
           <Paragraph style={{ color: 'white', fontSize: '16px', marginTop: '30px', lineHeight: '1.6' }}>
-            Your Millennium Tower San Francisco journey starts here. We welcome the opportunity to tell 
-            you more about this singular and spectacular property.
+            Hành trình khám phá Tháp Thiên Niên Kỷ San Francisco của bạn bắt đầu từ đây. 
+            Chúng tôi rất vinh dự được chia sẻ những điều kỳ diệu về tòa tháp độc đáo và 
+            ngoạn mục này cùng bạn.
           </Paragraph>
         </div>
 
@@ -196,100 +197,130 @@ const ContactPage = () => {
           {/* Notice */}
           <div style={{ textAlign: 'center', marginBottom: '60px' }}>
             <Text style={{ fontSize: '16px', color: '#666', lineHeight: '1.6' }}>
-              For lease and sales inquiries, please contact a local realtor for assistance, as there<br />
-              is no longer a sales/leasing team on-site at Millennium Tower San Francisco.
+              Đối với các yêu cầu thuê và mua bán, xin hãy liên hệ với một nhà môi giới địa phương<br />
+              để được hỗ trợ, vì hiện tại không còn đội ngũ bán hàng/cho thuê tại chỗ ở Tháp Thiên Niên Kỷ San Francisco.
             </Text>
           </div>
 
           <Row gutter={[60, 40]}>
             {/* Contact Form */}
             <Col xs={24} lg={14}>
-              <Card style={{ border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
-                <Title level={3} style={{ color: '#333', marginBottom: '30px', fontWeight: '300' }}>
-                  GENERAL INQUIRIES
+              <Card style={{ 
+                border: 'none', 
+                boxShadow: '0 8px 32px rgba(91, 179, 204, 0.15)',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #ffffff 0%, #f8fffe 100%)'
+              }}>
+                <Title level={3} style={{ 
+                  color: '#2c5aa0', 
+                  marginBottom: '30px', 
+                  fontWeight: '400',
+                  textAlign: 'center'
+                }}>
+                  GỬI THÔNG ĐIỆP ĐẾN CHÚNG TÔI
                 </Title>
                 
                 <div>
                   <Input 
-                    placeholder="Name*" 
+                    placeholder="Tên quý danh của bạn*" 
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     style={{ 
-                      backgroundColor: '#f8f9fa', 
-                      border: 'none',
-                      borderRadius: '0',
+                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
+                      border: '2px solid rgba(91, 179, 204, 0.2)',
+                      borderRadius: '8px',
                       padding: '15px',
-                      marginBottom: '20px'
+                      marginBottom: '20px',
+                      fontSize: '15px',
+                      transition: 'all 0.3s ease'
                     }} 
                     size="large"
                     disabled={loading}
+                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
                   />
 
                   <Input 
-                    placeholder="Email*" 
+                    placeholder="Địa chỉ email của bạn*" 
                     value={formData.email}
                     onChange={(e) => handleInputChange('email', e.target.value)}
                     style={{ 
-                      backgroundColor: '#f8f9fa', 
-                      border: 'none',
-                      borderRadius: '0',
+                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
+                      border: '2px solid rgba(91, 179, 204, 0.2)',
+                      borderRadius: '8px',
                       padding: '15px',
-                      marginBottom: '20px'
+                      marginBottom: '20px',
+                      fontSize: '15px',
+                      transition: 'all 0.3s ease'
                     }} 
                     size="large"
                     disabled={loading}
+                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
                   />
 
                   <Input 
-                    placeholder="Subject*" 
+                    placeholder="Chủ đề bạn muốn trao đổi*" 
                     value={formData.subject}
                     onChange={(e) => handleInputChange('subject', e.target.value)}
                     style={{ 
-                      backgroundColor: '#f8f9fa', 
-                      border: 'none',
-                      borderRadius: '0',
+                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
+                      border: '2px solid rgba(91, 179, 204, 0.2)',
+                      borderRadius: '8px',
                       padding: '15px',
-                      marginBottom: '20px'
+                      marginBottom: '20px',
+                      fontSize: '15px',
+                      transition: 'all 0.3s ease'
                     }} 
                     size="large"
                     disabled={loading}
+                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
                   />
 
                   <Input.TextArea 
-                    placeholder="Message*" 
+                    placeholder="Chia sẻ những suy nghĩ của bạn với chúng tôi*" 
                     value={formData.message}
                     onChange={(e) => handleInputChange('message', e.target.value)}
                     rows={6}
                     style={{ 
-                      backgroundColor: '#f8f9fa', 
-                      border: 'none',
-                      borderRadius: '0',
+                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
+                      border: '2px solid rgba(91, 179, 204, 0.2)',
+                      borderRadius: '8px',
                       padding: '15px',
-                      marginBottom: '30px'
+                      marginBottom: '30px',
+                      fontSize: '15px',
+                      transition: 'all 0.3s ease'
                     }}
                     disabled={loading}
+                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
+                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
                   />
 
-                  <Button 
-                    type="primary" 
-                    onClick={handleSubmit}
-                    loading={loading}
-                    disabled={loading}
-                    style={{
-                      backgroundColor: loading ? '#ccc' : '#5cb3cc',
-                      border: 'none',
-                      borderRadius: '0',
-                      padding: '15px 40px',
-                      height: 'auto',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      letterSpacing: '1px'
-                    }}
-                    size="large"
-                    icon={loading ? <LoadingOutlined /> : null}
-                  >
-                    {loading ? 'SENDING...' : 'SUBMIT'}
-                  </Button>
+                  <div style={{ textAlign: 'center' }}>
+                    <Button 
+                      type="primary" 
+                      onClick={handleSubmit}
+                      loading={loading}
+                      disabled={loading}
+                      style={{
+                        background: loading ? 'linear-gradient(135deg, #ccc 0%, #aaa 100%)' : 'linear-gradient(135deg, #5cb3cc 0%, #4a9fb8 100%)',
+                        border: 'none',
+                        borderRadius: '25px',
+                        padding: '15px 50px',
+                        height: 'auto',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        letterSpacing: '1px',
+                        boxShadow: loading ? 'none' : '0 4px 15px rgba(91, 179, 204, 0.4)',
+                        transition: 'all 0.3s ease'
+                      }}
+                      size="large"
+                      icon={loading ? <LoadingOutlined /> : null}
+                    >
+                      {loading ? 'ĐANG GỬI...' : 'GỬI THÔNG ĐIỆP'}
+                    </Button>
+                  </div>
                 </div>
               </Card>
             </Col>
@@ -298,14 +329,15 @@ const ContactPage = () => {
             <Col xs={24} lg={10}>
               <div style={{ padding: '20px 0' }}>
                 <Paragraph style={{ fontSize: '16px', color: '#666', marginBottom: '40px', lineHeight: '1.6' }}>
-                  Contact us directly, or complete the form with your question or concern.
+                  Hãy liên hệ trực tiếp với chúng tôi, hoặc điền vào mẫu đơn với những thắc mắc 
+                  và quan tâm của bạn. Chúng tôi luôn sẵn lòng lắng nghe.
                 </Paragraph>
 
                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
                   {/* Address */}
                   <div>
                     <Title level={5} style={{ color: '#999', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px' }}>
-                      ADDRESS
+                      ĐỊA CHỈ
                     </Title>
                     <Text style={{ fontSize: '16px', color: '#333' }}>301 Mission Street</Text><br />
                     <Text style={{ fontSize: '16px', color: '#333' }}>San Francisco, CA 94105</Text>
@@ -314,7 +346,7 @@ const ContactPage = () => {
                   {/* Contact */}
                   <div>
                     <Title level={5} style={{ color: '#999', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px' }}>
-                      CONTACT
+                      LIÊN HỆ
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
                       <a href="mailto:management@301mission.com" style={{ color: '#5cb3cc', fontSize: '16px' }}>
@@ -327,7 +359,7 @@ const ContactPage = () => {
                   {/* Public Relations */}
                   <div>
                     <Title level={5} style={{ color: '#999', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px' }}>
-                      PUBLIC RELATIONS
+                      QUAN HỆ CÔNG CHÚNG
                     </Title>
                     <div style={{ marginBottom: '8px' }}>
                       <a href="#" style={{ color: '#5cb3cc', fontSize: '16px' }}>
@@ -346,22 +378,7 @@ const ContactPage = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <div style={{ 
-        backgroundColor: '#2c3e50', 
-        color: 'white', 
-        textAlign: 'center', 
-        padding: '40px 20px',
-        fontSize: '12px'
-      }}>
-        <Text style={{ color: 'rgba(255,255,255,0.7)' }}>
-          © Copyright 2025 Millennium Tower San Francisco. All Rights Reserved. | Website by Mediaroom
-        </Text>
-        <br />
-        <a href="#" style={{ color: '#5cb3cc', marginTop: '10px', display: 'inline-block' }}>
-          Privacy Policy
-        </a>
-      </div>
+    
     </div>
   );
 };

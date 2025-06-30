@@ -80,24 +80,24 @@ const FooterComponent = () => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           // Animate sections từ dưới lên
-          gsap.fromTo(sectionsRef.current, 
+          gsap.fromTo(sectionsRef.current,
             { y: 50, opacity: 0 },
-            { 
-              y: 0, 
-              opacity: 1, 
-              duration: 0.8, 
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.8,
               stagger: 0.2,
               ease: "power2.out"
             }
           );
 
           // Animate social icons
-          gsap.fromTo(socialRef.current?.children || [], 
+          gsap.fromTo(socialRef.current?.children || [],
             { scale: 0, rotation: 180 },
-            { 
-              scale: 1, 
-              rotation: 0, 
-              duration: 0.6, 
+            {
+              scale: 1,
+              rotation: 0,
+              duration: 0.6,
               stagger: 0.1,
               ease: "back.out(1.7)",
               delay: 0.5
@@ -127,10 +127,10 @@ const FooterComponent = () => {
     if (!window.L || !mapRef.current) return;
 
     const { L } = window;
-    
+
     // Tạo map centered ở TP.HCM
     const mapInstance = L.map(mapRef.current).setView([10.8231, 106.6297], 12);
-    
+
     // Thêm tile layer
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
@@ -167,10 +167,10 @@ const FooterComponent = () => {
       (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation([latitude, longitude]);
-        
+
         const destination = locations[selectedLocation];
         const googleMapsUrl = `https://www.google.com/maps/dir/${latitude},${longitude}/${destination.coords[0]},${destination.coords[1]}`;
-        
+
         window.open(googleMapsUrl, '_blank');
         message.success('Đã mở Google Maps với đường đi!');
       },
@@ -191,12 +191,12 @@ const FooterComponent = () => {
   const renderParticle = (index) => {
     const isOdd = index % 2 === 1;
     return (
-      <div 
-        key={index} 
+      <div
+        key={index}
         style={{
           ...footerStyles.particle,
-          backgroundColor: isOdd 
-            ? 'rgba(64, 169, 255, 0.3)' 
+          backgroundColor: isOdd
+            ? 'rgba(64, 169, 255, 0.3)'
             : 'rgba(24, 144, 255, 0.3)',
           left: `${Math.random() * 100}%`,
           animationDelay: `${Math.random() * 20}s`,
@@ -212,7 +212,7 @@ const FooterComponent = () => {
         <div style={footerStyles.container}>
           {/* Floating particles background */}
           <div style={footerStyles.particlesContainer}>
-            {Array.from({length: 20}, (_, i) => renderParticle(i))}
+            {Array.from({ length: 20 }, (_, i) => renderParticle(i))}
           </div>
 
           {/* Main Footer Content */}
@@ -222,7 +222,7 @@ const FooterComponent = () => {
               <div ref={addRefToSection} style={footerStyles.section}>
                 <h3 style={footerStyles.title}>SmartBook</h3>
                 <p style={footerStyles.description}>
-                  Nền tảng đọc sách trực tuyến hàng đầu Việt Nam, mang đến 
+                  Nền tảng đọc sách trực tuyến hàng đầu Việt Nam, mang đến
                   trải nghiệm đọc sách tuyệt vời với kho tàng tri thức phong phú.
                 </p>
                 <Space ref={socialRef} size="middle" style={footerStyles.socialLinks}>
@@ -241,14 +241,29 @@ const FooterComponent = () => {
                 <ul style={footerStyles.linkList}>
                   {['Trang chủ', 'Sách', 'Thể loại', 'Tác giả', 'Giới thiệu', 'Liên hệ'].map((item, index) => (
                     <li key={index}>
-                      <a href="#" style={footerStyles.link} className="footer-link">
-                        {item}
-                      </a>
+                      {item === 'Liên hệ' ? (
+                        <a
+                          href="/contact"
+                          style={footerStyles.link}
+                          className="footer-link"
+                        >
+                          {item}
+                        </a>
+                      ) : (
+                        <a
+                          href="#"
+                          style={footerStyles.link}
+                          className="footer-link"
+                        >
+                          {item}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
               </div>
             </Col>
+
 
             {/* Services */}
             <Col xs={24} sm={12} md={6}>
@@ -275,7 +290,7 @@ const FooterComponent = () => {
                     <EnvironmentOutlined style={footerStyles.contactIcon} />
                     <div>
                       <div>Tòa nhà QTSC9 (toà T)</div>
-                      <div style={{fontSize: '12px', opacity: 0.8}}>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>
                         Đường Tô Ký, P.Tân Chánh Hiệp, Q.12
                       </div>
                     </div>
@@ -284,7 +299,7 @@ const FooterComponent = () => {
                     <EnvironmentOutlined style={footerStyles.contactIcon} />
                     <div>
                       <div>778/B1 Nguyễn Kiệm</div>
-                      <div style={{fontSize: '12px', opacity: 0.8}}>
+                      <div style={{ fontSize: '12px', opacity: 0.8 }}>
                         P.04, Q.Phú Nhuận, TP.HCM
                       </div>
                     </div>
@@ -298,23 +313,23 @@ const FooterComponent = () => {
                     <span>info@smartbook.com</span>
                   </div>
                 </div>
-                
+
                 {/* Map and Directions Buttons */}
                 <div style={footerStyles.actionButtons}>
-                  <Button 
-                    type="primary" 
-                    icon={<EnvironmentOutlined />} 
+                  <Button
+                    type="primary"
+                    icon={<EnvironmentOutlined />}
                     size="small"
                     onClick={handleShowMap}
                     style={footerStyles.actionButton}
                   >
                     Xem bản đồ
                   </Button>
-                  <Button 
-                    type="default" 
+                  <Button
+                    type="default"
                     size="small"
                     onClick={handleGetDirections}
-                    style={{...footerStyles.actionButton, marginTop: '8px'}}
+                    style={{ ...footerStyles.actionButton, marginTop: '8px' }}
                   >
                     Chỉ đường
                   </Button>
@@ -351,8 +366,8 @@ const FooterComponent = () => {
       {/* Map Modal */}
       <Modal
         title={
-          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-            <EnvironmentOutlined style={{color: '#1890ff'}} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <EnvironmentOutlined style={{ color: '#1890ff' }} />
             <span>Vị trí văn phòng SmartBook</span>
           </div>
         }
@@ -360,16 +375,16 @@ const FooterComponent = () => {
         onCancel={() => setIsMapVisible(false)}
         footer={null}
         width={800}
-        style={{top: 20}}
+        style={{ top: 20 }}
         closeIcon={<CloseOutlined />}
       >
-        <div style={{marginBottom: '16px'}}>
+        <div style={{ marginBottom: '16px' }}>
           <Row gutter={16} align="middle">
             <Col span={12}>
               <Select
                 value={selectedLocation}
                 onChange={setSelectedLocation}
-                style={{width: '100%'}}
+                style={{ width: '100%' }}
                 placeholder="Chọn địa điểm"
               >
                 <Option value="qtsc9">QTSC9 - Quận 12</Option>
@@ -377,8 +392,8 @@ const FooterComponent = () => {
               </Select>
             </Col>
             <Col span={12}>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 onClick={handleGetDirections}
                 block
               >
@@ -387,8 +402,8 @@ const FooterComponent = () => {
             </Col>
           </Row>
         </div>
-        
-        <div 
+
+        <div
           ref={mapRef}
           style={{
             height: '400px',
@@ -398,14 +413,14 @@ const FooterComponent = () => {
           }}
         />
 
-        <div style={{marginTop: '16px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '6px'}}>
-          <h4 style={{margin: '0 0 8px 0', color: '#001529'}}>
+        <div style={{ marginTop: '16px', padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '6px' }}>
+          <h4 style={{ margin: '0 0 8px 0', color: '#001529' }}>
             {locations[selectedLocation].name}
           </h4>
-          <p style={{margin: '0 0 4px 0', fontSize: '14px'}}>
+          <p style={{ margin: '0 0 4px 0', fontSize: '14px' }}>
             📍 {locations[selectedLocation].address}
           </p>
-          <p style={{margin: '0', fontSize: '14px', color: '#1890ff'}}>
+          <p style={{ margin: '0', fontSize: '14px', color: '#1890ff' }}>
             📞 {locations[selectedLocation].phone}
           </p>
         </div>
