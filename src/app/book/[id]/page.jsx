@@ -783,30 +783,47 @@ const BookDetailPage = () => {
             icon={<DollarOutlined />}
             style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
             onClick={() => {
-              // Tạo dữ liệu checkout cho sản phẩm hiện tại
+              if (!token) {
+                toast.warning('🔒 Vui lòng đăng nhập để mua ngay!');
+                router.push('/login'); // ✅ Chuyển sang login nếu chưa đăng nhập
+                return;
+              }
+
               const checkoutData = {
                 items: [{
-                  id: book.id, // ID sản phẩm hiện tại
+                  id: book.id,
                   name: book.name,
                   price: book.price,
-                  quantity: 1, // hoặc lấy từ state quantity
+                  quantity: 1,
                   image: book?.cover_image,
-                  // ... các thông tin khác của sản phẩm
+                  author: typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author'
                 }],
-                // totalAmount: product, // hoặc productPrice * quantity
-                totalDiscount: 0, // nếu có giảm giá
+                totalAmount: book.price,
+                totalDiscount: 0,
               };
 
-              // Chuyển đến trang checkout với dữ liệu
-              const encodedData = encodeURIComponent(JSON.stringify(checkoutData));
-              router.push(`/payment?data=${encodedData}`);
+              toast.success(`✅ Đã thêm "${book.name}" vào giỏ hàng!`);
+              toast.info('🛒 Chuyển đến trang đặt đơn...');
 
-              // Hoặc nếu không dùng Next.js router:
-              // window.location.href = `/checkout?data=${encodedData}`;
+
+              localStorage.setItem('buyNowData', JSON.stringify({
+                isBuyNow: true,
+                bookId: book.id,
+                checkoutData,
+                processed: false,
+                timestamp: Date.now()
+              }));
+
+              setTimeout(() => {
+                router.push('/cart');
+              }, 800);
+
             }}
           >
             Mua ngay
           </Button>
+
+
 
           <Tooltip title="Chia sẻ">
             <Button size="large" icon={<ShareAltOutlined />} />
@@ -949,17 +966,21 @@ const BookDetailPage = () => {
 
   const handleAddToCart = async () => {
     try {
+      if (!token) {
+        toast.error('🔒 Vui lòng đăng nhập để thêm sách vào giỏ hàng!');
+        router.push('/login');
+        return;
+      }
+
       setIsAddingToCart(true);
 
       const result = await addToCart(book.id, quantity);
 
       if (result.success) {
         toast.success('🎉 Đã thêm sách vào giỏ hàng!');
-
         window.updateCartCount?.();
         window.dispatchEvent(new CustomEvent('cartUpdated'));
       } else {
-        // Nếu có message từ server, hiển thị nó
         toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
       }
     } catch (error) {
@@ -969,6 +990,9 @@ const BookDetailPage = () => {
       setIsAddingToCart(false);
     }
   };
+
+
+
 
   return (
     <div className="book-detail-container">
@@ -1109,20 +1133,20 @@ const BookDetailPage = () => {
 
       {/* Description Section */}
       <Card
-      title={
-        <Space>
-          <FileTextOutlined />
-          <span>Mô tả sách</span>
-        </Space>
-      }
-      className="description-card"
-      bordered={false}
-    >
-      <div
-        className="book-description"
-        dangerouslySetInnerHTML={{  __html: marked(book.description) }}
-      />
-    </Card>
+        title={
+          <Space>
+            <FileTextOutlined />
+            <span>Mô tả sách</span>
+          </Space>
+        }
+        className="description-card"
+        bordered={false}
+      >
+        <div
+          className="book-description"
+          dangerouslySetInnerHTML={{ __html: marked(book.description) }}
+        />
+      </Card>
 
       {/* Reviews Section */}
       <div className="reviews-section">
