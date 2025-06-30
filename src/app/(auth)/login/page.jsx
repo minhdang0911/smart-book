@@ -45,108 +45,108 @@ export default function AuthPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
-const onFinish = async (values) => {
-  if (loading) return; // 🔒 Chặn double submit
+  const onFinish = async (values) => {
+    if (loading) return; // 🔒 Chặn double submit
 
-  setLoading(true);
-  try {
-    if (isLogin) {
-      const data = await apiLoginUser(values.email, values.password);
+    setLoading(true);
+    try {
+      if (isLogin) {
+        const data = await apiLoginUser(values.email, values.password);
 
-      if (!data.email_verified) {
+        if (!data.email_verified) {
+          setOtpEmail(values.email);
+          setNotifContent({
+            message: '⚠️ Chưa xác thực email',
+            description: 'Vui lòng kiểm tra email và nhập mã OTP!'
+          });
+          setShowNotif(true);
+
+          console.log('📩 Gửi OTP đến:', values.email);
+          await handleSendOtp(values.email);
+          setShowOtp(true);
+        } else {
+          localStorage.setItem('token', data.access_token);
+          setNotifContent({
+            message: '🎉 Đăng nhập thành công!',
+            description: `Chào mừng trở lại, ${data.user?.name || 'người dùng'}!`
+          });
+          setShowNotif(true);
+          setTimeout(() => window.location.href = '/', 1500);
+        }
+      } else {
+        // 🔥 REGISTER - Kiểm tra xem API có tự gửi OTP không
+        const registerResult = await apiRegisterUser(
+          values.name,
+          values.email,
+          values.password,
+          values.password_confirmation,
+          values.phone
+        );
+
         setOtpEmail(values.email);
         setNotifContent({
-          message: '⚠️ Chưa xác thực email',
-          description: 'Vui lòng kiểm tra email và nhập mã OTP!'
+          message: '🎉 Đăng ký thành công!',
+          description: 'Vui lòng kiểm tra email và nhập mã OTP để xác thực.'
         });
         setShowNotif(true);
 
-        console.log('📩 Gửi OTP đến:', values.email);
-        await handleSendOtp(values.email);
+        // ✅ CHỈ GỬI OTP NÉU API REGISTER CHƯA TỰ GỬI
+        if (!registerResult?.otp_sent && !registerResult?.otp_already_sent) {
+          console.log('📩 Gửi OTP đến:', values.email);
+          await handleSendOtp(values.email);
+        } else {
+          console.log('📩 OTP đã được gửi tự động từ API register');
+          setCountdown(60); // Set countdown ngay cả khi không gọi handleSendOtp
+        }
+
         setShowOtp(true);
-      } else {
-        localStorage.setItem('token', data.access_token);
-        setNotifContent({
-          message: '🎉 Đăng nhập thành công!',
-          description: `Chào mừng trở lại, ${data.user?.name || 'người dùng'}!`
-        });
-        setShowNotif(true);
-        setTimeout(() => window.location.href = '/', 1500);
       }
-    } else {
-      // 🔥 REGISTER - Kiểm tra xem API có tự gửi OTP không
-      const registerResult = await apiRegisterUser(
-        values.name,
-        values.email,
-        values.password,
-        values.password_confirmation,
-        values.phone
-      );
+    } catch (err) {
+      console.log('❌ Error caught:', err); // Debug log
 
-      setOtpEmail(values.email);
+      let errorMessage = '❌ Lỗi';
+      let errorDescription = 'Có lỗi xảy ra, vui lòng thử lại!';
+
+      // 🔥 XỬ LÝ LỖI VALIDATION TỪ API
+      if (err.response && err.response.data) {
+        const errorData = err.response.data;
+
+        // Kiểm tra format lỗi validation: { status: false, errors: {...} }
+        if (errorData.status === false && errorData.errors) {
+          const errors = errorData.errors;
+          const errorMessages = [];
+
+          // Lấy tất cả lỗi từ object errors
+          Object.keys(errors).forEach(field => {
+            if (Array.isArray(errors[field])) {
+              errorMessages.push(...errors[field]);
+            } else {
+              errorMessages.push(errors[field]);
+            }
+          });
+
+          errorMessage = '❌ Lỗi xác thực';
+          errorDescription = errorMessages.join('\n');
+        }
+        // Kiểm tra các format lỗi khác
+        else if (errorData.message) {
+          errorDescription = errorData.message;
+        }
+      }
+      // Fallback cho lỗi network hoặc không có response
+      else if (err.message) {
+        errorDescription = err.message;
+      }
+
       setNotifContent({
-        message: '🎉 Đăng ký thành công!',
-        description: 'Vui lòng kiểm tra email và nhập mã OTP để xác thực.'
+        message: errorMessage,
+        description: errorDescription
       });
       setShowNotif(true);
-
-      // ✅ CHỈ GỬI OTP NÉU API REGISTER CHƯA TỰ GỬI
-      if (!registerResult?.otp_sent && !registerResult?.otp_already_sent) {
-        console.log('📩 Gửi OTP đến:', values.email);
-        await handleSendOtp(values.email);
-      } else {
-        console.log('📩 OTP đã được gửi tự động từ API register');
-        setCountdown(60); // Set countdown ngay cả khi không gọi handleSendOtp
-      }
-      
-      setShowOtp(true);
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.log('❌ Error caught:', err); // Debug log
-    
-    let errorMessage = '❌ Lỗi';
-    let errorDescription = 'Có lỗi xảy ra, vui lòng thử lại!';
-
-    // 🔥 XỬ LÝ LỖI VALIDATION TỪ API
-    if (err.response && err.response.data) {
-      const errorData = err.response.data;
-      
-      // Kiểm tra format lỗi validation: { status: false, errors: {...} }
-      if (errorData.status === false && errorData.errors) {
-        const errors = errorData.errors;
-        const errorMessages = [];
-        
-        // Lấy tất cả lỗi từ object errors
-        Object.keys(errors).forEach(field => {
-          if (Array.isArray(errors[field])) {
-            errorMessages.push(...errors[field]);
-          } else {
-            errorMessages.push(errors[field]);
-          }
-        });
-        
-        errorMessage = '❌ Lỗi xác thực';
-        errorDescription = errorMessages.join('\n');
-      } 
-      // Kiểm tra các format lỗi khác
-      else if (errorData.message) {
-        errorDescription = errorData.message;
-      }
-    } 
-    // Fallback cho lỗi network hoặc không có response
-    else if (err.message) {
-      errorDescription = err.message;
-    }
-
-    setNotifContent({
-      message: errorMessage,
-      description: errorDescription
-    });
-    setShowNotif(true);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const handleSendOtp = async (email) => {
     // 🔒 Chặn gửi duplicate trong thời gian ngắn
@@ -157,7 +157,7 @@ const onFinish = async (values) => {
 
     setSendOtpLoading(true);
     setOtpSent(true);
-    
+
     try {
       await apiSendOtp(email);
       setNotifContent({
@@ -327,10 +327,20 @@ const onFinish = async (values) => {
                 <Form.Item name="name" rules={[{ required: true, message: 'Vui lòng nhập họ tên!' }]}>
                   <Input prefix={<UserOutlined />} placeholder="Họ và tên" autoComplete="name" />
                 </Form.Item>
-
-                <Form.Item name="phone" label="Số điện thoại">
+                <Form.Item
+                  name="phone"
+                  label="Số điện thoại"
+                  rules={[
+                    { required: true, message: 'Vui lòng nhập số điện thoại' },
+                    {
+                      pattern: /^(0[3|5|7|8|9])+([0-9]{8})$/,
+                      message: 'Số điện thoại không hợp lệ (phải gồm 10 chữ số và bắt đầu bằng 03, 05, 07, 08 hoặc 09)'
+                    }
+                  ]}
+                >
                   <Input placeholder="Nhập số điện thoại" />
                 </Form.Item>
+
               </>
             )}
 
@@ -343,7 +353,7 @@ const onFinish = async (values) => {
             >
               <Input prefix={<MailOutlined />} placeholder="Email" autoComplete="email" />
             </Form.Item>
-            
+
             <Form.Item
               name="password"
               rules={[
@@ -358,7 +368,7 @@ const onFinish = async (values) => {
                 autoComplete={isLogin ? 'current-password' : 'new-password'}
               />
             </Form.Item>
-            
+
             {!isLogin && (
               <Form.Item
                 name="password_confirmation"
@@ -381,7 +391,7 @@ const onFinish = async (values) => {
                 />
               </Form.Item>
             )}
-            
+
             {isLogin && (
               <div style={{ textAlign: 'right', marginBottom: 16 }}>
                 <span className="forgot-link" onClick={() => setShowForgot(true)}>
@@ -389,7 +399,7 @@ const onFinish = async (values) => {
                 </span>
               </div>
             )}
-            
+
             <Form.Item>
               <Button
                 type="primary"
@@ -525,7 +535,7 @@ const onFinish = async (values) => {
           </Button>
         </div>
       </Modal>
-      
+
       {showNotif && (
         <CustomNotification
           message={notifContent.message}

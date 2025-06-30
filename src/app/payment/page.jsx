@@ -48,7 +48,7 @@ const CheckoutPage = () => {
   const { cartData, selectedItems, calculateTotal, clearCart } = useContext(CartContext);
   const [checkoutData, setCheckoutData] = useState(null);
 
-const searchParams = useSearchParams();
+  const searchParams = useSearchParams();
   const router = useRouter();
 
   // States for address data
@@ -67,7 +67,7 @@ const searchParams = useSearchParams();
   const [isLoadingDistricts, setIsLoadingDistricts] = useState(false);
   const [isLoadingWards, setIsLoadingWards] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-   const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
   console.log(cartData)
 
@@ -110,13 +110,11 @@ const searchParams = useSearchParams();
       } else {
         // Không có dữ liệu, redirect về cart
         message.warning('Không có thông tin đơn hàng. Vui lòng thử lại.');
-        router.push('/cart');
+     
         return;
       }
     } catch (error) {
-      console.error('Error parsing checkout data:', error);
-      message.error('Dữ liệu không hợp lệ. Vui lòng thử lại.');
-      router.push('/cart');
+     
       return;
     } finally {
       setLoading(false);
@@ -277,7 +275,7 @@ const searchParams = useSearchParams();
     try {
       // Prepare order data
       const orderData = {
-        address: `${values.houseNumber || ''}, ${values.street || ''}, ${selectedWard.WardName}, ${selectedDistrict.DistrictName}, ${selectedProvince.ProvinceName}`.replace(/^,\s*/, ''), 
+        address: `${values.houseNumber || ''}, ${values.street || ''}, ${selectedWard.WardName}, ${selectedDistrict.DistrictName}, ${selectedProvince.ProvinceName}`.replace(/^,\s*/, ''),
         sonha: values.houseNumber || '',
         street: values.street || '',
         district_id: selectedDistrict.DistrictID,
@@ -290,7 +288,7 @@ const searchParams = useSearchParams();
         shipping_fee: shippingFee,
         total_price: priceOrder,
         note: values.note,
-        price:checkoutData?.totalAmount
+        price: checkoutData?.totalAmount
 
       };
 
@@ -364,8 +362,11 @@ const searchParams = useSearchParams();
       </div>
     );
   }
- 
+  const totalAmount = Number(checkoutData?.totalAmount || 0);
+  const fee = Number(shippingFee || 0);
+  const totalWithShipping = totalAmount + fee;
 
+  console.log("Tổng:", checkoutData?.totalAmount, "Phí ship:", shippingFee);
   return (
     <div className="checkout-container">
 
@@ -642,8 +643,10 @@ const searchParams = useSearchParams();
                 <div className="summary-row total-row">
                   <Text strong>Tổng cộng</Text>
                   <Text strong className="total-price">
-                 {(checkoutData?.totalAmount + shippingFee).toLocaleString()}đ
-
+                    {totalWithShipping.toLocaleString('vi-VN', {
+                      style: 'currency',
+                      currency: 'VND',
+                    })}
                   </Text>
                 </div>
 

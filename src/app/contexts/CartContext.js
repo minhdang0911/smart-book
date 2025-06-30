@@ -12,7 +12,7 @@ export const CartProvider = ({ children }) => {
   const [updatingItems, setUpdatingItems] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
-  
+
   // Refs để tránh stale closure
   const cartDataRef = useRef(cartData);
   const fetchingRef = useRef(false);
@@ -25,31 +25,46 @@ export const CartProvider = ({ children }) => {
     cartDataRef.current = cartData;
   }, [cartData]);
 
-  // Sync selectedItems với cartData - xóa các item không tồn tại
-  useEffect(() => {
-    if (cartData?.items) {
-      const currentItemIds = cartData.items.map(item => item.id);
-      setSelectedItems(prev => {
-        const validSelectedItems = prev.filter(id => currentItemIds.includes(id));
+
+ useEffect(() => {
+  // Kiểm tra buyNowData từ localStorage
+  const buyNowData = localStorage.getItem('buyNowData');
+  
+  if (buyNowData && cartData?.items && cartData.items.length > 0) {
+    try {
+      const parsedBuyNowData = JSON.parse(buyNowData);
+      
+      // Kiểm tra nếu là "mua ngay" và chưa được xử lý
+      if (parsedBuyNowData.isBuyNow && parsedBuyNowData.bookId && !parsedBuyNowData.processed) {
+        // Tìm item trong cart có id trùng với bookId
+        const targetItem = cartData.items.find(item => item.id === parsedBuyNowData.bookId);
         
-        // Chỉ update nếu có thay đổi để tránh infinite loop
-        if (validSelectedItems.length !== prev.length) {
-          // Save to localStorage
-          if (validSelectedItems.length > 0) {
-            localStorage.setItem('selectedCartItems', JSON.stringify(validSelectedItems));
-          } else {
-            localStorage.removeItem('selectedCartItems');
-          }
-          return validSelectedItems;
+        if (targetItem) {
+          // Tự động chọn item này
+          setSelectedItems([targetItem.id]);
+          localStorage.setItem('selectedCartItems', JSON.stringify([targetItem.id]));
+          
+          // Đánh dấu đã xử lý để tránh trigger lại
+          const updatedBuyNowData = {
+            ...parsedBuyNowData,
+            processed: true
+          };
+          localStorage.setItem('buyNowData', JSON.stringify(updatedBuyNowData));
+          
+          toast.info(`🎯 Đã tự động chọn "${targetItem.name || targetItem.title}" để đặt hàng!`);
         }
-        return prev;
-      });
+      }
+    } catch (error) {
+      console.error('Error parsing buyNowData:', error);
+      // Clear invalid data
+      localStorage.removeItem('buyNowData');
     }
-  }, [cartData?.items]);
+  }
+}, [cartData?.items]);
 
   const fetchCartData = useCallback(async (showLoading = true) => {
     if (fetchingRef.current) return; // Tránh multiple fetch
-    
+
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
@@ -59,7 +74,7 @@ export const CartProvider = ({ children }) => {
     try {
       fetchingRef.current = true;
       if (showLoading) setLoading(true);
-      
+
       const response = await fetch('http://localhost:8000/api/cart', {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -71,12 +86,12 @@ export const CartProvider = ({ children }) => {
 
       if (data.success) {
         setCartData(data.data);
-        
+
         // Broadcast cart update event
         window.dispatchEvent(new CustomEvent('cartDataUpdated', {
           detail: { cartData: data.data }
         }));
-        
+
         // Update global cart count
         if (window.updateCartCount) {
           window.updateCartCount(data.data.total_items || 0);
@@ -106,7 +121,7 @@ export const CartProvider = ({ children }) => {
       wsRef.current.onopen = () => {
         console.log('Cart WebSocket connected');
         setIsConnected(true);
-        
+
         // Start heartbeat
         heartbeatIntervalRef.current = setInterval(() => {
           if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -118,49 +133,49 @@ export const CartProvider = ({ children }) => {
       wsRef.current.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           switch (data.type) {
             case 'cart_updated':
               // Cập nhật cart data từ WebSocket
               setCartData(prevData => {
                 const newData = data.cartData;
-                
+
                 // Chỉ cập nhật nếu có thay đổi thực sự
                 if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
                   // Broadcast event
                   window.dispatchEvent(new CustomEvent('cartDataUpdated', {
                     detail: { cartData: newData }
                   }));
-                  
+
                   // Update global cart count
                   if (window.updateCartCount) {
                     window.updateCartCount(newData.total_items || 0);
                   }
-                  
+
                   return newData;
                 }
                 return prevData;
               });
               break;
-              
+
             case 'item_added':
               message.success(`Đã thêm ${data.item.book.title} vào giỏ hàng`);
               fetchCartData(false); // Refresh without loading
               break;
-              
+
             case 'item_removed':
               message.info('Sản phẩm đã được xóa khỏi giỏ hàng');
               fetchCartData(false);
               break;
-              
+
             case 'quantity_updated':
               message.success('Số lượng đã được cập nhật');
               break;
-              
+
             case 'pong':
               // Heartbeat response
               break;
-              
+
             default:
               console.log('Unknown WebSocket message:', data);
           }
@@ -172,13 +187,13 @@ export const CartProvider = ({ children }) => {
       wsRef.current.onclose = (event) => {
         console.log('Cart WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
-        
+
         // Clear heartbeat
         if (heartbeatIntervalRef.current) {
           clearInterval(heartbeatIntervalRef.current);
           heartbeatIntervalRef.current = null;
         }
-        
+
         // Reconnect after delay (unless manually closed)
         if (event.code !== 1000) {
           reconnectTimeoutRef.current = setTimeout(() => {
@@ -188,11 +203,11 @@ export const CartProvider = ({ children }) => {
       };
 
       wsRef.current.onerror = (error) => {
-         
+
       };
 
     } catch (error) {
-       
+
     }
   }, [fetchCartData]);
 
@@ -202,17 +217,17 @@ export const CartProvider = ({ children }) => {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    
+
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
       heartbeatIntervalRef.current = null;
     }
-    
+
     if (wsRef.current) {
       wsRef.current.close(1000, 'Component unmounting');
       wsRef.current = null;
     }
-    
+
     setIsConnected(false);
   }, []);
 
@@ -231,9 +246,9 @@ export const CartProvider = ({ children }) => {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          book_id: bookId, 
-          quantity: quantity 
+        body: JSON.stringify({
+          book_id: bookId,
+          quantity: quantity
         }),
       });
 
@@ -243,9 +258,9 @@ export const CartProvider = ({ children }) => {
         // Optimistic update
         setCartData(prev => {
           if (!prev) return prev;
-          
+
           const existingItemIndex = prev.items.findIndex(item => item.book.id === bookId);
-          
+
           if (existingItemIndex >= 0) {
             // Update existing item
             const updatedItems = [...prev.items];
@@ -253,7 +268,7 @@ export const CartProvider = ({ children }) => {
               ...updatedItems[existingItemIndex],
               quantity: updatedItems[existingItemIndex].quantity + quantity
             };
-            
+
             return {
               ...prev,
               items: updatedItems,
@@ -270,7 +285,7 @@ export const CartProvider = ({ children }) => {
 
         // Fetch updated cart data
         setTimeout(() => fetchCartData(false), 100);
-        
+
         message.success('Đã thêm vào giỏ hàng');
         return true;
       } else {
@@ -305,7 +320,7 @@ export const CartProvider = ({ children }) => {
         // Optimistic update
         setCartData(prev => {
           if (!prev) return prev;
-          
+
           return {
             ...prev,
             items: prev.items.map(item =>
@@ -319,7 +334,7 @@ export const CartProvider = ({ children }) => {
             } : prev.cart,
           };
         });
-        
+
         message.success('Cập nhật số lượng thành công');
       } else {
         message.error('Không thể cập nhật số lượng');
@@ -356,11 +371,11 @@ export const CartProvider = ({ children }) => {
         // Optimistic update
         setCartData(prev => {
           if (!prev) return prev;
-          
+
           const removedItemsCount = prev.items
             .filter(item => itemIds.includes(item.id))
             .reduce((sum, item) => sum + item.quantity, 0);
-          
+
           return {
             ...prev,
             items: prev.items.filter(item => !itemIds.includes(item.id)),
@@ -371,10 +386,10 @@ export const CartProvider = ({ children }) => {
             total_items: prev.total_items - removedItemsCount,
           };
         });
-        
+
         // selectedItems sẽ được tự động sync thông qua useEffect
         message.success('Xóa sản phẩm thành công');
-        
+
         // Broadcast update
         window.dispatchEvent(new CustomEvent('cartUpdated'));
       } else {
@@ -408,12 +423,12 @@ export const CartProvider = ({ children }) => {
   // Utility function để update selectedItems an toàn
   const updateSelectedItems = useCallback((newSelectedItems) => {
     if (!cartData?.items) return;
-    
+
     const currentItemIds = cartData.items.map(item => item.id);
     const validSelectedItems = newSelectedItems.filter(id => currentItemIds.includes(id));
-    
+
     setSelectedItems(validSelectedItems);
-    
+
     // Save to localStorage
     if (validSelectedItems.length > 0) {
       localStorage.setItem('selectedCartItems', JSON.stringify(validSelectedItems));
@@ -441,7 +456,7 @@ export const CartProvider = ({ children }) => {
   useEffect(() => {
     fetchCartData();
     connectWebSocket();
-    
+
     return () => {
       disconnectWebSocket();
     };
@@ -463,7 +478,7 @@ export const CartProvider = ({ children }) => {
     window.addEventListener('cartUpdated', handleCartUpdate);
     window.addEventListener('visibilitychange', handlePageFocus);
     window.addEventListener('focus', handlePageFocus);
-    
+
     return () => {
       window.removeEventListener('cartUpdated', handleCartUpdate);
       window.removeEventListener('visibilitychange', handlePageFocus);

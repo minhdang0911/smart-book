@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useCallback, useMemo, memo } from 'react';
+import React, { useState, useCallback, useMemo, memo, useEffect } from 'react';
 import {
   Card,
   Button,
@@ -299,7 +299,93 @@ const Cart = () => {
       setCheckingCoupon(false);
     }
   };
-
+  
+  useEffect(() => {
+  console.log('=== AUTO SELECT EFFECT TRIGGERED ===');
+  console.log('Cart data:', cartData);
+  console.log('Cart items:', cartData?.items);
+  
+  // Kiểm tra buyNowData từ localStorage
+  const buyNowData = localStorage.getItem('buyNowData');
+  console.log('Buy now data from localStorage:', buyNowData);
+  
+  if (buyNowData && cartData?.items && cartData.items.length > 0) {
+    try {
+      const parsedBuyNowData = JSON.parse(buyNowData);
+      console.log('Parsed buy now data:', parsedBuyNowData);
+      
+      // Kiểm tra nếu là "mua ngay" và chưa được xử lý
+      if (parsedBuyNowData.isBuyNow && parsedBuyNowData.bookId && !parsedBuyNowData.processed) {
+        console.log('Processing buy now auto-select...');
+        console.log('Looking for book ID:', parsedBuyNowData.bookId);
+        
+        // Tìm item trong cart - kiểm tra cả item.id và item.book.id
+        let targetItem = cartData.items.find(item => {
+          console.log('Checking item:', item);
+          console.log('Item ID:', item.id, 'Book ID:', item.book?.id);
+          
+          // Thử cả item.id và item.book.id để match với bookId
+          const itemId = item.id;
+          const bookId = item.book?.id;
+          const targetBookId = parsedBuyNowData.bookId;
+          
+          console.log('Comparing:', {
+            itemId,
+            bookId,
+            targetBookId,
+            itemMatch: itemId == targetBookId,
+            bookMatch: bookId == targetBookId
+          });
+          
+          return itemId == targetBookId || bookId == targetBookId;
+        });
+        
+        console.log('Target item found:', targetItem);
+        
+        if (targetItem) {
+          console.log('Auto-selecting item ID:', targetItem.id);
+          
+          // Set selectedItems với item.id (không phải book.id)
+          setSelectedItems([targetItem.id]);
+          localStorage.setItem('selectedCartItems', JSON.stringify([targetItem.id]));
+          
+          // Đánh dấu đã xử lý
+          const updatedBuyNowData = {
+            ...parsedBuyNowData,
+            processed: true,
+            selectedItemId: targetItem.id // Lưu lại để debug
+          };
+          localStorage.setItem('buyNowData', JSON.stringify(updatedBuyNowData));
+          
+          console.log('Auto-select completed for item:', targetItem.id);
+          toast.info(`🎯 Đã tự động chọn "${targetItem.book?.title || targetItem.book?.name}" để đặt hàng!`);
+        } else {
+          console.log('Target item not found in cart');
+          // Có thể item chưa được thêm vào cart, thử lại sau
+          setTimeout(() => {
+            console.log('Retrying auto-select...');
+            window.dispatchEvent(new CustomEvent('retryAutoSelect'));
+          }, 1000);
+        }
+      } else {
+        console.log('Buy now data not applicable:', {
+          isBuyNow: parsedBuyNowData.isBuyNow,
+          hasBookId: !!parsedBuyNowData.bookId,
+          processed: parsedBuyNowData.processed
+        });
+      }
+    } catch (error) {
+      console.error('Error parsing buyNowData:', error);
+      localStorage.removeItem('buyNowData');
+    }
+  } else {
+    console.log('Auto-select conditions not met:', {
+      hasBuyNowData: !!buyNowData,
+      hasCartData: !!cartData,
+      hasItems: !!(cartData?.items?.length)
+    });
+  }
+}, [cartData?.items]);
   // Xử lý áp dụng mã giảm giá
   const handleApplyCoupon = async () => {
     if (!voucherCode.trim()) {
@@ -472,6 +558,7 @@ const Cart = () => {
       </div>
     );
   }
+  
 
   if (!cartData || !cartData.items || cartData.items.length === 0) {
     return (
