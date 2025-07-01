@@ -200,24 +200,28 @@ const BookStore = () => {
 
 
   // Handle Add to Cart functionality
-  const handleAddToCart = async (book) => {
-    try {
-      setIsAddingToCart(true);
-      const result = await addToCart(book.id, 1);
-      if (result.success) {
-        toast.success('🎉 Đã thêm sách vào giỏ hàng!');
-        window.updateCartCount?.();
-        window.dispatchEvent(new CustomEvent('cartUpdated'));
-      } else {
-        toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
-      }
-    } catch (error) {
-      toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
-      console.error('Lỗi khi gọi API addToCart:', error);
-    } finally {
-      setIsAddingToCart(false);
+const handleAddToCart = async (book) => {
+  try {
+    setIsAddingToCart(true);
+    const result = await addToCart(book.id, 1);
+    if (result.success) {
+      toast.success('🎉 Đã thêm sách vào giỏ hàng!');
+      window.updateCartCount?.();
+      window.dispatchEvent(new CustomEvent('cartUpdated'));
+
+      // 👉 Đóng Quick View sau khi thêm thành công
+      closeQuickView(); // <== THÊM DÒNG NÀY
+    } else {
+      toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
     }
-  };
+  } catch (error) {
+    toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
+    console.error('Lỗi khi gọi API addToCart:', error);
+  } finally {
+    setIsAddingToCart(false);
+  }
+};
+
 
   // Handle Read Now for online books
   const handleReadNow = (book) => {
