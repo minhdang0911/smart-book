@@ -1,9 +1,10 @@
 import './globals.css';
 import ConditionalHeader from './components/ConditionalHeader';
-import ConditionalFooter from './components/footer/footer';
+import ConditionalFooter from './components/footer/ConditionalFooter';
+
 import { ToastContainer, toast } from 'react-toastify';
 import { CartProvider } from '../app/contexts/CartContext'
-import Footer from './components/footer/footer'
+
 export const metadata = {
   title: 'SmartBook Web',
   description: 'Trang đọc sách SmartBook clone',

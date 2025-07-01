@@ -6,11 +6,11 @@ import FooterComponent from './footer/footer';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
-  const isAuthPage = pathname?.includes('/login') || 
-                     pathname?.includes('/register') || 
-                     pathname?.includes('/auth')||
-                      pathname?.includes('/reset-password');
-  
+  const isAuthPage = pathname?.includes('/login') ||
+    pathname?.includes('/register') ||
+    pathname?.includes('/auth') ||
+    pathname?.includes('/reset-password');
+
   if (isAuthPage) return null;
   return <Header />;
 }
