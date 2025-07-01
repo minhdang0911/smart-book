@@ -110,11 +110,11 @@ const CheckoutPage = () => {
       } else {
         // Không có dữ liệu, redirect về cart
         message.warning('Không có thông tin đơn hàng. Vui lòng thử lại.');
-     
+
         return;
       }
     } catch (error) {
-     
+
       return;
     } finally {
       setLoading(false);
@@ -488,25 +488,24 @@ const CheckoutPage = () => {
                   {selectedCartItems.map(item => (
                     <div key={item.id} className="product-item">
                       <Image
-                        src={item.image || '/api/placeholder/80/100'}
-                        alt={item.name || item.title}
+                        src={item.book.cover_image || '/api/placeholder/80/100'}
+                        alt={item.book.title}
                         width={60}
                         height={80}
                         className="product-image"
                         fallback="/api/placeholder/80/100"
                       />
                       <div className="product-details">
-                        <Text strong className="product-name">{item.name || item.title}</Text>
-                        <Text className="product-author">{item.author || item.description}</Text>
-                        <Text className="product-quantity">Số lượng: {item.quantity || 1}</Text>
+                        <Text strong className="product-name">{item.book.title}</Text>
+                        <Text className="product-author">{item.book.author.name}</Text>
+                        <Text className="product-quantity">Số lượng: {item.quantity}</Text>
                       </div>
                       <div className="product-price">
-                        <Text strong>{(item.price || 0).toLocaleString()}đ</Text>
+                        <Text strong>{parseFloat(item.book.price).toLocaleString('vi-VN')}đ</Text>
                       </div>
                     </div>
                   ))}
                 </div>
-
                 <div className="shipping-info">
                   <Row>
                     <Col span={12}>

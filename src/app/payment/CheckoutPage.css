@@ -3,7 +3,7 @@
 /* Container chính */
 .checkout-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
   padding: 20px 0;
   position: relative;
 }
@@ -32,7 +32,7 @@
 
 /* ===== SECTION TITLES ===== */
 .section-title {
-  color: #fff !important;
+  color: #000000 !important;
   font-size: 28px !important;
   font-weight: 700 !important;
   margin-bottom: 24px !important;
@@ -322,7 +322,7 @@
 
 /* ===== BUTTONS ===== */
 .checkout-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  background: linear-gradient(135deg, #f50097 0%, #764ba2 100%) !important;
   border: none !important;
   border-radius: 12px !important;
   height: 50px !important;
