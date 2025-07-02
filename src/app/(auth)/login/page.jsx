@@ -2,13 +2,89 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, Modal, Typography, Divider, message } from 'antd';
-import { UserOutlined, LockOutlined, MailOutlined, EyeInvisibleOutlined, EyeTwoTone, PhoneOutlined } from '@ant-design/icons';
+import { UserOutlined, LockOutlined, MailOutlined, EyeInvisibleOutlined, EyeTwoTone, PhoneOutlined, GoogleOutlined } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiLoginUser, apiForgotPassword, apiRegisterUser, apiSendOtp, apiVerifyOtp } from '../../../../apis/user';
 import './AuthPage.css';
 import CustomNotification from './Notifi';
 
 const { Title, Text } = Typography;
+
+// 🔥 Component xử lý Google callback
+const GoogleCallback = () => {
+  const router = useRouter();
+  const [processing, setProcessing] = useState(true);
+
+  useEffect(() => {
+    const handleGoogleCallback = async () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const token = params.get('access_token');
+        const error = params.get('error');
+
+        if (error) {
+          message.error('Đăng nhập Google thất bại!');
+          router.push('/login?mode=login');
+          return;
+        }
+
+        if (token) {
+          // Lưu token vào localStorage
+          localStorage.setItem('token', token);
+          
+          // Hiển thị thông báo thành công
+          message.success('🎉 Đăng nhập Google thành công!');
+          
+          // Chuyển hướng về trang chủ hoặc dashboard
+          setTimeout(() => {
+            window.location.href = 'localhost:3000/'; // hoặc '/dashboard'
+          }, 1500);
+        } else {
+          message.error('Không nhận được token từ Google!');
+          router.push('/login?mode=login');
+        }
+      } catch (err) {
+        console.error('Google callback error:', err);
+        message.error('Có lỗi xảy ra khi xử lý đăng nhập Google!');
+        router.push('/login?mode=login');
+      } finally {
+        setProcessing(false);
+      }
+    };
+
+    handleGoogleCallback();
+  }, [router]);
+
+  if (processing) {
+    return (
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="loading-overlay">
+            <div className="loading-spinner"></div>
+          </div>
+          <div style={{ textAlign: 'center', padding: '40px' }}>
+            <GoogleOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
+            <Title level={3}>Đang xử lý đăng nhập Google...</Title>
+            <Text type="secondary">Vui lòng đợi trong giây lát</Text>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+// 🔥 Hàm xử lý đăng nhập Google
+const handleGoogleLogin = () => {
+  localStorage.setItem('redirect_after_login', '/');
+  
+  // Thêm frontend URL vào query parameter
+  const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/login/google?frontend_url=${encodeURIComponent(frontendUrl)}`;
+  
+  window.location.href = apiUrl;
+};
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -24,11 +100,14 @@ export default function AuthPage() {
   const [countdown, setCountdown] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
   const [notifContent, setNotifContent] = useState({ message: '', description: '' });
-  const [otpSent, setOtpSent] = useState(false); // 🔒 Flag chống gửi OTP duplicate
+  const [otpSent, setOtpSent] = useState(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const otpInputRefs = useRef([]);
+
+  // Kiểm tra nếu đang ở trang callback
+  const isGoogleCallback = searchParams.get('access_token') || searchParams.get('error');
 
   useEffect(() => {
     const mode = searchParams.get('mode');
@@ -45,8 +124,13 @@ export default function AuthPage() {
     return () => clearTimeout(timer);
   }, [countdown]);
 
+  // Nếu đang ở trang callback, hiển thị GoogleCallback component
+  if (isGoogleCallback) {
+    return <GoogleCallback />;
+  }
+
   const onFinish = async (values) => {
-    if (loading) return; // 🔒 Chặn double submit
+    if (loading) return;
 
     setLoading(true);
     try {
@@ -74,7 +158,6 @@ export default function AuthPage() {
           setTimeout(() => window.location.href = '/', 1500);
         }
       } else {
-        // 🔥 REGISTER - Kiểm tra xem API có tự gửi OTP không
         const registerResult = await apiRegisterUser(
           values.name,
           values.email,
@@ -90,33 +173,29 @@ export default function AuthPage() {
         });
         setShowNotif(true);
 
-        // ✅ CHỈ GỬI OTP NÉU API REGISTER CHƯA TỰ GỬI
         if (!registerResult?.otp_sent && !registerResult?.otp_already_sent) {
           console.log('📩 Gửi OTP đến:', values.email);
           await handleSendOtp(values.email);
         } else {
           console.log('📩 OTP đã được gửi tự động từ API register');
-          setCountdown(60); // Set countdown ngay cả khi không gọi handleSendOtp
+          setCountdown(60);
         }
 
         setShowOtp(true);
       }
     } catch (err) {
-      console.log('❌ Error caught:', err); // Debug log
+      console.log('❌ Error caught:', err);
 
       let errorMessage = '❌ Lỗi';
       let errorDescription = 'Có lỗi xảy ra, vui lòng thử lại!';
 
-      // 🔥 XỬ LÝ LỖI VALIDATION TỪ API
       if (err.response && err.response.data) {
         const errorData = err.response.data;
 
-        // Kiểm tra format lỗi validation: { status: false, errors: {...} }
         if (errorData.status === false && errorData.errors) {
           const errors = errorData.errors;
           const errorMessages = [];
 
-          // Lấy tất cả lỗi từ object errors
           Object.keys(errors).forEach(field => {
             if (Array.isArray(errors[field])) {
               errorMessages.push(...errors[field]);
@@ -128,12 +207,10 @@ export default function AuthPage() {
           errorMessage = '❌ Lỗi xác thực';
           errorDescription = errorMessages.join('\n');
         }
-        // Kiểm tra các format lỗi khác
         else if (errorData.message) {
           errorDescription = errorData.message;
         }
       }
-      // Fallback cho lỗi network hoặc không có response
       else if (err.message) {
         errorDescription = err.message;
       }
@@ -149,7 +226,6 @@ export default function AuthPage() {
   };
 
   const handleSendOtp = async (email) => {
-    // 🔒 Chặn gửi duplicate trong thời gian ngắn
     if (otpSent || sendOtpLoading) {
       console.log('🚫 OTP đã được gửi, bỏ qua request duplicate');
       return;
@@ -174,7 +250,6 @@ export default function AuthPage() {
       setShowNotif(true);
     } finally {
       setSendOtpLoading(false);
-      // Reset flag sau 3 giây để cho phép gửi lại
       setTimeout(() => setOtpSent(false), 3000);
     }
   };
@@ -208,7 +283,6 @@ export default function AuthPage() {
       }
     }
 
-    // Dán OTP (Ctrl + V)
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
       navigator.clipboard.readText().then((text) => {
         const numbers = text.replace(/\D/g, '').slice(0, 6);
@@ -268,7 +342,7 @@ export default function AuthPage() {
   const resetOtpModal = () => {
     setOtpValues(['', '', '', '', '', '']);
     setCountdown(0);
-    setOtpSent(false); // Reset flag khi đóng modal
+    setOtpSent(false);
   };
 
   const handleForgotPassword = async (values) => {
@@ -340,7 +414,6 @@ export default function AuthPage() {
                 >
                   <Input placeholder="Nhập số điện thoại" />
                 </Form.Item>
-
               </>
             )}
 
@@ -407,17 +480,30 @@ export default function AuthPage() {
                 className="submit-btn"
                 loading={loading}
                 disabled={loading}
+                style={{ width: '100%', marginBottom: '12px' }}
               >
                 {isLogin ? '🔑 Đăng nhập' : '📝 Đăng ký'}
               </Button>
-                <Button style={{marginTop:"10px", background: "linear-gradient(135deg,rgb(255, 0, 98),rgb(240, 45, 223))"}}
-                type="primary"
-                htmlType="submit"
-                className="submit-btn"
-                loading={loading}
-                disabled={loading}
-              ><GoogleOutlined/>
-                {isLogin ? ' Đăng nhập Google':''}
+
+              <Button
+                type="default"
+                onClick={handleGoogleLogin}
+                style={{
+                  width: '100%',
+                  height: '45px',
+                  background: 'linear-gradient(135deg, #db4437, #dd4b39)',
+                  border: 'none',
+                  color: 'white',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+              >
+                <GoogleOutlined style={{ fontSize: '18px' }} />
+                Đăng nhập với Google
               </Button>
             </Form.Item>
           </Form>
