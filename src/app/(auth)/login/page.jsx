@@ -410,6 +410,15 @@ export default function AuthPage() {
               >
                 {isLogin ? '🔑 Đăng nhập' : '📝 Đăng ký'}
               </Button>
+                <Button style={{marginTop:"10px", background: "linear-gradient(135deg,rgb(255, 0, 98),rgb(240, 45, 223))"}}
+                type="primary"
+                htmlType="submit"
+                className="submit-btn"
+                loading={loading}
+                disabled={loading}
+              ><GoogleOutlined/>
+                {isLogin ? ' Đăng nhập Google':''}
+              </Button>
             </Form.Item>
           </Form>
 

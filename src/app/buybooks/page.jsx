@@ -1,80 +1,79 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import { apiGetAllBook } from '../../../apis/allbook'
-import { Card, Row, Col } from 'antd'
-import '../components/product/product.css'
-import { useRouter } from 'next/navigation';
+import { Card, Row, Col, Spin } from 'antd'
+import LazyLoad from 'react-lazyload'
+import { useRouter } from 'next/navigation'
+import './buybook.css'
 
-const buybooks = () => {
+const BuyBooks = () => {
   const [ebooks, setEbooks] = useState([])
- 
-
-  const [notify, setNotify] = useState(null);
-  const router = useRouter();
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     const fetchAllBook = async () => {
+      setLoading(true)
       const response = await apiGetAllBook()
       if (response?.status === 'success') {
-        // Lấy đúng mảng từ object trả về
         setEbooks(response.latest_ebooks || [])
-       
       }
+      setLoading(false)
     }
     fetchAllBook()
   }, [])
 
-  const renderBooks = (books, showViews = false) =>
-    books.slice(0, 10).map((book) => (
+  const renderBooks = () =>
+    ebooks?.map((book) => (
       <Col key={book.id} span={4}>
-        <Card
-         onClick={() => router.push(`/book/${book.id}`)}
-          hoverable
-          className="book-card"
-          cover={
-            <img
-              alt={book.title}
-              src={book.cover_image || 'https://via.placeholder.com/150'}
-              className="book-image"
-            />
-          }
+        <LazyLoad 
+          height={300} 
+          offset={100} 
+          once 
+          placeholder={<div style={{ height: 300, background: '#f0f0f0' }} />}
         >
-          <Card.Meta title={book.title} />
-          {/* Hiển thị giá nếu là sách vật lý và có giá */}
-          {book?.is_physical === 1 && book?.price && (
-            <Card.Meta
-              description={
-                <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
-                  Giá: {book.price.toLocaleString('vi-VN')} VNĐ
-                </span>
-              }
-            />
-          )}
-          {/* Hiển thị số lượt xem chỉ khi showViews = true */}
-          {showViews && (
-            <Card.Meta
-              description={
-                <span style={{ color: '#666', fontSize: '14px' }}>
-                  👁️ Lượt xem: {book.views ? book.views.toLocaleString('vi-VN') : 0}
-                </span>
-              }
-            />
-          )}
-        </Card>
+          <Card
+            onClick={() => router.push(`/book/${book.id}`)}
+            hoverable
+            className="book-card"
+            cover={
+              <img
+                alt={book.title}
+                src={book.cover_image || 'https://via.placeholder.com/150'}
+                className="book-image"
+                loading="lazy"
+              />
+            }
+          >
+            <Card.Meta title={book.title} />
+            {book?.is_physical === 1 && book?.price && (
+              <Card.Meta
+                description={
+                  <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+                    Giá: {book.price.toLocaleString('vi-VN')} VNĐ
+                  </span>
+                }
+              />
+            )}
+          </Card>
+        </LazyLoad>
       </Col>
-    ));
+    ))
 
-  // Sử dụng trong component
-   
   return (
     <div className="product-wrapper">
-      <Row gutter={[16, 16]}>
-        {renderBooks(ebooks)}
-      </Row>
-
-    
+      {loading ? (
+        <div style={{ textAlign: 'center', marginTop: '20px' }}>
+          <Spin size="large" />
+          <p>Đang tải sách...</p>
+        </div>
+      ) : (
+        <Row gutter={[16, 16]}>
+          {renderBooks()}
+        </Row>
+      )}
     </div>
   )
 }
 
-export default buybooks
+export default BuyBooks
