@@ -15,7 +15,7 @@ export default function RootLayout({ children }) {
     <html lang="vi">
       <body>
         <CartProvider>
-          <ToastContainer position="top-right" autoClose={3000} />
+          <ToastContainer position="top-right" autoClose={1000} />
           <ConditionalHeader />
           <main className="main-content">{children}</main>
           <ConditionalFooter />

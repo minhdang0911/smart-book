@@ -1080,13 +1080,13 @@ return (
               <div className="book-image-container">
                 {/* Ảnh chính */}
                 <div className="main-image-wrapper">
-                  {mainImage && (
+                  
                     <ReactImageMagnify
                       {...{
                         smallImage: {
                           alt: 'Ảnh chính',
                           isFluidWidth: true,
-                          src: mainImage,
+                          src: book?.cover_image,
                         },
                         largeImage: {
                           src: mainImage,
@@ -1101,7 +1101,7 @@ return (
                         isEnlargedImagePortalEnabledForTouch: true,
                       }}
                     />
-                  )}
+                  
                 </div>
 
                 {/* Ảnh thumbnail - nằm ngang */}

@@ -21,6 +21,7 @@ import {
 import { FilterOutlined, ClearOutlined } from '@ant-design/icons';
 import { apiSearchBooks, apiGetAuthors, apiGetCategories } from '../../../apis/user';
 import './search.css';
+import axios from 'axios';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -32,6 +33,8 @@ const SearchPage = () => {
     const [books, setBooks] = useState([]);
     const [pagination, setPagination] = useState({});
     const [authors, setAuthors] = useState([]);
+    const keyword = searchParams.get('keyword'); // VD: cô
+
     const [categories, setCategories] = useState([]);
 
     // Filters state
@@ -56,9 +59,10 @@ const SearchPage = () => {
     }, []);
 
     // Search when filters change
-    useEffect(() => {
-        searchBooks();
-    }, [filters, currentPage]);
+  useEffect(() => {
+  searchBooks()
+}, [searchParams.toString()]) // ⚠️ Dùng toString để detect thay đổi
+
 
     const loadAuthors = async () => {
         const response = await apiGetAuthors();
@@ -74,33 +78,25 @@ const SearchPage = () => {
         }
     };
 
-    const searchBooks = async () => {
-        setLoading(true);
-        try {
-            const searchParams = {
-                name: filters.name,
-                author: filters.selectedAuthors.join(','),
-                category: filters.selectedCategories.join(','),
-                price_min: filters.priceRange[0],
-                price_max: filters.priceRange[1],
-                type: filters.bookType,
-                available: filters.available ? 1 : 0,
-                sort: filters.sort,
-                page: currentPage,
-                limit: pageSize
-            };
 
-            const response = await apiSearchBooks(searchParams);
-            if (response.status === 'success') {
-                setBooks(response.data);
-                setPagination(response.pagination);
-            }
-        } catch (error) {
-            console.error('Search error:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
+  const searchBooks = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('http://localhost:8000/api/books/search', {
+        params: {
+          name: searchParams.get('keyword') || '',
+        },
+      });
+
+      if (response.data.status === 'success') {
+        setBooks(response.data.data);
+      }
+    } catch (err) {
+      console.error('Lỗi khi tìm kiếm:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
     const handleAuthorChange = (checkedValues) => {
         setFilters(prev => ({
