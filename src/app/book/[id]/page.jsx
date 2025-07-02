@@ -51,12 +51,15 @@ import {
 } from '@ant-design/icons'
 import { useRouter } from 'next/navigation'
 import { marked } from 'marked';
+import ReactImageMagnify from 'react-image-magnify'
+
 
 
 import BookList from './BookList'
 import './BookDetail.css'
 import { apiGetMe } from '../../../../apis/user'
 import { toast } from 'react-toastify';
+import axios from 'axios'
 
 const { Title, Paragraph, Text } = Typography
 const { TextArea } = Input
@@ -86,7 +89,23 @@ const BookDetailPage = () => {
   const [wishlist, setWishlist] = useState([]);
   const [quantity, setQuantity] = useState(1)
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [images, setImages] = useState([])
+  const [mainImage, setMainImage] = useState(null)
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        const res = await axios.get(`http://localhost:8000/api/books/${book?.id}/images`)
+        const data = res.data.data
+        setImages(data)
+        const main = data.find((img) => img.is_main === 1)
+        setMainImage(main?.image_url || data[0]?.image_url)
+      } catch (err) {
+        console.error('Lỗi khi lấy ảnh:', err)
+      }
+    }
 
+    fetchImages()
+  }, [book?.id])
 
   useEffect(() => {
     const fetchBookDetail = async () => {
@@ -1045,276 +1064,310 @@ const BookDetailPage = () => {
   };
 
 
+  console.log(book.id)
 
-
-  return (
-    <div className="book-detail-container">
-      {/* Hero Section */}
-      <Card className="book-hero-card" bordered={false}>
-        <Row gutter={[32, 32]} align="middle">
-          <Col xs={24} md={8} lg={6}>
-            <div className="book-cover-wrapper">
-              <Badge.Ribbon
-                text={book.format === 'paper' ? 'Sách giấy' : 'Sách điện tử'}
-                color={book.format === 'paper' ? 'orange' : 'blue'}
-              >
-                <div className="book-cover-container">
-                  <img
-                    src={book.cover_image}
-                    alt={book.title}
-                    className="book-cover-image"
-                  />
+return (
+  <div className="book-detail-container">
+    {/* Hero Section */}
+    <Card className="book-hero-card" bordered={false}>
+      <Row gutter={[32, 32]} align="top">
+        <Col xs={24} md={8} lg={6}>
+          <div className="book-cover-wrapper">
+            <Badge.Ribbon
+              text={book.format === 'paper' ? 'Sách giấy' : 'Sách điện tử'}
+              color={book.format === 'paper' ? 'orange' : 'blue'}
+            >
+              <div className="book-image-container">
+                {/* Ảnh chính */}
+                <div className="main-image-wrapper">
+                  {mainImage && (
+                    <ReactImageMagnify
+                      {...{
+                        smallImage: {
+                          alt: 'Ảnh chính',
+                          isFluidWidth: true,
+                          src: mainImage,
+                        },
+                        largeImage: {
+                          src: mainImage,
+                          width: 1200,
+                          height: 1600,
+                        },
+                        enlargedImageContainerDimensions: {
+                          width: '150%',
+                          height: '150%',
+                        },
+                        enlargedImagePosition: 'over', // Hiển thị overlay thay vì beside
+                        isEnlargedImagePortalEnabledForTouch: true,
+                      }}
+                    />
+                  )}
                 </div>
-              </Badge.Ribbon>
-            </div>
-          </Col>
 
-          <Col xs={24} md={16} lg={18}>
-            <div className="book-info-section">
-              <Title level={1} className="book-title">
-                {book.title}
-              </Title>
+                {/* Ảnh thumbnail - nằm ngang */}
+                <div className="thumbnail-container">
+                  {images.map((img) => (
+                    <img
+                      key={img.id}
+                      src={img.image_url}
+                      alt={`Ảnh phụ ${img.id}`}
+                      onClick={() => {
+                        setMainImage(img.image_url)
+                        console.log('Click ảnh id:', img.id)
+                      }}
+                      className={`thumbnail-image ${mainImage === img.image_url ? 'active' : ''}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </Badge.Ribbon>
+          </div>
+        </Col>
+        
+        <Col xs={24} md={16} lg={18}>
+          <div className="book-info-section">
+            <Title level={1} className="book-title">
+              {book.title}
+            </Title>
 
-              <Space size="large" wrap className="book-meta">
-                <Space align="center">
-                  <Avatar size="small" icon={<UserOutlined />} />
-                  <Text className="meta-text">
-                    <Text strong>Tác giả:</Text> {book.author.name}
-                  </Text>
-                </Space>
-
-                <Space align="center">
-                  <Avatar size="small" icon={<HomeOutlined />} />
-                  <Text className="meta-text">
-                    <Text strong>NXB:</Text> {book.publisher.name}
-                  </Text>
-                </Space>
+            <Space size="large" wrap className="book-meta">
+              <Space align="center">
+                <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                <Text className="meta-text">
+                  <Text strong>Tác giả:</Text> {book.author.name}
+                </Text>
               </Space>
 
-              <div className="book-category-section">
-                <Tag
-                  icon={<TagOutlined />}
-                  color="geekblue"
-                  className="category-tag"
-                >
-                  {book.category.name}
-                </Tag>
-              </div>
+              <Space align="center">
+                <Avatar size="small" icon={<HomeOutlined />} style={{ backgroundColor: '#52c41a' }} />
+                <Text className="meta-text">
+                  <Text strong>NXB:</Text> {book.publisher.name}
+                </Text>
+              </Space>
+            </Space>
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
-                {renderStats().map((stat, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      color: stat.color,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 6
-                    }}
-                  >
-                    {stat.prefix && <span>{stat.prefix}</span>}
-                    <strong>{stat.title} {stat?.title ? ':' : ''}</strong>
-                    <span>{stat.value}</span>
-                  </div>
-                ))}
-              </div>
+            <div className="book-category-section">
+              <Tag
+                icon={<TagOutlined />}
+                color="geekblue"
+                className="category-tag"
+              >
+                {book.category.name}
+              </Tag>
+            </div>
 
-              {/* Quantity Selector Section */}
-              <div className="quantity-selector-section" style={{ margin: '24px 0' }}>
-                <Space size="middle" align="center">
-                  <Text strong style={{ fontSize: '16px' }}>Số lượng:</Text>
-                  <div className="quantity-controls" style={{ display: 'flex', alignItems: 'center', border: '1px solid #d9d9d9', borderRadius: '6px' }}>
-                    <Button
-                      type="text"
-                      icon={<MinusOutlined />}
-                      onClick={() => handleQuantityChange('decrease')}
-                      disabled={quantity <= 1}
-                      style={{
-                        border: 'none',
-                        borderRadius: '6px 0 0 6px',
-                        height: '40px',
-                        width: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    />
-                    <Input
-                      value={quantity}
-                      onChange={(e) => handleQuantityInputChange(e.target.value)}
-                      style={{
-                        width: '60px',
-                        textAlign: 'center',
-                        border: 'none',
-                        borderLeft: '1px solid #d9d9d9',
-                        borderRight: '1px solid #d9d9d9',
-                        borderRadius: '0',
-                        height: '40px'
-                      }}
-                      min={1}
-                      max={99}
-                    />
-                    <Button
-                      type="text"
-                      icon={<PlusOutlined />}
-                      onClick={() => handleQuantityChange('increase')}
-                      disabled={quantity >= 99}
-                      style={{
-                        border: 'none',
-                        borderRadius: '0 6px 6px 0',
-                        height: '40px',
-                        width: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    />
-                  </div>
-                  {book.stock_quantity && (
-                    <Text type="secondary" style={{ fontSize: '14px' }}>
-                      (Còn lại: {book.stock_quantity} sản phẩm)
+            <div className="book-stats">
+              {renderStats().map((stat, index) => (
+                <div key={index} className="stat-item">
+                  {stat.prefix && <span className="stat-prefix">{stat.prefix}</span>}
+                  <strong className="stat-title">
+                    {stat.title} {stat?.title ? ':' : ''}
+                  </strong>
+                  <span className="stat-value" style={{ color: stat.color }}>
+                    {stat.value}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Price Section */}
+            <div className="price-section">
+              <Space size="middle" align="center" wrap>
+                <div className="price-wrapper">
+                  <Text className="current-price">
+                    {book.price?.toLocaleString('vi-VN')}đ
+                  </Text>
+                  {book.original_price && book.original_price > book.price && (
+                    <Text delete className="original-price">
+                      {book.original_price?.toLocaleString('vi-VN')}đ
                     </Text>
                   )}
-                </Space>
-              </div>
+                </div>
+                {book.discount_percentage && (
+                  <Tag color="red" className="discount-tag">
+                    -{book.discount_percentage}%
+                  </Tag>
+                )}
+              </Space>
+            </div>
 
+            {/* Quantity Selector Section */}
+            <div className="quantity-selector-section">
+              <Space size="middle" align="center" wrap>
+                <Text strong className="quantity-label">
+                  Số lượng:
+                </Text>
+                <div className="quantity-controls">
+                  <Button
+                    type="text"
+                    icon={<MinusOutlined />}
+                    onClick={() => handleQuantityChange('decrease')}
+                    disabled={quantity <= 1}
+                    className="quantity-btn minus-btn"
+                  />
+                  <Input
+                    value={quantity}
+                    onChange={(e) => handleQuantityInputChange(e.target.value)}
+                    className="quantity-input"
+                    min={1}
+                    max={99}
+                  />
+                  <Button
+                    type="text"
+                    icon={<PlusOutlined />}
+                    onClick={() => handleQuantityChange('increase')}
+                    disabled={quantity >= 99}
+                    className="quantity-btn plus-btn"
+                  />
+                </div>
+                {book.stock_quantity && (
+                  <Text type="secondary" className="stock-info">
+                    (Còn lại: {book.stock_quantity} sản phẩm)
+                  </Text>
+                )}
+              </Space>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="action-buttons-section">
               {renderActionButtons()}
             </div>
-          </Col>
-        </Row>
-      </Card>
+          </div>
+        </Col>
+      </Row>
+    </Card>
 
-      {/* Description Section */}
+    {/* Description Section */}
+    <Card
+      title={
+        <Space>
+          <FileTextOutlined />
+          <span>Mô tả sách</span>
+        </Space>
+      }
+      className="description-card"
+      bordered={false}
+    >
+      {/* <div
+        className="book-description"
+        dangerouslySetInnerHTML={{ __html: marked(book.description) }}
+      /> */}
+    </Card>
+
+    {/* Reviews Section */}
+    <div className="reviews-section">
+      {renderReviewStats()}
+      {!isLoggedIn && renderLoginPrompt()}
+      {renderReviewsList()}
+    </div>
+
+    {/* Chapters Section for Ebook only */}
+    {book.format === 'ebook' && renderChaptersAccordion()}
+
+    {/* Related Books Section */}
+    <div className="related-books-section">
       <Card
         title={
           <Space>
-            <FileTextOutlined />
-            <span>Mô tả sách</span>
+            <UserOutlined />
+            <span>Sách cùng tác giả</span>
           </Space>
         }
-        className="description-card"
+        className="related-card"
         bordered={false}
       >
-        <div
-          className="book-description"
-          dangerouslySetInnerHTML={{ __html: marked(book.description) }}
-        />
+        <BookList books={sameAuthorBooks} />
       </Card>
 
-      {/* Reviews Section */}
-      <div className="reviews-section">
-        {renderReviewStats()}
-        {!isLoggedIn && renderLoginPrompt()}
-        {renderReviewsList()}
-      </div>
-
-      {/* Chapters Section for Ebook only */}
-      {book.format === 'ebook' && renderChaptersAccordion()}
-
-      {/* Related Books Section */}
-      <div className="related-books-section">
-        <Card
-          title={
-            <Space>
-              <UserOutlined />
-              <span>Sách cùng tác giả</span>
-            </Space>
-          }
-          className="related-card"
-          bordered={false}
-        >
-          <BookList books={sameAuthorBooks} />
-        </Card>
-
-        <Card
-          title={
-            <Space>
-              <TagOutlined />
-              <span>Sách cùng thể loại</span>
-            </Space>
-          }
-          className="related-card"
-          bordered={false}
-        >
-          <BookList books={sameCategoryBooks} />
-        </Card>
-      </div>
-
-      {/* Review Modal */}
-      <Modal
-        title="Viết đánh giá"
-        open={showReviewModal}
-        onCancel={() => {
-          setShowReviewModal(false)
-          form.resetFields()
-        }}
-        footer={null}
-        width={600}
+      <Card
+        title={
+          <Space>
+            <TagOutlined />
+            <span>Sách cùng thể loại</span>
+          </Space>
+        }
+        className="related-card"
+        bordered={false}
       >
-        <Form
-          form={form}
-          onFinish={handleSubmitReview}
-          layout="vertical"
-          initialValues={{ rating: 0.5 }}
-        >
-          <Form.Item
-            name="rating"
-            label="Đánh giá của bạn"
-            rules={[
-              { required: true, message: 'Vui lòng chọn số sao!' },
-              {
-                validator: (_, value) => {
-                  if (value >= 0.5 && value <= 5) {
-                    return Promise.resolve()
-                  }
-                  return Promise.reject(new Error('Đánh giá phải từ 0.5 đến 5 sao'))
-                }
-              }
-            ]}
-          >
-            <Rate
-              style={{ fontSize: '24px' }}
-              allowHalf
-              allowClear={false}
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Text type="secondary" style={{ fontSize: '12px' }}>
-              Đánh giá từ 0.5 - 5.0 sao
-            </Text>
-          </Form.Item>
-
-          <Form.Item
-            name="comment"
-            label="Nhận xét"
-            rules={[{ required: true, message: 'Vui lòng nhập nhận xét!' }]}
-          >
-            <TextArea
-              rows={4}
-              placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
-              showCount
-              maxLength={500}
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit">
-                Gửi đánh giá
-              </Button>
-              <Button onClick={() => {
-                setShowReviewModal(false)
-                form.resetFields()
-              }}>
-                Hủy
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
+        <BookList books={sameCategoryBooks} />
+      </Card>
     </div>
-  )
+
+    {/* Review Modal */}
+    <Modal
+      title="Viết đánh giá"
+      open={showReviewModal}
+      onCancel={() => {
+        setShowReviewModal(false)
+        form.resetFields()
+      }}
+      footer={null}
+      width={600}
+    >
+      <Form
+        form={form}
+        onFinish={handleSubmitReview}
+        layout="vertical"
+        initialValues={{ rating: 0.5 }}
+      >
+        <Form.Item
+          name="rating"
+          label="Đánh giá của bạn"
+          rules={[
+            { required: true, message: 'Vui lòng chọn số sao!' },
+            {
+              validator: (_, value) => {
+                if (value >= 0.5 && value <= 5) {
+                  return Promise.resolve()
+                }
+                return Promise.reject(new Error('Đánh giá phải từ 0.5 đến 5 sao'))
+              }
+            }
+          ]}
+        >
+          <Rate
+            style={{ fontSize: '24px' }}
+            allowHalf
+            allowClear={false}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <Text type="secondary">
+            Đánh giá từ 0.5 - 5.0 sao
+          </Text>
+        </Form.Item>
+
+        <Form.Item
+          name="comment"
+          label="Nhận xét"
+          rules={[{ required: true, message: 'Vui lòng nhập nhận xét!' }]}
+        >
+          <TextArea
+            rows={4}
+            placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
+            showCount
+            maxLength={500}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <Space>
+            <Button type="primary" htmlType="submit">
+              Gửi đánh giá
+            </Button>
+            <Button onClick={() => {
+              setShowReviewModal(false)
+              form.resetFields()
+            }}>
+              Hủy
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
+    </Modal>
+  </div>
+)
 }
 
 export default BookDetailPage;
