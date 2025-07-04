@@ -33,6 +33,7 @@ import {
     MailOutlined,
     EnvironmentOutlined,
     CalendarOutlined,
+    UserAddOutlined,
 } from "@ant-design/icons";
 import { apiGetMe } from "../../../apis/user";
 import './HistoryOrder.css';
@@ -40,6 +41,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { Heart, Star, Eye, DollarSign, Book, Sparkles, Filter, Search, Grid, List } from 'lucide-react';
 import gsap from "gsap";
+import './favoritebooks.css';
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -238,7 +240,7 @@ const ProfilePage = () => {
         { key: "personal", icon: <UserOutlined />, label: "Thông tin cá nhân" },
         { key: "favorites", icon: <HeartOutlined />, label: "Danh sách yêu thích" },
         { key: "history", icon: <HistoryOutlined />, label: "Lịch sử mua hàng" },
-        { key: "cart", icon: <ShoppingCartOutlined />, label: "Giỏ hàng" },
+        { key: "cart", icon: <UserAddOutlined />, label: "Đổi mật khẩu" },
     ];
 
 

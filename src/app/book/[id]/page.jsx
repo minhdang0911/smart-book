@@ -82,7 +82,7 @@ const BookDetailPage = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showReviewModal, setShowReviewModal] = useState(false)
   const [userReview, setUserReview] = useState({ rating: 0, comment: '' })
-  const [user, setUser] = useState({})
+  const [user, setUser] = useState([])
   const [form] = Form.useForm()
   const [selectedStarFilter, setSelectedStarFilter] = useState('all')
   const [reviewsLoading, setReviewsLoading] = useState(false)
@@ -91,6 +91,9 @@ const BookDetailPage = () => {
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [images, setImages] = useState([])
   const [mainImage, setMainImage] = useState(null)
+
+    const token = localStorage.getItem('token');
+
   useEffect(() => {
     const fetchImages = async () => {
       try {
@@ -103,10 +106,32 @@ const BookDetailPage = () => {
         console.error('Lỗi khi lấy ảnh:', err)
       }
     }
-
     fetchImages()
+
+   
   }, [book?.id])
 
+  console.log(user)
+
+   useEffect(() => {
+      if (token) {
+        const getUserInfo = async () => {
+          try {
+            const response = await apiGetMe(token);
+            if (response?.status === true) {
+              setUser(response?.user);
+              // Fetch cart count when user is logged in
+              fetchCartCount();
+            }
+          } catch (error) {
+            console.error('Error getting user info:', error);
+          }
+        };
+        getUserInfo();
+      }
+    }, [])
+   
+ 
   useEffect(() => {
     const fetchBookDetail = async () => {
       try {
@@ -193,29 +218,6 @@ const BookDetailPage = () => {
 
     if (id) fetchBookDetail()
   }, [id])
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      const getUserInfo = async () => {
-        try {
-          const response = await apiGetMe(token);
-          if (response?.status === true) {
-            setUser(response?.user);
-            setIsLoggedIn(true);
-          }
-        } catch (error) {
-          console.error('Error getting user info:', error);
-          localStorage.removeItem('token');
-        }
-      };
-      getUserInfo();
-    }
-  }, []);
-
-
-  const token = localStorage.getItem('token')
-
   useEffect(() => {
     const fetchWishlist = async () => {
       try {
@@ -237,6 +239,11 @@ const BookDetailPage = () => {
 
     fetchWishlist();
   }, []);
+
+
+
+
+
 
 
 
@@ -362,9 +369,11 @@ const BookDetailPage = () => {
   const checkCanReview = async (bookId) => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) {
-        return { canReview: false, message: 'Vui lòng đăng nhập để đánh giá!' }
-      }
+      if (user.length === 0) {
+                toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+                // router.push('/login');
+                return;
+              }
 
       // Gọi API lấy danh sách đơn hàng
       const response = await fetch('http://localhost:8000/api/orders', {
@@ -408,10 +417,11 @@ const BookDetailPage = () => {
   const handleSubmitReview = async (values) => {
     try {
       const token = localStorage.getItem('token')
-      if (!token) {
-        message.error('Vui lòng đăng nhập để đánh giá!')
-        return
-      }
+    if (user.length === 0) {
+                toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+                // router.push('/login');
+                return;
+              }
 
       const response = await fetch('http://localhost:8000/api/ratings', {
         method: 'POST',
@@ -802,7 +812,7 @@ const BookDetailPage = () => {
             icon={<DollarOutlined />}
             style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
             onClick={async () => {
-              if (!token) {
+              if (user.length === 0) {
                 toast.error('🔒 Vui lòng đăng nhập để mua sách!');
                 router.push('/login');
                 return;
@@ -982,7 +992,7 @@ const BookDetailPage = () => {
 
   if (!book) return <div className="error-message">Không tìm thấy thông tin sách</div>
 
-  // State cho quantity
+
 
 
   // Hàm xử lý tăng/giảm quantity
@@ -1001,6 +1011,8 @@ const BookDetailPage = () => {
       setQuantity(numValue);
     }
   };
+
+  ;
 
   const addToCart = async (bookId, quantity) => {
     try {
@@ -1038,11 +1050,11 @@ const BookDetailPage = () => {
 
   const handleAddToCart = async () => {
     try {
-      if (!token) {
-        toast.error('🔒 Vui lòng đăng nhập để thêm sách vào giỏ hàng!');
-        router.push('/login');
-        return;
-      }
+       if (user.length === 0) {
+                toast.error('🔒 Vui lòng đăng nhập để mua sách!');
+                // router.push('/login');
+                return;
+              }
 
       setIsAddingToCart(true);
 
@@ -1066,21 +1078,21 @@ const BookDetailPage = () => {
 
   console.log(book.id)
 
-return (
-  <div className="book-detail-container">
-    {/* Hero Section */}
-    <Card className="book-hero-card" bordered={false}>
-      <Row gutter={[32, 32]} align="top">
-        <Col xs={24} md={8} lg={6}>
-          <div className="book-cover-wrapper">
-            <Badge.Ribbon
-              text={book.format === 'paper' ? 'Sách giấy' : 'Sách điện tử'}
-              color={book.format === 'paper' ? 'orange' : 'blue'}
-            >
-              <div className="book-image-container">
-                {/* Ảnh chính */}
-                <div className="main-image-wrapper">
-                  
+  return (
+    <div className="book-detail-container">
+      {/* Hero Section */}
+      <Card className="book-hero-card" bordered={false}>
+        <Row gutter={[32, 32]} align="top">
+          <Col xs={24} md={8} lg={6}>
+            <div className="book-cover-wrapper">
+              <Badge.Ribbon
+                text={book.format === 'paper' ? 'Sách giấy' : 'Sách điện tử'}
+                color={book.format === 'paper' ? 'orange' : 'blue'}
+              >
+                <div className="book-image-container">
+                  {/* Ảnh chính */}
+                  <div className="main-image-wrapper">
+
                     <ReactImageMagnify
                       {...{
                         smallImage: {
@@ -1101,273 +1113,275 @@ return (
                         isEnlargedImagePortalEnabledForTouch: true,
                       }}
                     />
-                  
+
+                  </div>
+
+                  {/* Ảnh thumbnail - nằm ngang */}
+                  <div className="thumbnail-container">
+                    {images.map((img) => (
+                      <img
+                        key={img.id}
+                        src={img.image_url}
+                        alt={`Ảnh phụ ${img.id}`}
+                        onClick={() => {
+                          setMainImage(img.image_url)
+                          console.log('Click ảnh id:', img.id)
+                        }}
+                        className={`thumbnail-image ${mainImage === img.image_url ? 'active' : ''}`}
+                      />
+                    ))}
+                  </div>
                 </div>
-
-                {/* Ảnh thumbnail - nằm ngang */}
-                <div className="thumbnail-container">
-                  {images.map((img) => (
-                    <img
-                      key={img.id}
-                      src={img.image_url}
-                      alt={`Ảnh phụ ${img.id}`}
-                      onClick={() => {
-                        setMainImage(img.image_url)
-                        console.log('Click ảnh id:', img.id)
-                      }}
-                      className={`thumbnail-image ${mainImage === img.image_url ? 'active' : ''}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </Badge.Ribbon>
-          </div>
-        </Col>
-        
-        <Col xs={24} md={16} lg={18}>
-          <div className="book-info-section">
-            <Title level={1} className="book-title">
-              {book.title}
-            </Title>
-
-            <Space size="large" wrap className="book-meta">
-              <Space align="center">
-                <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
-                <Text className="meta-text">
-                  <Text strong>Tác giả:</Text> {book.author.name}
-                </Text>
-              </Space>
-
-              <Space align="center">
-                <Avatar size="small" icon={<HomeOutlined />} style={{ backgroundColor: '#52c41a' }} />
-                <Text className="meta-text">
-                  <Text strong>NXB:</Text> {book.publisher.name}
-                </Text>
-              </Space>
-            </Space>
-
-            <div className="book-category-section">
-              <Tag
-                icon={<TagOutlined />}
-                color="geekblue"
-                className="category-tag"
-              >
-                {book.category.name}
-              </Tag>
+              </Badge.Ribbon>
             </div>
+          </Col>
 
-            <div className="book-stats">
-              {renderStats().map((stat, index) => (
-                <div key={index} className="stat-item">
-                  {stat.prefix && <span className="stat-prefix">{stat.prefix}</span>}
-                  <strong className="stat-title">
-                    {stat.title} {stat?.title ? ':' : ''}
-                  </strong>
-                  <span className="stat-value" style={{ color: stat.color }}>
-                    {stat.value}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <Col xs={24} md={16} lg={18}>
+            <div className="book-info-section">
+              <Title level={1} className="book-title">
+                {book.title}
+              </Title>
 
-            {/* Price Section */}
-            <div className="price-section">
-              <Space size="middle" align="center" wrap>
-                <div className="price-wrapper">
-                  <Text className="current-price">
-                    {book.price?.toLocaleString('vi-VN')}đ
+              <Space size="large" wrap className="book-meta">
+                <Space align="center">
+                  <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+                  <Text className="meta-text">
+                    <Text strong>Tác giả:</Text> {book.author.name}
                   </Text>
-                  {book.original_price && book.original_price > book.price && (
-                    <Text delete className="original-price">
-                      {book.original_price?.toLocaleString('vi-VN')}đ
+                </Space>
+
+                <Space align="center">
+                  <Avatar size="small" icon={<HomeOutlined />} style={{ backgroundColor: '#52c41a' }} />
+                  <Text className="meta-text">
+                    <Text strong>NXB:</Text> {book.publisher.name}
+                  </Text>
+                </Space>
+              </Space>
+
+              <div className="book-category-section">
+                <Tag
+                  icon={<TagOutlined />}
+                  color="geekblue"
+                  className="category-tag"
+                >
+                  {book.category.name}
+                </Tag>
+              </div>
+
+              <div className="book-stats">
+                {renderStats().map((stat, index) => (
+                  <div key={index} className="stat-item">
+                    {stat.prefix && <span className="stat-prefix">{stat.prefix}</span>}
+                    <strong className="stat-title">
+                      {stat.title} {stat?.title ? ':' : ''}
+                    </strong>
+                    <span className="stat-value" style={{ color: stat.color }}>
+                      {stat.value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Price Section */}
+              <div className="price-section">
+                <Space size="middle" align="center" wrap>
+                  <div className="price-wrapper">
+                    <Text className="current-price">
+                      {book.price?.toLocaleString('vi-VN')}đ
+                    </Text>
+                    {book.original_price && book.original_price > book.price && (
+                      <Text delete className="original-price">
+                        {book.original_price?.toLocaleString('vi-VN')}đ
+                      </Text>
+                    )}
+                  </div>
+                  {book.discount_percentage && (
+                    <Tag color="red" className="discount-tag">
+                      -{book.discount_percentage}%
+                    </Tag>
+                  )}
+                </Space>
+              </div>
+
+              {/* Quantity Selector Section */}
+              <div className="quantity-selector-section">
+                <Space size="middle" align="center" wrap>
+                  <Text strong className="quantity-label">
+                    Số lượng:
+                  </Text>
+                  <div className="quantity-controls">
+                    <Button
+                      type="text"
+                      icon={<MinusOutlined />}
+                      onClick={() => handleQuantityChange('decrease')}
+                      disabled={quantity <= 1}
+                      className="quantity-btn minus-btn"
+                    />
+                    <Input
+                      value={quantity}
+                      onChange={(e) => handleQuantityInputChange(e.target.value)}
+                      className="quantity-input"
+                      min={1}
+                      max={99}
+                    />
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={() => handleQuantityChange('increase')}
+                      disabled={quantity >= 99}
+                      className="quantity-btn plus-btn"
+                    />
+                  </div>
+                  {book.stock_quantity && (
+                    <Text type="secondary" className="stock-info">
+                      (Còn lại: {book.stock_quantity} sản phẩm)
                     </Text>
                   )}
-                </div>
-                {book.discount_percentage && (
-                  <Tag color="red" className="discount-tag">
-                    -{book.discount_percentage}%
-                  </Tag>
-                )}
-              </Space>
-            </div>
+                </Space>
+              </div>
 
-            {/* Quantity Selector Section */}
-            <div className="quantity-selector-section">
-              <Space size="middle" align="center" wrap>
-                <Text strong className="quantity-label">
-                  Số lượng:
-                </Text>
-                <div className="quantity-controls">
-                  <Button
-                    type="text"
-                    icon={<MinusOutlined />}
-                    onClick={() => handleQuantityChange('decrease')}
-                    disabled={quantity <= 1}
-                    className="quantity-btn minus-btn"
-                  />
-                  <Input
-                    value={quantity}
-                    onChange={(e) => handleQuantityInputChange(e.target.value)}
-                    className="quantity-input"
-                    min={1}
-                    max={99}
-                  />
-                  <Button
-                    type="text"
-                    icon={<PlusOutlined />}
-                    onClick={() => handleQuantityChange('increase')}
-                    disabled={quantity >= 99}
-                    className="quantity-btn plus-btn"
-                  />
-                </div>
-                {book.stock_quantity && (
-                  <Text type="secondary" className="stock-info">
-                    (Còn lại: {book.stock_quantity} sản phẩm)
-                  </Text>
-                )}
-              </Space>
+              {/* Action Buttons */}
+              <div className="action-buttons-section">
+                {renderActionButtons()}
+              </div>
             </div>
+          </Col>
+        </Row>
+      </Card>
 
-            {/* Action Buttons */}
-            <div className="action-buttons-section">
-              {renderActionButtons()}
-            </div>
-          </div>
-        </Col>
-      </Row>
-    </Card>
-
-    {/* Description Section */}
-    <Card
-      title={
-        <Space>
-          <FileTextOutlined />
-          <span>Mô tả sách</span>
-        </Space>
-      }
-      className="description-card"
-      bordered={false}
-    >
-      {/* <div
+      {/* Description Section */}
+      <Card
+        title={
+          <Space>
+            <FileTextOutlined />
+            <span>Mô tả sách</span>
+          </Space>
+        }
+        className="description-card"
+        bordered={false}
+      >
+      {book?.description &&
+      
+        <div
         className="book-description"
-        dangerouslySetInnerHTML={{ __html: marked(book.description) }}
-      /> */}
-    </Card>
-
-    {/* Reviews Section */}
-    <div className="reviews-section">
-      {renderReviewStats()}
-      {!isLoggedIn && renderLoginPrompt()}
-      {renderReviewsList()}
-    </div>
-
-    {/* Chapters Section for Ebook only */}
-    {book.format === 'ebook' && renderChaptersAccordion()}
-
-    {/* Related Books Section */}
-    <div className="related-books-section">
-      <Card
-        title={
-          <Space>
-            <UserOutlined />
-            <span>Sách cùng tác giả</span>
-          </Space>
-        }
-        className="related-card"
-        bordered={false}
-      >
-        <BookList books={sameAuthorBooks} />
+        dangerouslySetInnerHTML={{ __html: marked(book?.description || '') }}
+      />}
       </Card>
 
-      <Card
-        title={
-          <Space>
-            <TagOutlined />
-            <span>Sách cùng thể loại</span>
-          </Space>
-        }
-        className="related-card"
-        bordered={false}
-      >
-        <BookList books={sameCategoryBooks} />
-      </Card>
-    </div>
+      {/* Reviews Section */}
+      <div className="reviews-section">
+        {renderReviewStats()}
+        {!isLoggedIn && renderLoginPrompt()}
+        {renderReviewsList()}
+      </div>
 
-    {/* Review Modal */}
-    <Modal
-      title="Viết đánh giá"
-      open={showReviewModal}
-      onCancel={() => {
-        setShowReviewModal(false)
-        form.resetFields()
-      }}
-      footer={null}
-      width={600}
-    >
-      <Form
-        form={form}
-        onFinish={handleSubmitReview}
-        layout="vertical"
-        initialValues={{ rating: 0.5 }}
+      {/* Chapters Section for Ebook only */}
+      {book.format === 'ebook' && renderChaptersAccordion()}
+
+      {/* Related Books Section */}
+      <div className="related-books-section">
+        <Card
+          title={
+            <Space>
+              <UserOutlined />
+              <span>Sách cùng tác giả</span>
+            </Space>
+          }
+          className="related-card"
+          bordered={false}
+        >
+          <BookList books={sameAuthorBooks} />
+        </Card>
+
+        <Card
+          title={
+            <Space>
+              <TagOutlined />
+              <span>Sách cùng thể loại</span>
+            </Space>
+          }
+          className="related-card"
+          bordered={false}
+        >
+          <BookList books={sameCategoryBooks} />
+        </Card>
+      </div>
+
+      {/* Review Modal */}
+      <Modal
+        title="Viết đánh giá"
+        open={showReviewModal}
+        onCancel={() => {
+          setShowReviewModal(false)
+          form.resetFields()
+        }}
+        footer={null}
+        width={600}
       >
-        <Form.Item
-          name="rating"
-          label="Đánh giá của bạn"
-          rules={[
-            { required: true, message: 'Vui lòng chọn số sao!' },
-            {
-              validator: (_, value) => {
-                if (value >= 0.5 && value <= 5) {
-                  return Promise.resolve()
+        <Form
+          form={form}
+          onFinish={handleSubmitReview}
+          layout="vertical"
+          initialValues={{ rating: 0.5 }}
+        >
+          <Form.Item
+            name="rating"
+            label="Đánh giá của bạn"
+            rules={[
+              { required: true, message: 'Vui lòng chọn số sao!' },
+              {
+                validator: (_, value) => {
+                  if (value >= 0.5 && value <= 5) {
+                    return Promise.resolve()
+                  }
+                  return Promise.reject(new Error('Đánh giá phải từ 0.5 đến 5 sao'))
                 }
-                return Promise.reject(new Error('Đánh giá phải từ 0.5 đến 5 sao'))
               }
-            }
-          ]}
-        >
-          <Rate
-            style={{ fontSize: '24px' }}
-            allowHalf
-            allowClear={false}
-          />
-        </Form.Item>
+            ]}
+          >
+            <Rate
+              style={{ fontSize: '24px' }}
+              allowHalf
+              allowClear={false}
+            />
+          </Form.Item>
 
-        <Form.Item>
-          <Text type="secondary">
-            Đánh giá từ 0.5 - 5.0 sao
-          </Text>
-        </Form.Item>
+          <Form.Item>
+            <Text type="secondary">
+              Đánh giá từ 0.5 - 5.0 sao
+            </Text>
+          </Form.Item>
 
-        <Form.Item
-          name="comment"
-          label="Nhận xét"
-          rules={[{ required: true, message: 'Vui lòng nhập nhận xét!' }]}
-        >
-          <TextArea
-            rows={4}
-            placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
-            showCount
-            maxLength={500}
-          />
-        </Form.Item>
+          <Form.Item
+            name="comment"
+            label="Nhận xét"
+            rules={[{ required: true, message: 'Vui lòng nhập nhận xét!' }]}
+          >
+            <TextArea
+              rows={4}
+              placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
+              showCount
+              maxLength={500}
+            />
+          </Form.Item>
 
-        <Form.Item>
-          <Space>
-            <Button type="primary" htmlType="submit">
-              Gửi đánh giá
-            </Button>
-            <Button onClick={() => {
-              setShowReviewModal(false)
-              form.resetFields()
-            }}>
-              Hủy
-            </Button>
-          </Space>
-        </Form.Item>
-      </Form>
-    </Modal>
-  </div>
-)
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Gửi đánh giá
+              </Button>
+              <Button onClick={() => {
+                setShowReviewModal(false)
+                form.resetFields()
+              }}>
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  )
 }
 
 export default BookDetailPage;

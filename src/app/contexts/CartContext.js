@@ -11,63 +11,82 @@ export const CartProvider = ({ children }) => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [updatingItems, setUpdatingItems] = useState(new Set());
   const [loading, setLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
 
   // Refs để tránh stale closure
   const cartDataRef = useRef(cartData);
   const fetchingRef = useRef(false);
-  const wsRef = useRef(null);
-  const reconnectTimeoutRef = useRef(null);
-  const heartbeatIntervalRef = useRef(null);
 
   // Cập nhật ref khi cartData thay đổi
   useEffect(() => {
     cartDataRef.current = cartData;
   }, [cartData]);
 
-
- useEffect(() => {
-  // Kiểm tra buyNowData từ localStorage
-  const buyNowData = localStorage.getItem('buyNowData');
-  
-  if (buyNowData && cartData?.items && cartData.items.length > 0) {
-    try {
-      const parsedBuyNowData = JSON.parse(buyNowData);
-      
-      // Kiểm tra nếu là "mua ngay" và chưa được xử lý
-      if (parsedBuyNowData.isBuyNow && parsedBuyNowData.bookId && !parsedBuyNowData.processed) {
-        // Tìm item trong cart có id trùng với bookId
-        const targetItem = cartData.items.find(item => item.id === parsedBuyNowData.bookId);
+  useEffect(() => {
+    // Kiểm tra buyNowData từ localStorage
+    const buyNowData = localStorage.getItem('buyNowData');
+    
+    if (buyNowData && cartData?.items && cartData.items.length > 0) {
+      try {
+        const parsedBuyNowData = JSON.parse(buyNowData);
         
-        if (targetItem) {
-          // Tự động chọn item này
-          setSelectedItems([targetItem.id]);
-          localStorage.setItem('selectedCartItems', JSON.stringify([targetItem.id]));
+        // Kiểm tra nếu là "mua ngay" và chưa được xử lý
+        if (parsedBuyNowData.isBuyNow && parsedBuyNowData.bookId && !parsedBuyNowData.processed) {
+          // Tìm item trong cart có id trùng với bookId
+          const targetItem = cartData.items.find(item => item.id === parsedBuyNowData.bookId);
           
-          // Đánh dấu đã xử lý để tránh trigger lại
-          const updatedBuyNowData = {
-            ...parsedBuyNowData,
-            processed: true
-          };
-          localStorage.setItem('buyNowData', JSON.stringify(updatedBuyNowData));
-          
-          toast.info(`🎯 Đã tự động chọn "${targetItem.name || targetItem.title}" để đặt hàng!`);
+          if (targetItem) {
+            // Tự động chọn item này
+            setSelectedItems([targetItem.id]);
+            localStorage.setItem('selectedCartItems', JSON.stringify([targetItem.id]));
+            
+            // Đánh dấu đã xử lý để tránh trigger lại
+            const updatedBuyNowData = {
+              ...parsedBuyNowData,
+              processed: true
+            };
+            localStorage.setItem('buyNowData', JSON.stringify(updatedBuyNowData));
+            
+            message.info(`🎯 Đã tự động chọn "${targetItem.name || targetItem.title}" để đặt hàng!`);
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing buyNowData:', error);
+        // Clear invalid data
+        localStorage.removeItem('buyNowData');
+      }
+    }
+  }, [cartData?.items]);
+
+  // Sync selectedItems với cartData để tránh orphaned selections
+  useEffect(() => {
+    if (cartData?.items && selectedItems.length > 0) {
+      const currentItemIds = cartData.items.map(item => item.id);
+      const validSelectedItems = selectedItems.filter(id => currentItemIds.includes(id));
+      
+      // Chỉ update nếu có thay đổi
+      if (validSelectedItems.length !== selectedItems.length) {
+        console.log('🔄 Syncing selected items:', {
+          before: selectedItems,
+          after: validSelectedItems,
+          currentItems: currentItemIds
+        });
+        setSelectedItems(validSelectedItems);
+        
+        if (validSelectedItems.length > 0) {
+          localStorage.setItem('selectedCartItems', JSON.stringify(validSelectedItems));
+        } else {
+          localStorage.removeItem('selectedCartItems');
         }
       }
-    } catch (error) {
-      console.error('Error parsing buyNowData:', error);
-      // Clear invalid data
-      localStorage.removeItem('buyNowData');
     }
-  }
-}, [cartData?.items]);
+  }, [cartData?.items, selectedItems]);
 
   const fetchCartData = useCallback(async (showLoading = true) => {
     if (fetchingRef.current) return; // Tránh multiple fetch
 
     const token = localStorage.getItem('token');
     if (!token) {
-      // router.push('/login');
+      setLoading(false);
       return;
     }
 
@@ -108,130 +127,7 @@ export const CartProvider = ({ children }) => {
     }
   }, [router]);
 
-  // WebSocket connection for real-time updates
-  const connectWebSocket = useCallback(() => {
-    const token = localStorage.getItem('token');
-    if (!token || wsRef.current?.readyState === WebSocket.OPEN) return;
-
-    try {
-      // WebSocket URL - adjust according to your backend
-      const wsUrl = `ws://localhost:8000/ws/cart?token=${token}`;
-      wsRef.current = new WebSocket(wsUrl);
-
-      wsRef.current.onopen = () => {
-        console.log('Cart WebSocket connected');
-        setIsConnected(true);
-
-        // Start heartbeat
-        heartbeatIntervalRef.current = setInterval(() => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({ type: 'ping' }));
-          }
-        }, 30000);
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          switch (data.type) {
-            case 'cart_updated':
-              // Cập nhật cart data từ WebSocket
-              setCartData(prevData => {
-                const newData = data.cartData;
-
-                // Chỉ cập nhật nếu có thay đổi thực sự
-                if (JSON.stringify(prevData) !== JSON.stringify(newData)) {
-                  // Broadcast event
-                  window.dispatchEvent(new CustomEvent('cartDataUpdated', {
-                    detail: { cartData: newData }
-                  }));
-
-                  // Update global cart count
-                  if (window.updateCartCount) {
-                    window.updateCartCount(newData.total_items || 0);
-                  }
-
-                  return newData;
-                }
-                return prevData;
-              });
-              break;
-
-            case 'item_added':
-              message.success(`Đã thêm ${data.item.book.title} vào giỏ hàng`);
-              fetchCartData(false); // Refresh without loading
-              break;
-
-            case 'item_removed':
-              message.info('Sản phẩm đã được xóa khỏi giỏ hàng');
-              fetchCartData(false);
-              break;
-
-            case 'quantity_updated':
-              message.success('Số lượng đã được cập nhật');
-              break;
-
-            case 'pong':
-              // Heartbeat response
-              break;
-
-            default:
-              console.log('Unknown WebSocket message:', data);
-          }
-        } catch (error) {
-          console.error('Error parsing WebSocket message:', error);
-        }
-      };
-
-      wsRef.current.onclose = (event) => {
-        console.log('Cart WebSocket disconnected:', event.code, event.reason);
-        setIsConnected(false);
-
-        // Clear heartbeat
-        if (heartbeatIntervalRef.current) {
-          clearInterval(heartbeatIntervalRef.current);
-          heartbeatIntervalRef.current = null;
-        }
-
-        // Reconnect after delay (unless manually closed)
-        if (event.code !== 1000) {
-          reconnectTimeoutRef.current = setTimeout(() => {
-            connectWebSocket();
-          }, 3000);
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-
-      };
-
-    } catch (error) {
-
-    }
-  }, [fetchCartData]);
-
-  // Disconnect WebSocket
-  const disconnectWebSocket = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
-    }
-
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-      heartbeatIntervalRef.current = null;
-    }
-
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'Component unmounting');
-      wsRef.current = null;
-    }
-
-    setIsConnected(false);
-  }, []);
-
-  // Add to cart with real-time update
+  // Add to cart
   const addToCart = useCallback(async (bookId, quantity = 1) => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -275,7 +171,7 @@ export const CartProvider = ({ children }) => {
               total_items: prev.total_items + quantity
             };
           } else {
-            // Add new item (will be properly updated by WebSocket or next fetch)
+            // Add new item (will be properly updated by next fetch)
             return {
               ...prev,
               total_items: prev.total_items + quantity
@@ -402,6 +298,128 @@ export const CartProvider = ({ children }) => {
     }
   }, []);
 
+  // ✅ THÊM FUNCTION CLEARCART
+  const clearCart = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+      console.log('🧹 Clearing cart...');
+
+      const response = await fetch('http://localhost:8000/api/cart/clear', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Immediate state update
+        setCartData(prev => ({
+          ...prev,
+          items: [],
+          total_items: 0,
+          total_amount: '0.00',
+          cart: prev?.cart ? {
+            ...prev.cart,
+            cart_items: []
+          } : null
+        }));
+
+        // Clear selected items
+        setSelectedItems([]);
+        localStorage.removeItem('selectedCartItems');
+
+        // Clear any buy now data
+        localStorage.removeItem('buyNowData');
+
+        // Broadcast update
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+        
+        // Update global cart count
+        if (window.updateCartCount) {
+          window.updateCartCount(0);
+        }
+
+        console.log('✅ Cart cleared successfully');
+        return true;
+      } else {
+        console.error('❌ Failed to clear cart:', data.message);
+        message.error('Không thể xóa giỏ hàng');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error clearing cart:', error);
+      message.error('Lỗi khi xóa giỏ hàng');
+      return false;
+    }
+  }, []);
+
+  // ✅ THÊM FUNCTION CLEAR SELECTED ITEMS ONLY
+  const clearSelectedItems = useCallback(async () => {
+    if (selectedItems.length === 0) return true;
+
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+
+    try {
+      console.log('🧹 Clearing selected items:', selectedItems);
+
+      const response = await fetch('http://localhost:8000/api/cart/remove', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ cart_item_ids: selectedItems }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Update cart data
+        setCartData(prev => {
+          if (!prev) return prev;
+
+          const removedItemsCount = prev.items
+            .filter(item => selectedItems.includes(item.id))
+            .reduce((sum, item) => sum + item.quantity, 0);
+
+          return {
+            ...prev,
+            items: prev.items.filter(item => !selectedItems.includes(item.id)),
+            cart: prev.cart ? {
+              ...prev.cart,
+              cart_items: prev.cart.cart_items.filter(item => !selectedItems.includes(item.id)),
+            } : prev.cart,
+            total_items: prev.total_items - removedItemsCount,
+          };
+        });
+
+        // Clear selected items
+        setSelectedItems([]);
+        localStorage.removeItem('selectedCartItems');
+
+        // Broadcast update
+        window.dispatchEvent(new CustomEvent('cartUpdated'));
+
+        console.log('✅ Selected items cleared successfully');
+        return true;
+      } else {
+        console.error('❌ Failed to clear selected items:', data.message);
+        message.error('Không thể xóa sản phẩm đã chọn');
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error clearing selected items:', error);
+      message.error('Lỗi khi xóa sản phẩm đã chọn');
+      return false;
+    }
+  }, [selectedItems]);
+
   const calculateTotal = useCallback(() => {
     if (!cartData || !selectedItems.length) return 0;
     return cartData.items
@@ -452,15 +470,10 @@ export const CartProvider = ({ children }) => {
     }
   }, []); // Chỉ chạy một lần khi mount
 
-  // Initial fetch and WebSocket connection
+  // Initial fetch
   useEffect(() => {
     fetchCartData();
-    connectWebSocket();
-
-    return () => {
-      disconnectWebSocket();
-    };
-  }, [fetchCartData, connectWebSocket, disconnectWebSocket]);
+  }, [fetchCartData]);
 
   // Listen for external cart updates
   useEffect(() => {
@@ -491,9 +504,11 @@ export const CartProvider = ({ children }) => {
       value={{
         cartData,
         selectedItems,
-        setSelectedItems: updateSelectedItems, // Sử dụng function an toàn
+        setSelectedItems: updateSelectedItems,
         updateItemQuantity,
         removeItems,
+        clearCart, // ✅ Export clearCart function
+        clearSelectedItems, // ✅ Export clearSelectedItems function
         calculateTotal,
         fetchCartData,
         addToCart,
@@ -501,7 +516,6 @@ export const CartProvider = ({ children }) => {
         getCartCount,
         loading,
         updatingItems,
-        isConnected, // WebSocket connection status
       }}
     >
       {children}
