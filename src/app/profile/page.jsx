@@ -1,47 +1,45 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
 import {
-    Layout,
-    Menu,
-    Card,
-    Avatar,
-    Typography,
-    Rate,
-    Button,
-    Spin,
-    message,
-    Empty,
-    Tag,
-    Drawer,
-    Row,
-    Col,
-    Space,
-    Divider,
-    Tabs,
-    Modal,
-    Popconfirm,
-} from "antd";
-import {
-    UserOutlined,
+    CalendarOutlined,
+    EditOutlined,
+    EnvironmentOutlined,
     HeartOutlined,
     HistoryOutlined,
-    ShoppingCartOutlined,
-    EyeOutlined,
-    MenuOutlined,
-    EditOutlined,
-    PhoneOutlined,
     MailOutlined,
-    EnvironmentOutlined,
-    CalendarOutlined,
+    MenuOutlined,
+    PhoneOutlined,
     UserAddOutlined,
+    UserOutlined
 } from "@ant-design/icons";
-import { apiGetMe } from "../../../apis/user";
-import './HistoryOrder.css';
+import {
+    Avatar,
+    Button,
+    Card,
+    Col,
+    Divider,
+    Drawer,
+    Empty,
+    Layout,
+    Menu,
+    Modal,
+    Popconfirm,
+    Rate,
+    Row,
+    Space,
+    Spin,
+    Tabs,
+    Tag,
+    Typography,
+    message,
+} from "antd";
 import axios from "axios";
-import { toast } from "react-toastify";
-import { Heart, Star, Eye, DollarSign, Book, Sparkles, Filter, Search, Grid, List } from 'lucide-react';
 import gsap from "gsap";
+import { Eye } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { toast } from "react-toastify";
+import { apiGetMe } from "../../../apis/user";
 import './favoritebooks.css';
+import './HistoryOrder.css';
 
 const { Sider, Content, Header } = Layout;
 const { Title, Text, Paragraph } = Typography;
@@ -561,7 +559,6 @@ const ProfilePage = () => {
             padding: "40px 20px"
         }}>
             <div style={{
-                maxWidth: "1200px",
                 margin: "0 auto",
                 background: "rgba(255, 255, 255, 0.98)",
                 borderRadius: "24px",
