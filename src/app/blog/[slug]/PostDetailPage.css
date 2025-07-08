@@ -1,0 +1,40 @@
+.post-detail-page {
+    display: flex;
+    justify-content: center; /* căn giữa ngang */
+    padding: 40px 20px;
+    background-color: #f9f9f9;
+}
+
+.post-detail-wrapper {
+    width: 100%;
+    max-width: 80%; /* chỉ rộng tối đa 80% màn hình */
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+}
+
+.post-detail-header {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 20px;
+}
+
+.back-button {
+    background-color: #1890ff;
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+    background-color: #40a9ff;
+}
+
+.post-detail-content {
+    /* phần chứa PostDetail */
+}

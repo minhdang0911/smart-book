@@ -393,7 +393,7 @@ const BookStore = () => {
                                             {book.price && (
                                                 <div className="price-container">
                                                     <span className="current-price">{formatPrice(book.price)}</span>
-                                                    {book.original_price && book.original_price > book.price && (
+                                                    {book.original_price && book.price > book.price && (
                                                         <span className="original-price">
                                                             {formatPrice(book.original_price)}
                                                         </span>
@@ -521,8 +521,19 @@ const BookStore = () => {
             return Math.round(originalPrice);
         };
 
-        const handleBookClick = (bookId) => {
-            window.location.href = `/book/${bookId}`;
+        const handleBookClick = async (bookId) => {
+            try {
+                await fetch(`http://localhost:8000/api/books/increase-view/${bookId}`, {
+                    method: 'POST',
+                });
+
+                // Sau khi gọi API thành công mới chuyển trang
+                window.location.href = `/book/${bookId}`;
+            } catch (error) {
+                console.error('Lỗi khi tăng lượt xem:', error);
+                // Dù lỗi vẫn chuyển trang (tuỳ bạn)
+                window.location.href = `/book/${bookId}`;
+            }
         };
 
         const handleQuickView = (e, book) => {
@@ -650,13 +661,20 @@ const BookStore = () => {
                     )}
 
                     {book.is_physical === 1 && book.price && (
-                        <div className="book-price-container">
-                            {/* Always show fake original price */}
-                            <span className="original-price">
-                                {formatPrice(book.originalPrice || generateDiscountPrice(book.price))}
-                            </span>
-                            {book?.discount_price > 0 && (
-                                <span className="book-price">{formatPrice(book.discount_price)}</span>
+                        <div
+                            className={`book-price-container ${book.discount_price > 0 ? 'text-left' : 'text-center'}`}
+                        >
+                            {book.discount_price > 0 ? (
+                                <>
+                                    <span className="original-price mr-2 line-through text-gray-500 inline-block">
+                                        {formatPrice(book.price)}
+                                    </span>
+                                    <span className="book-price font-semibold text-red-600 inline-block">
+                                        {formatPrice(book.discount_price)}
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="book-price font-semibold inline-block">{formatPrice(book.price)}</span>
                             )}
                         </div>
                     )}
@@ -673,7 +691,7 @@ const BookStore = () => {
                     .book-card {
                         width: 200px;
                         background: white;
-                        border-radius: 8px;
+                        border-radius: 4px;
                         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                         transition: transform 0.2s ease, box-shadow 0.2s ease;
                         cursor: pointer;
@@ -703,36 +721,12 @@ const BookStore = () => {
                         transform: scale(1.05);
                     }
 
-                    .quick-view-btn {
-                        position: absolute;
-                        top: 10px;
-                        right: 10px;
-                        background: rgba(0, 0, 0, 0.7);
-                        color: white;
-                        border: none;
-                        border-radius: 20px;
-                        padding: 8px 12px;
-                        font-size: 12px;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        gap: 4px;
-                        opacity: 0;
-                        transform: translateY(-10px);
-                        transition: all 0.3s ease;
-                    }
-
-                    .book-card:hover .quick-view-btn {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-
                     .book-info {
                         padding: 16px;
                     }
 
                     .book-title {
-                        font-size: 14px;
+                        font-size: 15px;
                         font-weight: 600;
                         margin: 0 0 8px 0;
                         color: #333;
@@ -744,7 +738,7 @@ const BookStore = () => {
                     }
 
                     .book-author {
-                        font-size: 12px;
+                        font-size: 14px;
                         color: #666;
                         margin: 0 0 8px 0;
                         display: -webkit-box;
@@ -756,7 +750,7 @@ const BookStore = () => {
                     .book-rating {
                         display: flex;
                         align-items: center;
-                        gap: 8px;
+                        gap: 30px;
                         margin-bottom: 8px;
                     }
 
@@ -815,7 +809,7 @@ const BookStore = () => {
                     .book-price-container {
                         display: flex;
                         align-items: center;
-                        gap: 8px;
+                        gap: 18px;
                         margin-top: 8px;
                     }
 
@@ -826,15 +820,14 @@ const BookStore = () => {
                     }
 
                     .book-price {
-                        font-size: 14px;
+                        font-size: 15px;
                         font-weight: 600;
-                        color: #333;
                     }
 
                     .book-views {
                         display: flex;
                         align-items: center;
-                        gap: 4px;
+
                         margin-top: 8px;
                         font-size: 11px;
                         color: #999;
