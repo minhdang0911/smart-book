@@ -3,6 +3,8 @@
     justify-content: center; /* căn giữa ngang */
     padding: 40px 20px;
     background-color: #f9f9f9;
+    max-width: 80%;
+    margin: 0 auto;
 }
 
 .post-detail-wrapper {
@@ -12,6 +14,7 @@
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     padding: 24px;
+    box-sizing: border-box;
 }
 
 .post-detail-header {
@@ -35,6 +38,94 @@
     background-color: #40a9ff;
 }
 
-.post-detail-content {
-    /* phần chứa PostDetail */
+.post-detail-content,
+.editor-content {
+    max-width: 100%;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    box-sizing: border-box;
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+}
+
+/* Xử lý ảnh trong nội dung bài viết */
+.post-detail-content img,
+.editor-content img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 16px auto; /* canh giữa ảnh */
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive cho video nhúng hoặc iframe */
+.post-detail-content iframe,
+.editor-content iframe,
+.post-detail-content video,
+.editor-content video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 16px auto;
+}
+
+/* Xử lý tiêu đề trong nội dung */
+.post-detail-content h1,
+.post-detail-content h2,
+.post-detail-content h3,
+.post-detail-content h4,
+.post-detail-content h5,
+.post-detail-content h6,
+.editor-content h1,
+.editor-content h2,
+.editor-content h3,
+.editor-content h4,
+.editor-content h5,
+.editor-content h6 {
+    margin: 24px 0 12px;
+    font-weight: bold;
+    color: #222;
+}
+
+/* Xử lý đoạn văn và danh sách */
+.post-detail-content p,
+.editor-content p {
+    margin-bottom: 16px;
+}
+
+.post-detail-content ul,
+.editor-content ul {
+    padding-left: 20px;
+    margin-bottom: 16px;
+    list-style-type: disc;
+}
+
+.post-detail-content ol,
+.editor-content ol {
+    padding-left: 20px;
+    margin-bottom: 16px;
+    list-style-type: decimal;
+}
+
+/* Table trong nội dung */
+.post-detail-content table,
+.editor-content table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.post-detail-content table th,
+.post-detail-content table td,
+.editor-content table th,
+.editor-content table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.post-detail-content table th,
+.editor-content table th {
+    background-color: #f2f2f2;
 }
