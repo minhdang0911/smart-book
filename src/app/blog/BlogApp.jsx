@@ -1,6 +1,7 @@
 import BlogInterface from './BlogInterface';
 import './BlogInterface.css';
 import './PostDetail.css';
+import './comment/cmt';
 
 const BlogApp = () => {
     return (

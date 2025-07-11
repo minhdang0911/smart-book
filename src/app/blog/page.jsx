@@ -33,13 +33,25 @@ const BlogInterface = () => {
         }
     }, [currentPage, pageSize, selectedTopic]);
 
+    const getAuthHeaders = () => {
+        const token = localStorage.getItem('token');
+        return token ? { Authorization: `Bearer ${token}` } : {};
+    };
+
+    const fetchWithAuth = async (url) => {
+        return fetch(url, {
+            headers: {
+                'Content-Type': 'application/json',
+                ...getAuthHeaders(),
+            },
+        });
+    };
+
     const fetchTopics = async () => {
         try {
             const res = await fetch('http://localhost:8000/api/topics');
             const result = await res.json();
-            if (result.success) {
-                setTopics(result.data);
-            }
+            if (result.success) setTopics(result.data);
         } catch (err) {
             console.error('Lỗi tải danh sách chủ đề:', err);
         }
@@ -47,11 +59,9 @@ const BlogInterface = () => {
 
     const fetchPinnedPosts = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/posts/pinned');
+            const res = await fetchWithAuth('http://localhost:8000/api/posts/pinned');
             const result = await res.json();
-            if (result.success) {
-                setPinnedPosts(result.data);
-            }
+            if (result.success) setPinnedPosts(result.data);
         } catch (err) {
             console.error('Lỗi tải bài ghim:', err);
         }
@@ -59,11 +69,9 @@ const BlogInterface = () => {
 
     const fetchPopularPosts = async () => {
         try {
-            const res = await fetch('http://localhost:8000/api/posts/popular');
+            const res = await fetchWithAuth('http://localhost:8000/api/posts/popular');
             const result = await res.json();
-            if (result.success) {
-                setPopularPosts(result.data);
-            }
+            if (result.success) setPopularPosts(result.data);
         } catch (err) {
             console.error('Lỗi tải bài phổ biến:', err);
         }
@@ -72,7 +80,7 @@ const BlogInterface = () => {
     const fetchPosts = async (page, size) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/posts?page=${page}&per_page=${size}`);
+            const res = await fetchWithAuth(`http://localhost:8000/api/posts?page=${page}&per_page=${size}`);
             const result = await res.json();
             if (result.success) {
                 const pinnedIds = new Set(pinnedPosts.map((p) => p.id));
@@ -89,16 +97,19 @@ const BlogInterface = () => {
         }
     };
 
-    const fetchPostsByTopic = async (slug) => {
+    const fetchPostsByTopic = async (id) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/posts/${slug}/related`);
+            const res = await fetchWithAuth(`http://localhost:8000/api/posts/related/${id}`);
             const result = await res.json();
             if (result.success) {
                 setPosts(result.data);
                 setPinnedPosts([]);
                 setPopularPosts([]);
                 setTotal(result.data.length);
+            } else {
+                setPosts([]);
+                setTotal(0);
             }
         } catch (err) {
             console.error('Lỗi lọc bài viết theo chủ đề:', err);
@@ -109,11 +120,18 @@ const BlogInterface = () => {
     };
 
     const handleLike = async (postId) => {
+        const token = localStorage.getItem('token');
+        if (!token) return message.warning('Vui lòng đăng nhập để thả tim');
+
         try {
             const res = await fetch(`http://localhost:8000/api/posts/${postId}/like`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`,
+                },
             });
+
             if (res.ok) {
                 if (selectedTopic) {
                     fetchPostsByTopic(selectedTopic);
@@ -138,10 +156,17 @@ const BlogInterface = () => {
         return map[name] || 'default';
     };
 
-    const handleClick = (slug) => router.push(`/blog/${slug}`);
+    const handleClick = (slug) => {
+        const viewedKey = `viewed_${slug}`;
+        if (!sessionStorage.getItem(viewedKey)) {
+            fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
+            sessionStorage.setItem(viewedKey, 'true');
+        }
+        router.push(`/blog/${slug}`);
+    };
 
-    const handleTopicClick = (slug) => {
-        setSelectedTopic(slug);
+    const handleTopicClick = (id) => {
+        setSelectedTopic(id);
         setCurrentPage(1);
     };
 
@@ -165,7 +190,7 @@ const BlogInterface = () => {
                                     <Tag
                                         key={topic.id}
                                         color={getTopicColor(topic.name)}
-                                        onClick={() => handleTopicClick(topic.slug)}
+                                        onClick={() => handleTopicClick(topic.id)}
                                         style={{ cursor: 'pointer' }}
                                     >
                                         {topic.name}
@@ -186,8 +211,7 @@ const BlogInterface = () => {
                         onClick={() => handleClick(post.slug)}
                         style={{ cursor: 'pointer' }}
                     >
-                        {post.title}
-                        {isPinned && <Tag color="red">Ghim</Tag>}
+                        {post.title} {isPinned && <Tag color="red">Ghim</Tag>}
                     </Title>
                     <Paragraph>{post.excerpt || 'Không có mô tả'}</Paragraph>
                 </div>
@@ -255,7 +279,11 @@ const BlogInterface = () => {
                             {popularPosts
                                 .filter((post) => !pinnedPosts.find((p) => p.id === post.id))
                                 .map((post) => renderPostCard(post))}
-                            {posts.map((post) => renderPostCard(post))}
+                            {posts.length > 0 ? (
+                                posts.map((post) => renderPostCard(post))
+                            ) : (
+                                <Text type="secondary">Không có bài viết nào thuộc chủ đề này.</Text>
+                            )}
                         </div>
 
                         {!selectedTopic && (
@@ -286,7 +314,7 @@ const BlogInterface = () => {
                                         <Button
                                             key={topic.id}
                                             type="default"
-                                            onClick={() => handleTopicClick(topic.slug)}
+                                            onClick={() => handleTopicClick(topic.id)}
                                         >
                                             {topic.name}
                                         </Button>

@@ -1,7 +1,7 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
+    reactStrictMode: false, // 🚫 Tắt Strict Mode để tránh useEffect bị gọi 2 lần
 };
 
 export default nextConfig;
