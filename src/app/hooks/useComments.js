@@ -1,4 +1,5 @@
 'use client';
+
 import { message } from 'antd';
 import { useEffect, useState } from 'react';
 
@@ -7,12 +8,12 @@ export const useComments = (postId) => {
     const [loading, setLoading] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Fetch comments from API
+    // Lấy bình luận cha
     const fetchComments = async () => {
         setLoading(true);
         try {
-            const response = await fetch(`http://localhost:8000/api/comments/${postId}`);
-            const data = await response.json();
+            const res = await fetch(`http://localhost:8000/api/comments?post_id=${postId}`);
+            const data = await res.json();
             if (data.success) {
                 setComments(data.data);
             }
@@ -23,13 +24,13 @@ export const useComments = (postId) => {
         }
     };
 
-    // Submit comment to API
+    // Gửi comment hoặc reply
     const submitComment = async (content, parentId = null) => {
         setSubmitting(true);
         const token = localStorage.getItem('token');
 
         try {
-            const response = await fetch('http://localhost:8000/api/comments', {
+            const res = await fetch('http://localhost:8000/api/comments', {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -42,8 +43,8 @@ export const useComments = (postId) => {
                 }),
             });
 
-            const data = await response.json();
-            if (data.success || response.ok) {
+            const data = await res.json();
+            if (data.success || res.ok) {
                 message.success('Bình luận đã được gửi!');
                 await fetchComments();
                 return true;
@@ -59,9 +60,7 @@ export const useComments = (postId) => {
     };
 
     useEffect(() => {
-        if (postId) {
-            fetchComments();
-        }
+        if (postId) fetchComments();
     }, [postId]);
 
     return {

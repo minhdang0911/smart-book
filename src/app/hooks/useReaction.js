@@ -7,13 +7,13 @@ const useReaction = () => {
     const pressTimerRef = useRef(null);
     const isLongPressRef = useRef(false);
 
-    const reactions = [
-        { emoji: '👍', label: 'Like', type: 'like' },
-        { emoji: '❤️', label: 'Love', type: 'love' },
+    const reactionTypes = [
+        { emoji: '👍', label: 'Thích', type: 'like' },
+        { emoji: '❤️', label: 'Yêu thích', type: 'love' },
         { emoji: '😂', label: 'Haha', type: 'haha' },
         { emoji: '😮', label: 'Wow', type: 'wow' },
-        { emoji: '😢', label: 'Sad', type: 'sad' },
-        { emoji: '😡', label: 'Angry', type: 'angry' },
+        { emoji: '😢', label: 'Buồn', type: 'sad' },
+        { emoji: '😡', label: 'Phẫn nộ', type: 'angry' },
     ];
 
     const handleReaction = async (itemId, reactionType) => {
@@ -30,13 +30,15 @@ const useReaction = () => {
             });
 
             if (response.ok) {
-                console.log('Reaction added successfully');
-                // Có thể return data để component cha xử lý cập nhật UI
                 const data = await response.json();
+                console.log('Reaction updated successfully:', data);
                 return data;
+            } else {
+                console.error('Failed to update reaction:', response.status);
+                throw new Error('Failed to update reaction');
             }
         } catch (error) {
-            console.error('Error adding reaction:', error);
+            console.error('Error updating reaction:', error);
             throw error;
         }
     };
@@ -65,16 +67,26 @@ const useReaction = () => {
     );
 
     const handleMouseUp = useCallback(
-        async (e, itemId) => {
+        async (e, itemId, onSuccess) => {
             e.preventDefault();
             clearPressTimer();
 
-            if (!isLongPressRef.current) {
-                // Click nhanh - thực hiện like
-                await handleReaction(itemId, 'like');
-            } else if (hoveredReaction) {
-                // Long press và có reaction được hover
-                await handleReaction(itemId, hoveredReaction);
+            try {
+                if (!isLongPressRef.current) {
+                    // Click nhanh - thực hiện like
+                    await handleReaction(itemId, 'like');
+                    if (onSuccess) {
+                        await onSuccess(itemId, 'like');
+                    }
+                } else if (hoveredReaction) {
+                    // Long press và có reaction được hover
+                    await handleReaction(itemId, hoveredReaction);
+                    if (onSuccess) {
+                        await onSuccess(itemId, hoveredReaction);
+                    }
+                }
+            } catch (error) {
+                console.error('Error in handleMouseUp:', error);
             }
 
             setShowReactions(false);
@@ -86,7 +98,6 @@ const useReaction = () => {
     const handleMouseLeave = useCallback(() => {
         clearPressTimer();
         if (!showReactions) {
-            // Chỉ ẩn reactions nếu không đang trong chế độ chọn
             setShowReactions(false);
         }
     }, [clearPressTimer, showReactions]);
@@ -100,16 +111,26 @@ const useReaction = () => {
     );
 
     const handleTouchEnd = useCallback(
-        async (e, itemId) => {
+        async (e, itemId, onSuccess) => {
             e.preventDefault();
             clearPressTimer();
 
-            if (!isLongPressRef.current) {
-                // Tap nhanh - thực hiện like
-                await handleReaction(itemId, 'like');
-            } else if (hoveredReaction) {
-                // Long press và có reaction được chọn
-                await handleReaction(itemId, hoveredReaction);
+            try {
+                if (!isLongPressRef.current) {
+                    // Tap nhanh - thực hiện like
+                    await handleReaction(itemId, 'like');
+                    if (onSuccess) {
+                        await onSuccess(itemId, 'like');
+                    }
+                } else if (hoveredReaction) {
+                    // Long press và có reaction được chọn
+                    await handleReaction(itemId, hoveredReaction);
+                    if (onSuccess) {
+                        await onSuccess(itemId, hoveredReaction);
+                    }
+                }
+            } catch (error) {
+                console.error('Error in handleTouchEnd:', error);
             }
 
             setShowReactions(false);
@@ -122,8 +143,16 @@ const useReaction = () => {
         setHoveredReaction(reactionType);
     }, []);
 
-    const handleReactionClick = useCallback(async (itemId, reactionType) => {
-        await handleReaction(itemId, reactionType);
+    const handleReactionClick = useCallback(async (itemId, reactionType, onSuccess) => {
+        try {
+            await handleReaction(itemId, reactionType);
+            if (onSuccess) {
+                await onSuccess(itemId, reactionType);
+            }
+        } catch (error) {
+            console.error('Error in handleReactionClick:', error);
+        }
+
         setShowReactions(false);
         setHoveredReaction(null);
     }, []);
@@ -134,7 +163,7 @@ const useReaction = () => {
     }, []);
 
     return {
-        reactions,
+        reactionTypes,
         showReactions,
         hoveredReaction,
         handleMouseDown,

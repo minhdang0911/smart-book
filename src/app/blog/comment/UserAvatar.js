@@ -9,7 +9,7 @@ const UserAvatar = ({ user, size = 40 }) => {
             return user.avatar;
         }
         return user.name
-            .split(' ')
+            ?.split(' ')
             .map((name) => name[0])
             .join('')
             .toUpperCase();

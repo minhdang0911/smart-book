@@ -156,13 +156,14 @@ const BlogInterface = () => {
         return map[name] || 'default';
     };
 
-    const handleClick = (slug) => {
+    const handleClick = (slug, id) => {
         const viewedKey = `viewed_${slug}`;
         if (!sessionStorage.getItem(viewedKey)) {
             fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
             sessionStorage.setItem(viewedKey, 'true');
         }
         router.push(`/blog/${slug}`);
+        localStorage.setItem('postid', id);
     };
 
     const handleTopicClick = (id) => {
@@ -208,7 +209,7 @@ const BlogInterface = () => {
                     <Title
                         level={4}
                         className="post-title"
-                        onClick={() => handleClick(post.slug)}
+                        onClick={() => handleClick(post.slug, post.id)}
                         style={{ cursor: 'pointer' }}
                     >
                         {post.title} {isPinned && <Tag color="red">Ghim</Tag>}
@@ -218,7 +219,7 @@ const BlogInterface = () => {
                 {post.thumbnail && (
                     <div
                         className="post-thumbnail"
-                        onClick={() => handleClick(post.slug)}
+                        onClick={() => handleClick(post.slug, post.id)}
                         style={{ cursor: 'pointer' }}
                     >
                         <img src={post.thumbnail} alt={post.title} onError={(e) => (e.target.style.display = 'none')} />

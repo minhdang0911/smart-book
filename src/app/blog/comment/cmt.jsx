@@ -1,5 +1,5 @@
 // components/CommentInterface.js - Main component
-import { Avatar, Button, Spin, message } from 'antd';
+import { Avatar, Button, message, Spin } from 'antd';
 import { useState } from 'react';
 import { useComments } from '../../hooks/useComments';
 import CommentCount from './CommentCount';
@@ -15,7 +15,7 @@ const CommentInterface = ({ postId }) => {
     const [replyingTo, setReplyingTo] = useState(null);
     const [showAll, setShowAll] = useState(false);
 
-    const { comments, loading, submitting, submitComment } = useComments(postId);
+    const { comments, loading, submitting, submitComment, fetchComments } = useComments(postId);
 
     // Handle reply
     const handleReply = (comment) => {
@@ -45,6 +45,7 @@ const CommentInterface = ({ postId }) => {
             setShowReplyBox(false);
             setReplyText('');
             setReplyingTo(null);
+            await fetchComments(); // <--- cập nhật lại danh sách
         }
     };
 
@@ -59,27 +60,13 @@ const CommentInterface = ({ postId }) => {
         if (success) {
             setShowMainCommentBox(false);
             setCommentText('');
+            await fetchComments(); // <--- cập nhật lại danh sách
         }
     };
 
     // Display comments (show only 4 latest or all)
     const displayComments = showAll ? comments : comments.slice(0, 4);
     const hasMoreComments = comments.length > 4;
-
-    if (loading) {
-        return (
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    padding: '40px',
-                }}
-            >
-                <Spin size="large" />
-            </div>
-        );
-    }
 
     return (
         <div
@@ -124,6 +111,7 @@ const CommentInterface = ({ postId }) => {
 
             {/* Comments */}
             <div style={{ padding: '16px' }}>
+                {loading && <Spin size="small" style={{ marginBottom: 8 }} />}
                 {displayComments.map((comment) => (
                     <CommentItem key={comment.id} comment={comment} onReply={handleReply} />
                 ))}
