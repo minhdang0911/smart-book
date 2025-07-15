@@ -28,7 +28,7 @@ const PostDetail = ({ slug, onBack }) => {
 
             if (result.success) {
                 setPost(result.data);
-                const topicIds = result.data.topics.map((topic) => topic.id);
+                const topicIds = result?.data?.topics?.map((topic) => topic.id);
                 setPostId(result?.data?.id);
                 fetchRelatedPosts(topicIds);
             } else {
@@ -55,7 +55,7 @@ const PostDetail = ({ slug, onBack }) => {
 
             const result = await response.json();
             if (result.success && result.data) {
-                const likedIds = result.data.map((item) => item.id);
+                const likedIds = result?.data?.map((item) => item.id);
                 setPost((prev) => {
                     if (!prev) return prev;
                     return {
@@ -192,9 +192,9 @@ const PostDetail = ({ slug, onBack }) => {
 
                     <div className="post-detail-content">
                         <div className="post-topics">
-                            {post.topics.map((topic) => (
-                                <Tag key={topic.id} color={getTopicColor(topic.name)}>
-                                    {topic.name}
+                            {post?.topics?.map((topic) => (
+                                <Tag key={topic.id} color={getTopicColor(topic?.name)}>
+                                    {topic?.name}
                                 </Tag>
                             ))}
                         </div>

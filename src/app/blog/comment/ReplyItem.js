@@ -26,11 +26,11 @@ const ReplyItem = ({
     return (
         <div style={{ marginTop: '12px', marginLeft: '52px' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
-                <UserAvatar user={reply.user} size={32} />
+                <UserAvatar user={reply?.user} size={32} />
                 <div style={{ flex: 1 }}>
                     <div style={{ marginBottom: '4px' }}>
                         <span style={{ fontWeight: 'bold', color: '#1877f2', fontSize: '13px' }}>
-                            {reply.user.name}
+                            {reply?.user?.name}
                         </span>
                         <span style={{ color: '#65676b', fontSize: '11px', marginLeft: '8px' }}>
                             {formatTime(reply.created_at)}
@@ -85,8 +85,8 @@ const ReplyItem = ({
                     )}
 
                     {/* Render replies cấp cháu nếu có */}
-                    {reply.replies &&
-                        reply.replies.map((subReply) => (
+                    {reply?.replies &&
+                        reply?.replies?.map((subReply) => (
                             <ReplyItem
                                 key={subReply.id}
                                 reply={subReply}

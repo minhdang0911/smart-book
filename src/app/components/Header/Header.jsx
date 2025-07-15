@@ -284,12 +284,12 @@ const Header = () => {
                   <div className="user-profile">
                     <Avatar
                       icon={<UserOutlined />}
-                      src={user.avatar}
+                      src={user?.avatar}
                       size="default"
                       className="user-avatar"
                     />
                     <div className="user-info">
-                      <span className="user-name">{user.name}</span>
+                      <span className="user-name">{user?.name}</span>
                       <span className="user-role">Thành viên</span>
                     </div>
                   </div>
@@ -402,7 +402,7 @@ const Header = () => {
                 <div className="drawer-user-profile">
                   <Avatar
                     icon={<UserOutlined />}
-                    src={user.avatar}
+                    src={user?.avatar}
                     size="large"
                   />
                   <div className="drawer-user-info">

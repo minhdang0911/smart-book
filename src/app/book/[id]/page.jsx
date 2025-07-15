@@ -317,8 +317,8 @@ const BookDetailPage = () => {
                 const formattedReviews = data.data.ratings.map((rating) => ({
                     id: rating.rating_id,
                     user: {
-                        name: rating.user_name,
-                        avatar: rating.user_avatar,
+                        name: rating?.user_name,
+                        avatar: rating?.user_avatar,
                     },
                     rating: rating.rating_star,
                     comment: rating.comment,
@@ -636,8 +636,8 @@ const BookDetailPage = () => {
                                 <List.Item.Meta
                                     avatar={
                                         <Avatar
-                                            src={review.user.avatar}
-                                            icon={!review.user.avatar && <UserOutlined />}
+                                            src={review?.user?.avatar}
+                                            icon={!review?.user?.avatar && <UserOutlined />}
                                             size={40}
                                         />
                                     }

@@ -1,53 +1,25 @@
 'use client';
 
-import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { DeleteOutlined, EditOutlined, FlagOutlined, MoreOutlined } from '@ant-design/icons';
+import { useState } from 'react';
 import { formatTime } from '../../utils/timeUtils';
 import ReactionButton from './ReactionButton';
 import ReplyItem from './ReplyItem';
 import UserAvatar from './UserAvatar';
 
-const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelete, currentUserId }) => {
+const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelete }) => {
     const [replies, setReplies] = useState([]);
     const [showReplies, setShowReplies] = useState(false);
     const [loadingReplies, setLoadingReplies] = useState(false);
     const [showOptions, setShowOptions] = useState(false);
     const [showReactionDetails, setShowReactionDetails] = useState(false);
     const [commentData, setCommentData] = useState(comment);
-    const [showReplyForm, setShowReplyForm] = useState(false);
-    const [replyContent, setReplyContent] = useState('');
-    const [isSubmittingReply, setIsSubmittingReply] = useState(false);
 
     const [isEditing, setIsEditing] = useState(false);
     const [editContent, setEditContent] = useState(comment.content);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    // Kiểm tra quyền sở hữu comment
-    const isOwner = currentUserId && commentData.user_id === currentUserId;
-
-    // Decode JWT token để lấy user info
-    const getCurrentUser = () => {
-        try {
-            const token = localStorage.getItem('token');
-            if (!token) return null;
-
-            const payload = JSON.parse(atob(token?.split('.')[1]));
-            return payload;
-        } catch (error) {
-            console.error('Error decoding token:', error);
-            return null;
-        }
-    };
-
-    // Lấy current user khi component mount
-    useEffect(() => {
-        const user = getCurrentUser();
-        if (user) {
-            // Có thể set vào state nếu cần
-        }
-    }, []);
 
     const loadReplies = async () => {
         if (!showReplies && replies.length === 0) {
@@ -142,7 +114,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
         setIsDeleting(true);
         try {
             const res = await fetch(`http://localhost:8000/api/comments/${commentData.id}`, {
-                method: 'PATCH',
+                method: 'DELETE',
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
                 },
@@ -151,6 +123,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
             const data = await res.json();
 
             if (data.success) {
+                // Gọi callback để thông báo cho component cha xóa comment này khỏi danh sách
                 if (onCommentDelete) {
                     onCommentDelete(commentData.id);
                 }
@@ -164,58 +137,6 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
             alert('Lỗi kết nối server!');
         } finally {
             setIsDeleting(false);
-        }
-    };
-
-    const handleReplySubmit = async () => {
-        if (replyContent.trim() === '') {
-            alert('Nội dung phản hồi không được để trống');
-            return;
-        }
-
-        setIsSubmittingReply(true);
-        try {
-            const res = await fetch(`http://localhost:8000/api/comments/replies`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${localStorage.getItem('token')}`,
-                },
-                body: JSON.stringify({
-                    content: replyContent.trim(),
-                    parent_id: commentData.id,
-                    post_id: postId,
-                }),
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                // Thêm reply mới vào danh sách
-                setReplies((prev) => [...prev, data.data]);
-
-                // Cập nhật số lượng replies
-                setCommentData((prev) => ({
-                    ...prev,
-                    replies_count: prev.replies_count + 1,
-                }));
-
-                // Clear form
-                setReplyContent('');
-                setShowReplyForm(false);
-
-                // Hiển thị replies nếu chưa hiển thị
-                if (!showReplies) {
-                    setShowReplies(true);
-                }
-            } else {
-                alert(data.message || 'Có lỗi xảy ra khi gửi phản hồi');
-            }
-        } catch (err) {
-            console.error('Lỗi khi gửi phản hồi:', err);
-            alert('Lỗi kết nối server!');
-        } finally {
-            setIsSubmittingReply(false);
         }
     };
 
@@ -237,16 +158,6 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
 
     const cancelDelete = () => {
         setShowDeleteConfirm(false);
-    };
-
-    const handleReplyClick = () => {
-        setShowReplyForm(true);
-        setReplyContent(`@${commentData.user.name} `);
-    };
-
-    const cancelReply = () => {
-        setShowReplyForm(false);
-        setReplyContent('');
     };
 
     const renderReactionsSummary = () => {
@@ -610,114 +521,129 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                                         fontWeight: '500',
                                         transition: 'background-color 0.2s',
                                     }}
-                                    onClick={handleReplyClick}
+                                    onClick={() => onReply(commentData)}
                                     onMouseEnter={(e) => (e.target.style.backgroundColor = '#f0f2f5')}
                                     onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
                                 >
                                     Phản hồi
                                 </button>
 
-                                {/* Chỉ hiển thị menu options nếu user là chủ comment */}
-                                {isOwner && (
-                                    <div style={{ marginLeft: 'auto', position: 'relative' }}>
-                                        <div
-                                            style={{
-                                                width: '32px',
-                                                height: '32px',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                borderRadius: '50%',
-                                                cursor: 'pointer',
-                                                backgroundColor: showOptions ? '#e4e6ea' : 'transparent',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onClick={() => setShowOptions(!showOptions)}
-                                            onMouseEnter={(e) =>
-                                                !showOptions && (e.target.style.backgroundColor = '#f0f2f5')
-                                            }
-                                            onMouseLeave={(e) =>
-                                                !showOptions && (e.target.style.backgroundColor = 'transparent')
-                                            }
-                                        >
-                                            <MoreOutlined style={{ color: '#65676b', fontSize: '16px' }} />
-                                        </div>
-
-                                        {showOptions && (
-                                            <>
-                                                <div
-                                                    style={{
-                                                        position: 'fixed',
-                                                        top: 0,
-                                                        left: 0,
-                                                        right: 0,
-                                                        bottom: 0,
-                                                        zIndex: 998,
-                                                    }}
-                                                    onClick={() => setShowOptions(false)}
-                                                />
-                                                <div
-                                                    style={{
-                                                        position: 'absolute',
-                                                        top: '100%',
-                                                        right: 0,
-                                                        background: '#fff',
-                                                        border: '1px solid #dadde1',
-                                                        borderRadius: '8px',
-                                                        padding: '8px 0',
-                                                        zIndex: 999,
-                                                        minWidth: '150px',
-                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                    }}
-                                                >
-                                                    <div
-                                                        style={{
-                                                            padding: '12px 16px',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '8px',
-                                                            fontSize: '14px',
-                                                            transition: 'background-color 0.2s',
-                                                        }}
-                                                        onClick={openEditMode}
-                                                        onMouseEnter={(e) =>
-                                                            (e.target.style.backgroundColor = '#f0f2f5')
-                                                        }
-                                                        onMouseLeave={(e) =>
-                                                            (e.target.style.backgroundColor = 'transparent')
-                                                        }
-                                                    >
-                                                        <EditOutlined style={{ color: '#65676b' }} />
-                                                        Chỉnh sửa
-                                                    </div>
-                                                    <div
-                                                        style={{
-                                                            padding: '12px 16px',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '8px',
-                                                            fontSize: '14px',
-                                                            transition: 'background-color 0.2s',
-                                                            color: '#d73502',
-                                                        }}
-                                                        onClick={openDeleteConfirm}
-                                                        onMouseEnter={(e) =>
-                                                            (e.target.style.backgroundColor = '#f0f2f5')
-                                                        }
-                                                        onMouseLeave={(e) =>
-                                                            (e.target.style.backgroundColor = 'transparent')
-                                                        }
-                                                    >
-                                                        <DeleteOutlined style={{ color: '#d73502' }} />
-                                                        Xóa
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
+                                <div style={{ marginLeft: 'auto', position: 'relative' }}>
+                                    <div
+                                        style={{
+                                            width: '32px',
+                                            height: '32px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: '50%',
+                                            cursor: 'pointer',
+                                            backgroundColor: showOptions ? '#e4e6ea' : 'transparent',
+                                            transition: 'background-color 0.2s',
+                                        }}
+                                        onClick={() => setShowOptions(!showOptions)}
+                                        onMouseEnter={(e) =>
+                                            !showOptions && (e.target.style.backgroundColor = '#f0f2f5')
+                                        }
+                                        onMouseLeave={(e) =>
+                                            !showOptions && (e.target.style.backgroundColor = 'transparent')
+                                        }
+                                    >
+                                        <MoreOutlined style={{ color: '#65676b', fontSize: '16px' }} />
                                     </div>
-                                )}
+
+                                    {showOptions && (
+                                        <>
+                                            <div
+                                                style={{
+                                                    position: 'fixed',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    zIndex: 998,
+                                                }}
+                                                onClick={() => setShowOptions(false)}
+                                            />
+                                            <div
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    right: 0,
+                                                    background: '#fff',
+                                                    border: '1px solid #dadde1',
+                                                    borderRadius: '8px',
+                                                    padding: '8px 0',
+                                                    zIndex: 999,
+                                                    minWidth: '150px',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        padding: '12px 16px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        fontSize: '14px',
+                                                        transition: 'background-color 0.2s',
+                                                    }}
+                                                    onClick={openEditMode}
+                                                    onMouseEnter={(e) => (e.target.style.backgroundColor = '#f0f2f5')}
+                                                    onMouseLeave={(e) =>
+                                                        (e.target.style.backgroundColor = 'transparent')
+                                                    }
+                                                >
+                                                    <EditOutlined style={{ color: '#65676b' }} />
+                                                    Chỉnh sửa
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        padding: '12px 16px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        fontSize: '14px',
+                                                        transition: 'background-color 0.2s',
+                                                        color: '#d73502',
+                                                    }}
+                                                    onClick={openDeleteConfirm}
+                                                    onMouseEnter={(e) => (e.target.style.backgroundColor = '#f0f2f5')}
+                                                    onMouseLeave={(e) =>
+                                                        (e.target.style.backgroundColor = 'transparent')
+                                                    }
+                                                >
+                                                    <DeleteOutlined style={{ color: '#d73502' }} />
+                                                    Xóa
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        padding: '12px 16px',
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        fontSize: '14px',
+                                                        transition: 'background-color 0.2s',
+                                                    }}
+                                                    onClick={() => {
+                                                        setShowOptions(false);
+                                                        // Future: Báo cáo
+                                                    }}
+                                                    onMouseEnter={(e) => (e.target.style.backgroundColor = '#f0f2f5')}
+                                                    onMouseLeave={(e) =>
+                                                        (e.target.style.backgroundColor = 'transparent')
+                                                    }
+                                                >
+                                                    <FlagOutlined style={{ color: '#65676b' }} />
+                                                    Báo cáo
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
 
                             {renderReactionsSummary()}
@@ -747,254 +673,18 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                         </div>
                     )}
 
-                    {/* Form phản hồi */}
-                    {showReplyForm && (
-                        <div style={{ marginTop: '12px', paddingLeft: '0' }}>
-                            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-                                <UserAvatar user={getCurrentUser()} size={32} />
-                                <div style={{ flex: 1 }}>
-                                    {/* Thanh công cụ */}
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            padding: '8px 12px',
-                                            backgroundColor: '#f0f2f5',
-                                            borderRadius: '8px 8px 0 0',
-                                            borderBottom: '1px solid #e4e6ea',
-                                        }}
-                                    >
-                                        <button
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
-                                                fontWeight: 'bold',
-                                                color: '#65676b',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
-                                            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            B
-                                        </button>
-                                        <button
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                borderRadius: '4px',
-                                                fontSize: '14px',
-                                                fontStyle: 'italic',
-                                                color: '#65676b',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
-                                            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            I
-                                        </button>
-                                        <button
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                borderRadius: '4px',
-                                                fontSize: '12px',
-                                                color: '#65676b',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
-                                            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            ""
-                                        </button>
-                                        <button
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                borderRadius: '4px',
-                                                fontSize: '12px',
-                                                color: '#65676b',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
-                                            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            &lt;/&gt;
-                                        </button>
-                                        <button
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                borderRadius: '4px',
-                                                fontSize: '12px',
-                                                color: '#65676b',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
-                                            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            🖼️
-                                        </button>
-                                        <button
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                cursor: 'pointer',
-                                                padding: '4px',
-                                                borderRadius: '4px',
-                                                fontSize: '12px',
-                                                color: '#65676b',
-                                                transition: 'background-color 0.2s',
-                                            }}
-                                            onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
-                                            onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            🔗
-                                        </button>
-                                    </div>
-
-                                    {/* Textarea cho phản hồi */}
-                                    <textarea
-                                        value={replyContent}
-                                        onChange={(e) => setReplyContent(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            minHeight: '60px',
-                                            padding: '12px',
-                                            border: '1px solid #e4e6ea',
-                                            borderTop: 'none',
-                                            borderRadius: '0 0 8px 8px',
-                                            fontSize: '14px',
-                                            fontFamily: 'inherit',
-                                            resize: 'vertical',
-                                            outline: 'none',
-                                            backgroundColor: '#fff',
-                                        }}
-                                        placeholder="Viết phản hồi..."
-                                        autoFocus
-                                    />
-
-                                    {/* Nút action cho phản hồi */}
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'flex-end',
-                                            gap: '8px',
-                                            marginTop: '8px',
-                                        }}
-                                    >
-                                        <button
-                                            onClick={cancelReply}
-                                            disabled={isSubmittingReply}
-                                            style={{
-                                                padding: '8px 16px',
-                                                border: '1px solid #e4e6ea',
-                                                borderRadius: '6px',
-                                                backgroundColor: '#f8f9fa',
-                                                color: '#65676b',
-                                                fontSize: '14px',
-                                                fontWeight: '500',
-                                                cursor: isSubmittingReply ? 'not-allowed' : 'pointer',
-                                                opacity: isSubmittingReply ? 0.6 : 1,
-                                                transition: 'all 0.2s',
-                                            }}
-                                            onMouseEnter={(e) =>
-                                                !isSubmittingReply && (e.target.style.backgroundColor = '#e4e6ea')
-                                            }
-                                            onMouseLeave={(e) =>
-                                                !isSubmittingReply && (e.target.style.backgroundColor = '#f8f9fa')
-                                            }
-                                        >
-                                            HỦY
-                                        </button>
-                                        <button
-                                            onClick={handleReplySubmit}
-                                            disabled={isSubmittingReply || replyContent.trim() === ''}
-                                            style={{
-                                                padding: '8px 16px',
-                                                border: 'none',
-                                                borderRadius: '6px',
-                                                backgroundColor:
-                                                    isSubmittingReply || replyContent.trim() === ''
-                                                        ? '#e4e6ea'
-                                                        : '#1877f2',
-                                                color:
-                                                    isSubmittingReply || replyContent.trim() === ''
-                                                        ? '#bcc0c4'
-                                                        : '#fff',
-                                                fontSize: '14px',
-                                                fontWeight: '500',
-                                                cursor:
-                                                    isSubmittingReply || replyContent.trim() === ''
-                                                        ? 'not-allowed'
-                                                        : 'pointer',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: '8px',
-                                                transition: 'all 0.2s',
-                                            }}
-                                        >
-                                            {isSubmittingReply ? (
-                                                <>
-                                                    <div
-                                                        style={{
-                                                            width: '12px',
-                                                            height: '12px',
-                                                            border: '2px solid #bcc0c4',
-                                                            borderTop: '2px solid #1877f2',
-                                                            borderRadius: '50%',
-                                                            animation: 'spin 1s linear infinite',
-                                                        }}
-                                                    />
-                                                    Đang gửi...
-                                                </>
-                                            ) : (
-                                                'GỬI'
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Hiển thị danh sách replies */}
                     {showReplies && (
-                        <div style={{ marginTop: '16px', paddingLeft: '0' }}>
+                        <div style={{ marginTop: '12px' }}>
                             {loadingReplies ? (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '16px' }}>
-                                    <div
-                                        style={{
-                                            width: '16px',
-                                            height: '16px',
-                                            border: '2px solid #e4e6ea',
-                                            borderTop: '2px solid #1877f2',
-                                            borderRadius: '50%',
-                                            animation: 'spin 1s linear infinite',
-                                        }}
-                                    />
-                                    <span style={{ color: '#65676b', fontSize: '14px' }}>Đang tải phản hồi...</span>
-                                </div>
+                                <div style={{ fontSize: '12px', color: '#999' }}>Đang tải phản hồi...</div>
                             ) : (
                                 replies.map((reply) => (
                                     <ReplyItem
                                         key={reply.id}
                                         reply={reply}
+                                        parentId={commentData.id}
                                         postId={postId}
-                                        currentUserId={currentUserId}
-                                        onReactionUpdate={handleReactionUpdate}
+                                        onReply={onReply}
                                         onRepliesUpdate={handleRepliesUpdate}
                                     />
                                 ))
@@ -1004,7 +694,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                 </div>
             </div>
 
-            {/* Dialog xác nhận xóa */}
+            {/* Modal xác nhận xóa */}
             {showDeleteConfirm && (
                 <>
                     <div
@@ -1014,11 +704,11 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                             left: 0,
                             right: 0,
                             bottom: 0,
-                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            zIndex: 1000,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            zIndex: 9999,
                         }}
                         onClick={cancelDelete}
                     >
@@ -1027,38 +717,28 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                                 backgroundColor: '#fff',
                                 borderRadius: '8px',
                                 padding: '24px',
-                                maxWidth: '400px',
-                                width: '90%',
+                                minWidth: '400px',
+                                maxWidth: '500px',
                                 boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
                             }}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <h3
-                                style={{
-                                    margin: '0 0 16px 0',
-                                    fontSize: '18px',
-                                    fontWeight: 'bold',
-                                    color: '#1c1e21',
-                                }}
-                            >
-                                Xác nhận xóa bình luận
-                            </h3>
-                            <p
-                                style={{
-                                    margin: '0 0 24px 0',
-                                    fontSize: '14px',
-                                    color: '#65676b',
-                                    lineHeight: '1.4',
-                                }}
+                            <div style={{ marginBottom: '16px' }}>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: '#1c1e21' }}>
+                                    Xác nhận xóa bình luận
+                                </h3>
+                            </div>
+                            <div
+                                style={{ marginBottom: '24px', fontSize: '14px', color: '#65676b', lineHeight: '1.4' }}
                             >
                                 Bạn có chắc chắn muốn xóa bình luận này không? Hành động này không thể hoàn tác.
-                            </p>
-                            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                                 <button
                                     onClick={cancelDelete}
                                     disabled={isDeleting}
                                     style={{
-                                        padding: '10px 20px',
+                                        padding: '8px 16px',
                                         border: '1px solid #e4e6ea',
                                         borderRadius: '6px',
                                         backgroundColor: '#f8f9fa',
@@ -1072,17 +752,17 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                                     onMouseEnter={(e) => !isDeleting && (e.target.style.backgroundColor = '#e4e6ea')}
                                     onMouseLeave={(e) => !isDeleting && (e.target.style.backgroundColor = '#f8f9fa')}
                                 >
-                                    HỦY
+                                    Hủy
                                 </button>
                                 <button
                                     onClick={handleDeleteComment}
                                     disabled={isDeleting}
                                     style={{
-                                        padding: '10px 20px',
+                                        padding: '8px 16px',
                                         border: 'none',
                                         borderRadius: '6px',
-                                        backgroundColor: isDeleting ? '#e4e6ea' : '#d73502',
-                                        color: isDeleting ? '#bcc0c4' : '#fff',
+                                        backgroundColor: isDeleting ? '#f5c6cb' : '#d73502',
+                                        color: isDeleting ? '#721c24' : '#fff',
                                         fontSize: '14px',
                                         fontWeight: '500',
                                         cursor: isDeleting ? 'not-allowed' : 'pointer',
@@ -1091,7 +771,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                                         gap: '8px',
                                         transition: 'all 0.2s',
                                     }}
-                                    onMouseEnter={(e) => !isDeleting && (e.target.style.backgroundColor = '#b32d00')}
+                                    onMouseEnter={(e) => !isDeleting && (e.target.style.backgroundColor = '#c52707')}
                                     onMouseLeave={(e) => !isDeleting && (e.target.style.backgroundColor = '#d73502')}
                                 >
                                     {isDeleting ? (
@@ -1100,7 +780,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                                                 style={{
                                                     width: '12px',
                                                     height: '12px',
-                                                    border: '2px solid #bcc0c4',
+                                                    border: '2px solid #721c24',
                                                     borderTop: '2px solid #d73502',
                                                     borderRadius: '50%',
                                                     animation: 'spin 1s linear infinite',
@@ -1109,7 +789,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                                             Đang xóa...
                                         </>
                                     ) : (
-                                        'XÓA'
+                                        'Xóa'
                                     )}
                                 </button>
                             </div>
@@ -1118,7 +798,7 @@ const CommentItem = ({ comment, postId, onReply, onCommentUpdate, onCommentDelet
                 </>
             )}
 
-            {/* CSS animations */}
+            {/* CSS Animation */}
             <style jsx>{`
                 @keyframes spin {
                     0% {

@@ -252,7 +252,7 @@ const ProfilePage = () => {
                         <div className="avatar-wrapper">
                             <Avatar
                                 size={100}
-                                src={user.avatar}
+                                src={user?.avatar}
                                 icon={<UserOutlined />}
                                 className="profile-avatar"
                             />
@@ -1503,7 +1503,7 @@ const ProfilePage = () => {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <Avatar
                                     size={40}
-                                    src={user.avatar}
+                                    src={user?.avatar}
                                     icon={<UserOutlined />}
                                 />
                                 <span>{user.name}</span>
@@ -1543,7 +1543,7 @@ const ProfilePage = () => {
                             <div className="sider-header">
                                 <Avatar
                                     size={80}
-                                    src={user.avatar}
+                                    src={user?.avatar}
                                     icon={<UserOutlined />}
                                     className="sider-avatar"
                                 />
