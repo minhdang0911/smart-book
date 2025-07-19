@@ -2,7 +2,6 @@
 import {
     CalendarOutlined,
     ClockCircleOutlined,
-    CloseOutlined,
     CopyOutlined,
     CustomerServiceOutlined,
     InfoCircleOutlined,
@@ -25,19 +24,15 @@ const CouponSlider = () => {
     const [copiedCoupon, setCopiedCoupon] = useState(null);
     const sliderRef = useRef(null);
 
-    // Fetch coupons from API
     useEffect(() => {
         const fetchCoupons = async () => {
             try {
                 setLoading(true);
                 const response = await fetch('http://localhost:8000/api/coupons/get');
-
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-
                 const data = await response.json();
-                // Filter coupons based on Vietnamese display logic
                 const filteredCoupons = filterCouponsForDisplay(data?.coupons);
                 setCoupons(filteredCoupons);
                 setError(null);
@@ -48,35 +43,23 @@ const CouponSlider = () => {
                 setLoading(false);
             }
         };
-
         fetchCoupons();
     }, []);
 
-    // Filter coupons for display (hide expired coupons after 24h)
     const filterCouponsForDisplay = (coupons) => {
         const now = new Date();
-
         return coupons.filter((coupon) => {
             const endDate = new Date(coupon.end_date);
-
-            // Nếu chưa hết hạn thì hiển thị
             if (now <= endDate) return true;
-
-            // Nếu đã hết hạn, kiểm tra có quá 24h chưa
             const timeDiffInMs = now.getTime() - endDate.getTime();
-
-            // 24 giờ = 86400000 milliseconds
-            return timeDiffInMs <= 86400000;
+            return timeDiffInMs <= 86400000; // 24 giờ
         });
     };
 
-    // Fetch coupon details
     const fetchCouponDetails = async (couponId) => {
         try {
             const response = await fetch(`http://localhost:8000/api/coupons/${couponId}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             const data = await response.json();
             return data;
         } catch (err) {
@@ -85,7 +68,6 @@ const CouponSlider = () => {
         }
     };
 
-    // Format date to Vietnamese format
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('vi-VN', {
@@ -95,7 +77,6 @@ const CouponSlider = () => {
         });
     };
 
-    // Format currency to Vietnamese format
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', {
             style: 'currency',
@@ -103,7 +84,6 @@ const CouponSlider = () => {
         }).format(amount);
     };
 
-    // Format percentage to Vietnamese format
     const formatPercentage = (value) => {
         return new Intl.NumberFormat('vi-VN', {
             style: 'percent',
@@ -112,12 +92,6 @@ const CouponSlider = () => {
         }).format(value / 100);
     };
 
-    // Format number to Vietnamese format
-    const formatNumber = (number) => {
-        return new Intl.NumberFormat('vi-VN').format(number);
-    };
-
-    // Handle copy coupon code
     const handleCopyCoupon = async (couponCode) => {
         try {
             await navigator.clipboard.writeText(couponCode);
@@ -130,11 +104,8 @@ const CouponSlider = () => {
         }
     };
 
-    // Handle show coupon details
     const handleShowDetails = async (coupon) => {
         const detailData = await fetchCouponDetails(coupon.id);
-        console.log(detailData);
-
         if (detailData) {
             setSelectedCoupon(detailData?.coupon);
         } else {
@@ -143,13 +114,11 @@ const CouponSlider = () => {
         setModalVisible(true);
     };
 
-    // Handle close modal
     const handleCloseModal = () => {
         setModalVisible(false);
         setSelectedCoupon(null);
     };
 
-    // Handle slider navigation
     const nextSlide = () => {
         if (coupons.length > 4) {
             setCurrentSlide((prev) => (prev + 1) % Math.max(1, coupons.length - 3));
@@ -162,7 +131,6 @@ const CouponSlider = () => {
         }
     };
 
-    // Update slider position
     useEffect(() => {
         const slider = sliderRef.current;
         if (slider && coupons.length > 4) {
@@ -170,29 +138,26 @@ const CouponSlider = () => {
         }
     }, [currentSlide, coupons.length]);
 
-    // Check if coupon is expired
     const isCouponExpired = (endDate) => {
         const currentDate = new Date();
         const expireDate = new Date(endDate);
         return expireDate < currentDate;
     };
 
-    // Get coupon status info
     const getCouponStatusInfo = (coupon) => {
         const isExpired = isCouponExpired(coupon.end_date);
         const isActive = coupon.is_active;
-
         if (!isExpired && isActive) {
             return {
                 text: 'Còn hạn',
                 className: 'active',
-                color: '#52c41a', // Green color for active coupons
+                color: '#52c41a',
             };
         } else {
             return {
                 text: 'Hết hạn',
                 className: 'inactive',
-                color: '#ff4d4f', // Red color for expired coupons
+                color: '#ff4d4f',
             };
         }
     };
@@ -228,7 +193,6 @@ const CouponSlider = () => {
 
     return (
         <div className="coupon-container">
-            {/* Header Services */}
             <div className="services-grid">
                 <div className="service-item">
                     <div className="service-icon clock-icon">
@@ -271,7 +235,6 @@ const CouponSlider = () => {
                 </div>
             </div>
 
-            {/* Coupon Slider */}
             <div className="slider-container">
                 <div className="slider-header">
                     <h2>Mã giảm giá</h2>
@@ -306,6 +269,8 @@ const CouponSlider = () => {
                         >
                             {coupons.map((coupon) => {
                                 const statusInfo = getCouponStatusInfo(coupon);
+                                const isExpired = statusInfo.className === 'inactive';
+
                                 return (
                                     <div
                                         key={coupon.id}
@@ -317,50 +282,58 @@ const CouponSlider = () => {
                                                     : `${100 / coupons.length}%`,
                                         }}
                                     >
-                                        <div className="coupon-card">
-                                            <div
-                                                className={`coupon-status ${statusInfo.className}`}
-                                                style={{ color: statusInfo.color }}
-                                            >
-                                                {statusInfo.text}
+                                        <div className={`coupon-card ${isExpired ? 'expired' : ''}`}>
+                                            <div className="coupon-left">
+                                                <div className="coupon-code">{coupon.name.toUpperCase()}</div>
+                                                <div className="coupon-discount">
+                                                    Giảm {formatPercentage(coupon.discount_value)}
+                                                </div>
                                             </div>
 
-                                            <div className="coupon-code">{coupon.name.toUpperCase()}</div>
+                                            <div className="coupon-right">
+                                                <div className={`coupon-status ${statusInfo.className}`}>
+                                                    {statusInfo.text}
+                                                </div>
 
-                                            <div className="coupon-description">
-                                                {coupon.description ||
-                                                    `Giảm ${formatPercentage(
-                                                        coupon.discount_value,
-                                                    )} cho đơn hàng từ ${formatCurrency(coupon.min_order_value || 0)}`}
-                                            </div>
+                                                <div className="coupon-description">
+                                                    {coupon.description ||
+                                                        `Giảm ${formatPercentage(
+                                                            coupon.discount_value,
+                                                        )} cho đơn hàng từ ${formatCurrency(
+                                                            coupon.min_order_value || 0,
+                                                        )}`}
+                                                </div>
 
-                                            <div className="coupon-expiry">
-                                                <CalendarOutlined className="expiry-icon" />
-                                                <span>{formatDate(coupon.end_date)}</span>
-                                            </div>
+                                                <div className="coupon-bottom">
+                                                    <div className="coupon-expiry">
+                                                        <CalendarOutlined className="expiry-icon" />
+                                                        <span>{formatDate(coupon.end_date)}</span>
+                                                    </div>
 
-                                            <div className="coupon-actions">
-                                                <Button
-                                                    type="default"
-                                                    size="small"
-                                                    icon={<InfoCircleOutlined />}
-                                                    onClick={() => handleShowDetails(coupon)}
-                                                    className="conditions-btn"
-                                                >
-                                                    Điều kiện
-                                                </Button>
-                                                <Button
-                                                    type="primary"
-                                                    size="small"
-                                                    icon={<CopyOutlined />}
-                                                    onClick={() => handleCopyCoupon(coupon.name.toUpperCase())}
-                                                    className="copy-btn"
-                                                    disabled={statusInfo.className === 'inactive'}
-                                                >
-                                                    {copiedCoupon === coupon.name.toUpperCase()
-                                                        ? 'Đã sao chép!'
-                                                        : 'Sao chép'}
-                                                </Button>
+                                                    <div className="coupon-actions">
+                                                        <Button
+                                                            type="default"
+                                                            size="small"
+                                                            icon={<InfoCircleOutlined />}
+                                                            onClick={() => handleShowDetails(coupon)}
+                                                            className="conditions-btn"
+                                                        >
+                                                            Điều kiện
+                                                        </Button>
+                                                        <Button
+                                                            type="primary"
+                                                            size="small"
+                                                            icon={<CopyOutlined />}
+                                                            onClick={() => handleCopyCoupon(coupon.name.toUpperCase())}
+                                                            className="copy-btn"
+                                                            disabled={isExpired}
+                                                        >
+                                                            {copiedCoupon === coupon.name.toUpperCase()
+                                                                ? 'Đã sao chép!'
+                                                                : 'Sao chép'}
+                                                        </Button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -371,78 +344,37 @@ const CouponSlider = () => {
                 )}
             </div>
 
-            {/* Modal for coupon details - Updated with Vietnamese formatting */}
+            {/* Modal chi tiết */}
             <Modal
-                title={null}
+                title="Chi tiết mã giảm giá"
                 open={modalVisible}
                 onCancel={handleCloseModal}
-                footer={null}
-                className="coupon-modal"
-                width={400}
-                centered
-                closeIcon={<CloseOutlined style={{ color: '#999', fontSize: '16px' }} />}
+                footer={[
+                    <Button key="close" onClick={handleCloseModal}>
+                        Đóng
+                    </Button>,
+                ]}
             >
-                {selectedCoupon && (
-                    <div className="modal-content">
-                        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                            <div className="coupon-code" style={{ fontSize: '24px', marginBottom: '8px' }}>
-                                {selectedCoupon.name.toUpperCase()}
-                            </div>
-                            <div className="modal-description">
-                                {selectedCoupon.description ||
-                                    `Giảm ${formatPercentage(
-                                        selectedCoupon.discount_value,
-                                    )} cho đơn hàng có giá trị tối thiểu ${formatCurrency(
-                                        selectedCoupon.min_order_value || 0,
-                                    )}.`}
-                            </div>
-                        </div>
-
-                        <div className="modal-details">
-                            <div className="detail-item">
-                                • Giảm {formatPercentage(selectedCoupon.discount_value)} cho nhóm sản phẩm{' '}
-                                {selectedCoupon.scope === 'product' ? selectedCoupon.name : 'EGA'}
-                            </div>
-                            <div className="detail-item">
-                                • Tổng giá trị sản phẩm từ {formatCurrency(selectedCoupon.min_order_value || 0)} trở lên
-                            </div>
-                            <div className="detail-item" style={{ marginTop: '16px', color: '#999', fontSize: '12px' }}>
-                                Hết hạn: {formatDate(selectedCoupon.end_date)}
-                            </div>
-                            <div
-                                className="detail-item"
-                                style={{
-                                    color: isCouponExpired(selectedCoupon.end_date) ? '#ff4d4f' : '#52c41a',
-                                    fontSize: '12px',
-                                    marginTop: '4px',
-                                    fontWeight: 'bold',
-                                }}
-                            >
-                                {isCouponExpired(selectedCoupon.end_date) ? 'Hết hạn' : 'Còn hạn'}
-                            </div>
-                        </div>
-
-                        <div style={{ textAlign: 'center', marginTop: '20px' }}>
-                            <Button
-                                type="default"
-                                onClick={handleCloseModal}
-                                style={{ marginRight: '8px', minWidth: '80px' }}
-                            >
-                                Đóng
-                            </Button>
-                            <Button
-                                type="primary"
-                                onClick={() => {
-                                    handleCopyCoupon(selectedCoupon?.name?.toUpperCase());
-                                    handleCloseModal();
-                                }}
-                                disabled={isCouponExpired(selectedCoupon.end_date) || !selectedCoupon.is_active}
-                                style={{ minWidth: '80px' }}
-                            >
-                                Sao chép
-                            </Button>
-                        </div>
+                {selectedCoupon ? (
+                    <div className="coupon-detail">
+                        <p>
+                            <strong>Mã:</strong> {selectedCoupon.name.toUpperCase()}
+                        </p>
+                        <p>
+                            <strong>Giảm giá:</strong> {formatPercentage(selectedCoupon.discount_value)}
+                        </p>
+                        <p>
+                            <strong>Giá trị tối thiểu:</strong> {formatCurrency(selectedCoupon.min_order_value || 0)}
+                        </p>
+                        <p>
+                            <strong>Ngày hết hạn:</strong> {formatDate(selectedCoupon.end_date)}
+                        </p>
+                        <p>
+                            <strong>Mô tả:</strong> {selectedCoupon.description || 'Không có mô tả chi tiết.'}
+                        </p>
                     </div>
+                ) : (
+                    <Spin />
                 )}
             </Modal>
         </div>
