@@ -1,82 +1,99 @@
-'use client'
-import React, { useEffect, useState } from 'react'
-import { apiGetAllBook } from '../../../apis/allbook'
-import { Card, Row, Col } from 'antd'
-import '../components/product/product.css'
+'use client';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { apiGetAllBook } from '../../../apis/allbook';
+import './ebook.css';
 
 const ebooks = () => {
-  const [ebooks, setEbooks] = useState([])
+    const [ebooks, setEbooks] = useState([]);
+    const [notify, setNotify] = useState(null);
+    const router = useRouter();
 
+    useEffect(() => {
+        const fetchAllBook = async () => {
+            const response = await apiGetAllBook();
+            if (response?.status === 'success') {
+                setEbooks(response.latest_paper_books || []);
+            }
+        };
+        fetchAllBook();
+    }, []);
 
-  const [notify, setNotify] = useState(null);
-  const router = useRouter();
+    const renderBooks = (books) =>
+        books.slice(0, 10).map((book) => (
+            <div key={book.id} className="product-card">
+                {/* Header với menu icons */}
+                <div className="card-header">
+                    <div className="menu-icon">
+                        <div className="menu-line"></div>
+                        <div className="menu-line"></div>
+                        <div className="menu-line"></div>
+                    </div>
+                    <div className="menu-icon" style={{ transform: 'rotate(90deg)' }}>
+                        <div className="menu-line"></div>
+                        <div className="menu-line"></div>
+                        <div className="menu-line"></div>
+                    </div>
+                </div>
 
-  useEffect(() => {
-    const fetchAllBook = async () => {
-      const response = await apiGetAllBook()
-      if (response?.status === 'success') {
-        // Lấy đúng mảng từ object trả về
-        setEbooks(response.latest_paper_books || [])
+                {/* Book image với discount badge (nếu có) */}
+                <div className="relative">
+                    <div className="product-image" onClick={() => router.push(`/book/${book.id}`)}>
+                        {book.cover_image ? (
+                            <img src={book.cover_image} alt={book.title} className="book-cover-image" />
+                        ) : (
+                            <>
+                                Ảnh sản phẩm
+                                <br />
+                                240 x 200px
+                            </>
+                        )}
+                    </div>
 
-      }
-    }
-    fetchAllBook()
-  }, [])
+                    {/* Hiển thị discount badge nếu sách có giảm giá */}
+                    {book.discount_percentage && <div className="discount-badge">-{book.discount_percentage}%</div>}
+                </div>
 
-  const renderBooks = (books, showViews = false) =>
-    books.slice(0, 10).map((book) => (
-      <Col key={book.id} span={4}>
-        <Card
-         onClick={() => router.push(`/book/${book.id}`)}
-          hoverable
-          className="book-card"
-          cover={
-            <img
-              alt={book.title}
-              src={book.cover_image || 'https://via.placeholder.com/150'}
-              className="book-image"
-            />
-          }
-        >
-          <Card.Meta title={book.title} />
-          {/* Hiển thị giá nếu là sách vật lý và có giá */}
-          {book?.is_physical === 1 && book?.price && (
-            <Card.Meta
-              description={
-                <span style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
-                  Giá: {book.price.toLocaleString('vi-VN')} VNĐ
-                </span>
-              }
-            />
-          )}
-          {/* Hiển thị số lượt xem chỉ khi showViews = true */}
-          {showViews && (
-            <Card.Meta
-              description={
-                <span style={{ color: '#666', fontSize: '14px' }}>
-                  👁️ Lượt xem: {book.views ? book.views.toLocaleString('vi-VN') : 0}
-                </span>
-              }
-            />
-          )}
-        </Card>
-      </Col>
-    ));
+                {/* Stats - Số lượng và lượt xem */}
+                <div className="stats">
+                    <div className="stat-item">
+                        <span className="stat-label">Số lượng:</span>
+                        <span className="stat-value">{book.quantity || 0}</span>
+                    </div>
+                    <div className="stat-item">
+                        <span className="stat-label">Lượt xem:</span>
+                        <span className="stat-value">{book.views || 0}</span>
+                    </div>
+                </div>
 
-  // Sử dụng trong component
+                {/* Book title */}
+                <h3 className="product-title">{book.title}</h3>
 
-  return (
-    <div className="product-wrapper">
+                {/* Price section - chỉ hiển thị cho sách vật lý */}
+                {book?.is_physical === 1 && book?.price && (
+                    <div className="price-section">
+                        <span className="current-price">{book.price.toLocaleString('vi-VN')}đ</span>
+                        {book.original_price && book.original_price > book.price && (
+                            <span className="original-price">{book.original_price.toLocaleString('vi-VN')}đ</span>
+                        )}
+                    </div>
+                )}
 
+                {/* Footer với buttons */}
+                <div className="card-footer">
+                    <button className="btn btn-outline">
+                        <span className="clock-icon">🕒</span>
+                        {book.status || 'Vừa mở bán'}
+                    </button>
+                    <button className="btn btn-primary" onClick={() => router.push(`/book/${book.id}`)}>
+                        <span className="cart-icon">{book?.is_physical === 1 ? '🛒' : '📖'}</span>
+                        {book?.is_physical === 1 ? '' : ''}
+                    </button>
+                </div>
+            </div>
+        ));
 
-      <Row gutter={[16, 16]}>
-        {renderBooks(ebooks)}
-      </Row>
+    return <div className="container">{renderBooks(ebooks)}</div>;
+};
 
-
-    </div>
-  )
-}
-
-export default ebooks
+export default ebooks;

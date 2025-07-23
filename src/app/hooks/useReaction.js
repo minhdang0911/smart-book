@@ -1,5 +1,6 @@
 // hooks/useReaction.js
 import { useCallback, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
 const useReaction = () => {
     const [showReactions, setShowReactions] = useState(false);
@@ -32,12 +33,14 @@ const useReaction = () => {
             if (response.ok) {
                 const data = await response.json();
                 console.log('Reaction updated successfully:', data);
+                toast.success('Bình luận thành công');
                 return data;
             } else {
                 console.error('Failed to update reaction:', response.status);
                 throw new Error('Failed to update reaction');
             }
         } catch (error) {
+            toast.error('Vui lòng đăng nhập để thả cảm xúc!');
             console.error('Error updating reaction:', error);
             throw error;
         }

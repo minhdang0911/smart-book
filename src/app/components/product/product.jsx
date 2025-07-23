@@ -681,15 +681,11 @@ const BookStore = () => {
 
                     {showViews && book.views && (
                         <div className="book-views">
-                            <span className="views-icon">👁️</span>
+                            <span className="views-icon"></span>
                             <span className="views-count">{book.views.toLocaleString('vi-VN')} lượt xem</span>
                         </div>
                     )}
                 </div>
-
-                <style jsx>{`
-                  
-                `}</style>
             </div>
         );
     };

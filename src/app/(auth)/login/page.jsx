@@ -365,7 +365,7 @@ export default function AuthPage() {
         } catch (err) {
             setNotifContent({
                 message: '❌ Gửi thất bại',
-                description: err.message || 'Có lỗi xảy ra, vui lòng thử lại!',
+                description: 'Email không tồn tại!',
             });
             setShowNotif(true);
         } finally {

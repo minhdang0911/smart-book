@@ -1,0 +1,280 @@
+
+                .profile-page {
+                    min-height: 100vh;
+                    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+                }
+
+                .profile-card {
+                    border: none !important;
+                    overflow: hidden;
+                }
+
+                .profile-header {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                    margin-bottom: 24px;
+                }
+
+                .avatar-section {
+                    margin-bottom: 20px;
+                }
+
+                .avatar-wrapper {
+                    position: relative;
+                    display: inline-block;
+                }
+
+                .profile-avatar {
+                    border: 4px solid #e6f4ff;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                }
+
+                .edit-avatar-btn {
+                    position: absolute;
+                    bottom: -2px;
+                    right: -2px;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+                }
+
+                .info-item {
+                    display: flex;
+                    align-items: center;
+                    padding: 16px;
+                    background: #fafafa;
+                    border-radius: 12px;
+                    transition: all 0.3s ease;
+                }
+
+                .info-item:hover {
+                    background: #f0f2ff;
+                    transform: translateY(-1px);
+                }
+
+                .info-icon {
+                    margin-right: 12px;
+                    font-size: 20px;
+                    color: #1890ff;
+                }
+
+                .info-content {
+                    flex: 1;
+                }
+
+                .edit-profile-btn {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    border: none;
+                    height: 44px;
+                    border-radius: 8px;
+                    font-weight: 600;
+                }
+
+                .edit-profile-btn:hover {
+                    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+                }
+
+                .section-header {
+                    margin-bottom: 24px;
+                }
+
+                .loading-container {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 80px 20px;
+                    background: white;
+                    border-radius: 16px;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                }
+
+                .empty-container {
+                    background: white;
+                    border-radius: 16px;
+                    padding: 60px 20px;
+                    text-align: center;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                }
+
+                .book-card {
+                    border-radius: 16px !important;
+                    overflow: hidden;
+                    transition: all 0.3s ease;
+                    border: none !important;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+                }
+
+                .book-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+                }
+
+                .book-cover {
+                    position: relative;
+                    overflow: hidden;
+                }
+
+                .cover-image {
+                    width: 100%;
+                    height: 240px;
+                    object-fit: cover;
+                    transition: transform 0.3s ease;
+                }
+
+                .book-card:hover .cover-image {
+                    transform: scale(1.05);
+                }
+
+                .book-tag {
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                }
+
+                .book-title {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #1a1a1a;
+                    margin-bottom: 8px;
+                }
+
+                .book-content {
+                    padding: 0;
+                }
+
+                .book-stats {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 16px;
+                }
+
+                .rating-section,
+                .views-section {
+                    display: flex;
+                    align-items: center;
+                }
+
+                .book-footer {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 16px;
+                }
+
+                .custom-sider {
+                    background: white !important;
+                    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.08);
+                    border-right: 1px solid #f0f0f0;
+                }
+
+                .sider-header {
+                    padding: 24px 20px;
+                    text-align: center;
+                    border-bottom: 1px solid #f0f0f0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                }
+
+                .sider-avatar {
+                    border: 3px solid rgba(255, 255, 255, 0.3) !important;
+                    margin-bottom: 12px;
+                }
+
+                .sider-menu {
+                    border: none !important;
+                    padding: 20px 0;
+                }
+
+                .sider-menu .ant-menu-item {
+                    margin: 8px 12px !important;
+                    border-radius: 12px !important;
+                    height: 48px !important;
+                    line-height: 48px !important;
+                    transition: all 0.3s ease;
+                }
+
+                .sider-menu .ant-menu-item-selected {
+                    background: linear-gradient(135deg, #e6f4ff 0%, #f0f5ff 100%) !important;
+                    color: #1890ff !important;
+                    font-weight: 600;
+                }
+
+                .sider-menu .ant-menu-item:hover {
+                    background: #f5f5f5 !important;
+                    transform: translateX(4px);
+                }
+
+                .mobile-header {
+                    background: white !important;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+                    border-bottom: 1px solid #f0f0f0;
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                }
+
+                .mobile-menu-btn {
+                    border: none;
+                    background: transparent;
+                    font-size: 18px;
+                    color: #1a1a1a;
+                }
+
+                .mobile-drawer .ant-drawer-header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-bottom: none;
+                }
+
+                .mobile-drawer .ant-drawer-title {
+                    color: white !important;
+                }
+
+                .mobile-drawer .ant-drawer-close {
+                    color: white !important;
+                }
+
+                .mobile-drawer .ant-menu {
+                    border: none;
+                    padding: 0;
+                }
+
+                .mobile-drawer .ant-menu-item {
+                    margin: 4px 0 !important;
+                    border-radius: 8px !important;
+                    height: 44px !important;
+                    line-height: 44px !important;
+                }
+
+                @media (max-width: 768px) {
+                    .profile-header {
+                        text-align: center;
+                    }
+
+                    .book-stats {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 8px;
+                    }
+
+                    .book-footer {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 12px;
+                    }
+                }
+
+                @media (max-width: 576px) {
+                    .profile-page .ant-layout-content {
+                        padding: 12px !important;
+                    }
+
+                    .section-header {
+                        margin-bottom: 16px;
+                    }
+                }
+    

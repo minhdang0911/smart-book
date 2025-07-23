@@ -2,6 +2,7 @@
 
 import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 import { formatTime } from '../../utils/timeUtils';
 import ReactionButton from './ReactionButton';
 import ReplyItem from './ReplyItem';
@@ -135,11 +136,11 @@ const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, curre
 
                 setIsEditing(false);
             } else {
-                alert(data.message || 'Có lỗi xảy ra khi cập nhật bình luận');
+                toast.error('Có lỗi xảy ra khi cập nhật bình luận');
             }
         } catch (err) {
             console.error('Lỗi khi cập nhật bình luận:', err);
-            alert('Lỗi kết nối server!');
+            toast.error('Có lỗi xảy ra khi cập nhật bình luận');
         } finally {
             setIsSaving(false);
         }
@@ -226,11 +227,11 @@ const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, curre
                     setShowReplies(true);
                 }
             } else {
-                alert(data.message || 'Có lỗi xảy ra khi gửi phản hồi');
+                toast.error(data.message || 'Có lỗi xảy ra khi gửi phản hồi');
             }
         } catch (err) {
             console.error('Lỗi khi gửi phản hồi:', err);
-            alert('Lỗi kết nối server!');
+            toast.error('Vui lòng đăng nhập để bình luận!');
         } finally {
             setIsSubmittingReply(false);
         }

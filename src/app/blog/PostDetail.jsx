@@ -69,12 +69,13 @@ const PostDetail = ({ slug, onBack }) => {
         }
     };
 
-    const fetchRelatedPosts = async (id) => {
+    const fetchRelatedPosts = async (topicIds, currentPostId) => {
         try {
-            const res = await fetch(`http://localhost:8000/api/posts/related/${id}`);
+            const res = await fetch(`http://localhost:8000/api/posts/related/${topicIds}`);
             const result = await res.json();
             if (result.success) {
-                setRelatedPosts(result.data);
+                const filtered = result.data.filter((item) => item.id !== currentPostId); // chính xác 100%
+                setRelatedPosts(filtered);
             }
         } catch (err) {
             console.error('Lỗi khi tải bài liên quan:', err);
@@ -241,65 +242,67 @@ const PostDetail = ({ slug, onBack }) => {
                             className="related-list"
                             style={{ display: 'grid', gap: 16, gridTemplateColumns: '1fr 1fr' }}
                         >
-                            {relatedPosts.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="related-post-item"
-                                    style={{
-                                        display: 'flex',
-                                        gap: 16,
-                                        marginBottom: 24,
-                                        cursor: 'pointer',
-                                        borderBottom: '1px solid #eee',
-                                        paddingBottom: 16,
-                                    }}
-                                    onClick={() => (window.location.href = `/blog/${item.slug}`)}
-                                >
-                                    <div style={{ width: 200, height: 140, flexShrink: 0 }}>
-                                        <img
-                                            src={item.thumbnail}
-                                            alt={item.title}
-                                            style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover',
-                                                borderRadius: 8,
-                                            }}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                            }}
-                                        />
-                                    </div>
-                                    <div style={{ flex: 1 }}>
-                                        <Text strong style={{ fontSize: 16 }}>
-                                            {item.title}
-                                        </Text>
-                                        <div
-                                            style={{
-                                                margin: '4px 0 8px',
-                                                color: '#888',
-                                                fontSize: 13,
-                                            }}
-                                        >
-                                            Đăng bởi Admin · {item.created_at}
+                            {relatedPosts
+                                .filter((item) => item.id !== post?.id) // 👈 loại trùng id bài hiện tại
+                                .map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="related-post-item"
+                                        style={{
+                                            display: 'flex',
+                                            gap: 16,
+                                            marginBottom: 24,
+                                            cursor: 'pointer',
+                                            borderBottom: '1px solid #eee',
+                                            paddingBottom: 16,
+                                        }}
+                                        onClick={() => (window.location.href = `/blog/${item.slug}`)}
+                                    >
+                                        <div style={{ width: 200, height: 140, flexShrink: 0 }}>
+                                            <img
+                                                src={item.thumbnail}
+                                                alt={item.title}
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                    borderRadius: 8,
+                                                }}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                }}
+                                            />
                                         </div>
-                                        <Paragraph
-                                            style={{
-                                                margin: 0,
-                                                fontSize: 14,
-                                                lineHeight: '1.6em',
-                                                display: '-webkit-box',
-                                                WebkitBoxOrient: 'vertical',
-                                                WebkitLineClamp: 4,
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis',
-                                            }}
-                                        >
-                                            {item.excerpt}
-                                        </Paragraph>
+                                        <div style={{ flex: 1 }}>
+                                            <Text strong style={{ fontSize: 16 }}>
+                                                {item.title}
+                                            </Text>
+                                            <div
+                                                style={{
+                                                    margin: '4px 0 8px',
+                                                    color: '#888',
+                                                    fontSize: 13,
+                                                }}
+                                            >
+                                                Đăng bởi Admin · {item.created_at}
+                                            </div>
+                                            <Paragraph
+                                                style={{
+                                                    margin: 0,
+                                                    fontSize: 14,
+                                                    lineHeight: '1.6em',
+                                                    display: '-webkit-box',
+                                                    WebkitBoxOrient: 'vertical',
+                                                    WebkitLineClamp: 4,
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                }}
+                                            >
+                                                {item.excerpt}
+                                            </Paragraph>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
                         </div>
                     </div>
                 )}

@@ -2,6 +2,7 @@
 
 import { message } from 'antd';
 import { useEffect, useState } from 'react';
+import { toast } from 'react-toastify';
 
 export const useComments = (postId) => {
     const [comments, setComments] = useState([]);
@@ -45,14 +46,17 @@ export const useComments = (postId) => {
 
             const data = await res.json();
             if (data.success || res.ok) {
-                message.success('Bình luận đã được gửi!');
+                toast.success('Bình luận đã được gửi!');
                 await fetchComments();
                 return true;
             } else {
                 throw new Error(data.message || 'Lỗi khi gửi bình luận');
             }
         } catch (error) {
-            message.error('Không thể gửi bình luận: ' + error.message);
+            toast.error('Vui lòng đăng nhập để bình luận');
+            // setTimeout(()=>{
+            //     router.push('/login')
+            // },1000)
             return false;
         } finally {
             setSubmitting(false);

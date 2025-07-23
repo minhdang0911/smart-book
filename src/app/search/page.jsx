@@ -43,12 +43,24 @@ const SearchPage = () => {
     const [filters, setFilters] = useState({
         name: searchParams.get('keyword') || '',
         selectedAuthors: [],
-        selectedCategories: [],
+        selectedCategories: searchParams.get('category') ? [searchParams.get('category')] : [],
         priceRange: [0, 1000000],
         bookType: '',
         available: false,
         sort: 'popular',
     });
+
+    useEffect(() => {
+        const newCategory = searchParams.get('category');
+        const newKeyword = searchParams.get('keyword');
+
+        setFilters((prev) => ({
+            ...prev,
+            name: newKeyword || '',
+            selectedCategories: newCategory ? [newCategory] : [],
+        }));
+        setCurrentPage(1);
+    }, [searchParams]);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
