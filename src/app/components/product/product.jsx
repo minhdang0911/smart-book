@@ -1,13 +1,19 @@
 'use client';
-import { marked } from 'marked';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
+import { EyeOutlined, HeartFilled, HeartOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { Button, Card, message, Skeleton, Typography } from 'antd';
+import { gsap } from 'gsap';
+import { useEffect, useRef, useState } from 'react';
 import { apiGetAllBook } from '../../../../apis/allbook';
+import { apiAddToCart } from '../../../../apis/cart';
 import { apiGetMe } from '../../../../apis/user';
-import './product.css';
+import { handleAddToCartHelper } from '../../utils/addToCartHandler';
+import { toggleWishlist } from '../../utils/wishlist';
+import './product.css'; // Import CSS file
+import QuickViewModal from './QuickViewModal';
 
-const BookStore = () => {
+const { Title, Text } = Typography;
+
+const WatchStyleBookStore = () => {
     const [books, setBooks] = useState({
         featured: [],
         topRated: [],
@@ -15,31 +21,68 @@ const BookStore = () => {
         ebooks: [],
         paperBooks: [],
     });
+
+    const isFavorite = (bookId) => wishlist.includes(bookId);
+    const handleToggle = () => {
+        toggleWishlist({
+            bookId: book.id,
+            token,
+            wishlist,
+            setWishlist,
+        });
+    };
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [isAddingToCart, setIsAddingToCart] = useState(false);
-    const [token, setToken] = useState(null);
+    const [favorites, setFavorites] = useState(new Set());
+    const [user, setUser] = useState(null);
     const [showQuickView, setShowQuickView] = useState(false);
     const [selectedBook, setSelectedBook] = useState(null);
-    const [user, setUser] = useState([]);
-    const router = useRouter();
+    const [quickViewVisible, setQuickViewVisible] = useState(false);
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
+    const [quantity, setQuantity] = useState(1);
+    const [wishlist, setWishlist] = useState([]);
 
-    // Lấy token khi component mount
+    // Fetch user info and books data
     useEffect(() => {
-        const getToken = () => {
-            const storedToken =
-                localStorage.getItem('authToken') ||
-                localStorage.getItem('token') ||
-                localStorage.getItem('access_token');
-            return storedToken;
+        const fetchData = async () => {
+            try {
+                setLoading(true);
+
+                // Get user info
+                const token = localStorage.getItem('token');
+                if (token) {
+                    try {
+                        const userResponse = await apiGetMe(token);
+                        if (userResponse?.status === true) {
+                            setUser(userResponse.user);
+                        }
+                    } catch (error) {
+                        console.error('Error getting user info:', error);
+                    }
+                }
+
+                // Get all books
+                const response = await apiGetAllBook();
+
+                if (response?.status === 'success') {
+                    setBooks({
+                        featured: response.latest_ebooks?.slice(0, 5) || [], // Thay đổi từ 4 thành 5
+                        topRated: response.top_rated_books || [],
+                        mostViewed: response.top_viewed_books || [],
+                        ebooks: response.latest_ebooks || [],
+                        paperBooks: response.latest_paper_books || [],
+                    });
+                } else {
+                    message.error('Không thể tải dữ liệu sách');
+                }
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                message.error('Lỗi khi tải dữ liệu');
+            } finally {
+                setLoading(false);
+            }
         };
 
-        const authToken = getToken();
-        if (authToken) {
-            setToken(authToken);
-        } else {
-            console.warn('Không tìm thấy token. User có thể chưa đăng nhập.');
-        }
+        fetchData();
     }, []);
 
     // Format price to Vietnamese currency
@@ -53,715 +96,308 @@ const BookStore = () => {
         }).format(price);
     };
 
-    const addToCart = async (bookId, quantity) => {
-        try {
-            if (!token) {
-                toast.error('🔒 Vui lòng đăng nhập để thêm sách vào giỏ hàng!');
-                // router.push('/login');
-                return {
-                    success: false,
-                    error: 'Token không tồn tại',
-                };
-            }
-
-            const response = await fetch('http://localhost:8000/api/cart/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    book_id: bookId,
-                    quantity: quantity,
-                }),
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    toast.error('🔒 Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('access_token');
-                    setToken(null);
-                    router.push('/login');
-                    return {
-                        success: false,
-                        error: 'Token expired',
-                    };
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return {
-                success: true,
-                data: data,
-            };
-        } catch (error) {
-            console.error('Lỗi khi thêm vào giỏ hàng:', error);
-            return {
-                success: false,
-                error: error.message,
-            };
-        }
+    // Calculate discount percentage
+    const calculateDiscount = (originalPrice, discountPrice) => {
+        if (!originalPrice || !discountPrice) return 0;
+        return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
     };
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            const getUserInfo = async () => {
-                try {
-                    const response = await apiGetMe(token);
-                    console.log('res', response);
-                    if (response?.status === true) {
-                        setUser(response?.user);
-                        // Fetch cart count when user is logged in
-                        fetchCartCount();
-                    }
-                } catch (error) {
-                    console.error('Error getting user info:', error);
-                }
-            };
-            getUserInfo();
+    // Toggle favorite
+    const toggleFavorite = (bookId) => {
+        const newFavorites = new Set(favorites);
+        if (newFavorites.has(bookId)) {
+            newFavorites.delete(bookId);
+        } else {
+            newFavorites.add(bookId);
         }
-    }, []);
-
-    console.log(user);
-    // Handle Buy Now functionality
-    const handleBuyNow = async (book) => {
-        if (user.length === 0) {
-            toast.error('🔒 Vui lòng đăng nhập để mua sách!');
-            return;
-        }
-
-        try {
-            // Tạo dữ liệu checkout như cũ
-            const checkoutData = {
-                items: [
-                    {
-                        id: book.id,
-                        name: book.title || book.name,
-                        price: book.price,
-                        quantity: 1,
-                        image: book.cover_image,
-                        author: typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author',
-                    },
-                ],
-                totalAmount: book.price,
-                totalDiscount: 0,
-            };
-
-            // Hiển thị loading
-            setIsAddingToCart(true);
-            toast.info('🔄 Đang thêm vào giỏ hàng...');
-
-            // Gọi API cart/add
-            const item = checkoutData.items[0];
-
-            const response = await fetch('http://localhost:8000/api/cart/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    book_id: item.id,
-                    quantity: item.quantity,
-                }),
-            });
-
-            if (!response.ok) {
-                if (response.status === 401) {
-                    toast.error('🔒 Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-                    localStorage.removeItem('authToken');
-                    localStorage.removeItem('token');
-                    localStorage.removeItem('access_token');
-                    setToken(null);
-                    router.push('/login');
-                    return;
-                }
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const result = await response.json();
-
-            if (result.success || response.ok) {
-                toast.success(`✅ Đã thêm "${item.name}" vào giỏ hàng!`);
-
-                // Cập nhật số lượng giỏ hàng
-                window.updateCartCount?.();
-                window.dispatchEvent(new CustomEvent('cartUpdated'));
-
-                // Lưu thông tin buy now với bookId chính xác
-                localStorage.setItem(
-                    'buyNowData',
-                    JSON.stringify({
-                        isBuyNow: true,
-                        bookId: book.id, // Đảm bảo là book.id từ parameter
-                        checkoutData: checkoutData,
-                        processed: false,
-                        timestamp: Date.now(), // Thêm timestamp để debug
-                    }),
-                );
-
-                console.log('Saved buyNowData:', {
-                    isBuyNow: true,
-                    bookId: book.id,
-                    checkoutData: checkoutData,
-                    processed: false,
-                    timestamp: Date.now(),
-                });
-
-                // Chuyển đến trang payment
-                setTimeout(() => {
-                    toast.info('🛒 Chuyển đến trang đặt đơn...');
-                    router.push('/cart');
-                }, 800);
-            } else {
-                toast.error(`🚫 ${result.message || 'Không thể thêm vào giỏ hàng'}`);
-            }
-        } catch (error) {
-            console.error('Lỗi khi thêm vào giỏ hàng:', error);
-            toast.error(`🚨 Lỗi hệ thống: ${error.message}`);
-        } finally {
-            setIsAddingToCart(false);
-        }
+        setFavorites(newFavorites);
     };
 
-    // Handle Add to Cart functionality
-    const handleAddToCart = async (book) => {
-        try {
-            if (user.length === 0) {
-                toast.error('🔒 Vui lòng đăng nhập để mua sách!');
-                // router.push('/login');
-                return;
-            }
-            setIsAddingToCart(true);
-            const result = await addToCart(book.id, 1);
-            if (result.success) {
-                toast.success('🎉 Đã thêm sách vào giỏ hàng!');
-                window.updateCartCount?.();
-                window.dispatchEvent(new CustomEvent('cartUpdated'));
-
-                // 👉 Đóng Quick View sau khi thêm thành công
-                closeQuickView(); // <== THÊM DÒNG NÀY
-            } else {
-                toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
-            }
-        } catch (error) {
-            toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
-            console.error('Lỗi khi gọi API addToCart:', error);
-        } finally {
-            setIsAddingToCart(false);
-        }
-    };
-
-    // Handle Read Now for online books
-    const handleReadNow = (book) => {
-        if (user.length === 0) {
-            toast.error('🔒 Vui lòng đăng nhập để mua sách!');
-            // router.push('/login');
-            return;
-        }
-
-        // Navigate to reading page
-        router.push(`/read/${book.id}`);
-    };
-
-    // Handle Quick View
-    const handleQuickView = (e, book) => {
-        e.stopPropagation();
+    // Handle quick view
+    const handleQuickView = (book) => {
         setSelectedBook(book);
-        setShowQuickView(true);
+        setQuickViewVisible(true);
     };
 
-    // Close Quick View
     const closeQuickView = () => {
         setShowQuickView(false);
         setSelectedBook(null);
     };
 
-    // Fetch data from your API
-    useEffect(() => {
-        const fetchAllBooks = async () => {
-            try {
-                setLoading(true);
-                const response = await apiGetAllBook();
+    const handleToggleWishlist = async (bookId) => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            message.warning('Vui lòng đăng nhập để thêm vào danh sách yêu thích');
+            return;
+        }
 
-                console.log('API Response:', response);
+        await toggleWishlist({
+            bookId,
+            token,
+            wishlist,
+            setWishlist,
+        });
+    };
 
-                if (response?.status === 'success') {
-                    console.log('Latest eBooks:', response.latest_ebooks);
-                    console.log('Top rated books:', response.top_rated_books);
-                    console.log('Top viewed books:', response.top_viewed_books);
-                    console.log('Latest paper books:', response.latest_paper_books);
+    // Fixed handleAddToCart function
+    const handleAddToCart = async (book, qty = 1) => {
+        await handleAddToCartHelper({
+            user,
+            bookId: book.id,
+            quantity: qty,
+            addToCart: apiAddToCart,
+            setIsAddingToCart,
+            router: null,
+        });
+    };
 
-                    setBooks({
-                        featured: response.latest_ebooks?.slice(0, 2) || [],
-                        topRated: response.top_rated_books || [],
-                        mostViewed: response.top_viewed_books || [],
-                        ebooks: response.latest_ebooks || [],
-                        paperBooks: response.latest_paper_books || [],
-                    });
-                } else {
-                    setError('Failed to fetch books');
-                }
-            } catch (err) {
-                setError('Error loading books: ' + err.message);
-                console.error('Error fetching books:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
+    // Book Card Component
+    const BookCard = ({ book }) => {
+        const cardRef = useRef(null);
+        const actionsRef = useRef(null);
+        const discount = calculateDiscount(book.price, book.discount_price);
+        const isFavoriteBook = isFavorite(book.id);
 
-        fetchAllBooks();
-    }, []);
+        useEffect(() => {
+            const card = cardRef.current;
+            const actions = actionsRef.current;
 
-    // Quick View Popup Component
-    const QuickViewPopup = ({ book, onClose }) => {
-        if (!book) return null;
+            if (!card || !actions) return;
+
+            const buttons = actions.querySelectorAll('.ant-btn');
+
+            // Set initial state for buttons
+            gsap.set(buttons, {
+                y: 30,
+                opacity: 0,
+                scale: 0.8,
+            });
+
+            const handleMouseEnter = () => {
+                // Animate buttons with stagger effect
+                gsap.to(buttons, {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    duration: 0.4,
+                    ease: 'back.out(1.7)',
+                    stagger: 0.1,
+                });
+            };
+
+            const handleMouseLeave = () => {
+                gsap.to(buttons, {
+                    y: 30,
+                    opacity: 0,
+                    scale: 0.8,
+                    duration: 0.3,
+                    ease: 'power2.in',
+                    stagger: 0.05,
+                });
+            };
+
+            card.addEventListener('mouseenter', handleMouseEnter);
+            card.addEventListener('mouseleave', handleMouseLeave);
+
+            return () => {
+                card.removeEventListener('mouseenter', handleMouseEnter);
+                card.removeEventListener('mouseleave', handleMouseLeave);
+            };
+        }, []);
 
         return (
-            <div className="quick-view-overlay" onClick={onClose}>
-                <div className="quick-view-popup" onClick={(e) => e.stopPropagation()}>
-                    <button className="close-btn" onClick={onClose}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M18 6L6 18M6 6L18 18"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                        </svg>
-                    </button>
+            <div className="book-card-wrapper">
+                <Card
+                    ref={cardRef}
+                    className="book-card"
+                    style={{ width: '100%', margin: '0 auto' }}
+                    cover={
+                        <div className="book-image-container">
+                            {book.discount_price > 0 && book.discount_price < book.price && (
+                                <div className="discount-badge">-{discount}%</div>
+                            )}
 
-                    <div className="popup-content">
-                        <div className="popup-image">
                             <img
                                 src={book.cover_image || 'https://via.placeholder.com/300x400?text=No+Image'}
                                 alt={book.title}
+                                className="book-image"
                                 onError={(e) => {
                                     e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
                                 }}
                             />
-                        </div>
-
-                        <div className="popup-info">
-                            <h2 className="popup-title">{book.title}</h2>
-                            <p className="popup-author">
-                                {typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author'}
-                            </p>
-
-                            {book.genre && (
-                                <div className="popup-genre">
-                                    {Array.isArray(book.genre)
-                                        ? book.genre.map((g) => (typeof g === 'string' ? g : g.name)).join(', ')
-                                        : typeof book.genre === 'string'
-                                        ? book.genre
-                                        : book.genre.name || ''}
-                                </div>
-                            )}
-
-                            {book.average_rating && (
-                                <div className="popup-rating">
-                                    <span className="stars">{'★'.repeat(Math.floor(book.average_rating))}</span>
-                                    <span className="rating-number">{book.average_rating}</span>
-                                    {book.sold_count && <span className="sold-count">| Đã bán {book.sold_count}</span>}
-                                </div>
-                            )}
-
-                            {book.description && (
-                                <p
-                                    className="popup-description"
-                                    dangerouslySetInnerHTML={{ __html: marked(book.description) }}
+                            <div ref={actionsRef} className="book-actions">
+                                <Button
+                                    type="text"
+                                    icon={isFavoriteBook ? <HeartFilled /> : <HeartOutlined />}
+                                    className={`favorite-btn ${isFavoriteBook ? 'favorited' : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleWishlist(book.id);
+                                    }}
                                 />
-                            )}
 
-                            {book.views && (
-                                <div className="popup-views">
-                                    <span className="views-icon">👁️</span>
-                                    <span className="views-count">{book.views.toLocaleString('vi-VN')} lượt xem</span>
-                                </div>
-                            )}
-
-                            <div className="popup-actions">
-                                {book.is_physical === 1 ? (
-                                    // Physical book - show price and purchase options
-                                    <>
-                                        <div className="price-section">
-                                            {book.price && (
-                                                <div className="price-container">
-                                                    <span className="current-price">{formatPrice(book.price)}</span>
-                                                    {book.original_price && book.price > book.price && (
-                                                        <span className="original-price">
-                                                            {formatPrice(book.original_price)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="action-buttons">
-                                            <button
-                                                className="buy-now-btn-popup"
-                                                onClick={() => {
-                                                    handleBuyNow(book);
-                                                    closeQuickView();
-                                                }}
-                                            >
-                                                <svg
-                                                    width="20"
-                                                    height="20"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <path
-                                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    />
-                                                </svg>
-                                                Mua sách
-                                            </button>
-
-                                            <button
-                                                className="add-to-cart-btn-popup"
-                                                onClick={() => {
-                                                    handleAddToCart(book);
-                                                }}
-                                                disabled={isAddingToCart}
-                                            >
-                                                <svg
-                                                    width="20"
-                                                    height="20"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                >
-                                                    <path
-                                                        d="M3 3H5L5.4 5M7 13H17L21 5H5.4M7 13L5.4 5M7 13L4.7 15.3C4.3 15.7 4.6 16.5 5.1 16.5H17M17 13V17C17 18.1 16.1 19 15 19H9C7.9 19 7 18.1 7 17V13M17 13H7M9 21C9.6 21 10 21.4 10 22S9.6 23 9 23 8 22.6 8 22 8.4 21 9 21ZM20 21C20.6 21 21 21.4 21 22S20.6 23 20 23 19 22.6 19 22 19.4 21 20 21Z"
-                                                        stroke="currentColor"
-                                                        strokeWidth="2"
-                                                        strokeLinecap="round"
-                                                        strokeLinejoin="round"
-                                                    />
-                                                </svg>
-                                                {isAddingToCart ? 'Đang thêm...' : 'Thêm vào giỏ'}
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    // Online book - show read option
-                                    <div className="action-buttons">
-                                        <button
-                                            className="read-now-btn-popup"
-                                            onClick={() => {
-                                                handleReadNow(book);
-                                                closeQuickView();
-                                            }}
-                                        >
-                                            <svg
-                                                width="20"
-                                                height="20"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                                <path
-                                                    d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                                <path
-                                                    d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                />
-                                            </svg>
-                                            Đọc sách
-                                        </button>
-                                    </div>
-                                )}
+                                <Button
+                                    type="text"
+                                    icon={<ShoppingCartOutlined />}
+                                    className="cart-btn"
+                                    loading={isAddingToCart}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAddToCart(book);
+                                    }}
+                                />
+                                <Button
+                                    type="text"
+                                    icon={<EyeOutlined />}
+                                    className="view-btn"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleQuickView(book);
+                                    }}
+                                />
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
+                    }
+                    onClick={() => (window.location.href = `/book/${book.id}`)}
+                >
+                    <div className="book-info">
+                        <Title level={5} className="book-title" ellipsis={{ rows: 2 }}>
+                            {book.title}
+                        </Title>
 
-    const BookCard = ({ book, showPrice = false, showViews = false, size = 'normal' }) => {
-        // Generate random rating between 3.5 and 5.0
-        const generateRandomRating = () => {
-            return (Math.random() * (5.0 - 3.5) + 3.5).toFixed(1);
-        };
-
-        // Use existing rating or generate random one
-        const rating = book.average_rating || generateRandomRating();
-
-        const formatPrice = (price) => {
-            return new Intl.NumberFormat('vi-VN', {
-                style: 'currency',
-                currency: 'VND',
-            }).format(price);
-        };
-
-        // Generate fake discount price (20-40% higher than current price)
-        const generateDiscountPrice = (currentPrice) => {
-            const discountPercent = Math.random() * 0.2 + 0.2; // 20-40% discount
-            const originalPrice = currentPrice / (1 - discountPercent);
-            return Math.round(originalPrice);
-        };
-
-        const handleBookClick = async (bookId) => {
-            try {
-                await fetch(`http://localhost:8000/api/books/increase-view/${bookId}`, {
-                    method: 'POST',
-                });
-
-                // Sau khi gọi API thành công mới chuyển trang
-                window.location.href = `/book/${bookId}`;
-            } catch (error) {
-                console.error('Lỗi khi tăng lượt xem:', error);
-                // Dù lỗi vẫn chuyển trang (tuỳ bạn)
-                window.location.href = `/book/${bookId}`;
-            }
-        };
-
-        const handleQuickView = (e, book) => {
-            e.stopPropagation();
-            setSelectedBook(book);
-            setShowQuickView(true);
-        };
-
-        const renderStars = (rating) => {
-            const numRating = parseFloat(rating) || 0;
-            const stars = [];
-
-            // Nếu rating = 0 thì hiển thị 5 sao rỗng
-            if (numRating === 0) {
-                for (let i = 0; i < 5; i++) {
-                    stars.push(
-                        <span key={`empty-${i}`} className="star empty">
-                            ☆
-                        </span>,
-                    );
-                }
-                return stars;
-            }
-
-            const fullStars = Math.floor(numRating);
-            const hasHalfStar = numRating % 1 !== 0;
-            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
-
-            // Full stars (sao đầy)
-            for (let i = 0; i < fullStars; i++) {
-                stars.push(
-                    <span key={i} className="star filled">
-                        ★
-                    </span>,
-                );
-            }
-
-            // Half star (sao nửa)
-            if (hasHalfStar) {
-                stars.push(
-                    <span key="half" className="star half-filled">
-                        ★
-                    </span>,
-                );
-            }
-
-            // Empty stars (sao rỗng)
-            for (let i = 0; i < emptyStars; i++) {
-                stars.push(
-                    <span key={`empty-${i}`} className="star empty">
-                        ☆
-                    </span>,
-                );
-            }
-
-            return stars;
-        };
-
-        return (
-            <div className={`book-card ${size}`} onClick={() => handleBookClick(book.id)}>
-                <div className="book-cover">
-                    <img
-                        src={book.cover_image || 'https://via.placeholder.com/150x200?text=No+Image'}
-                        alt={book.title}
-                        onError={(e) => {
-                            e.target.src = 'https://via.placeholder.com/150x200?text=No+Image';
-                        }}
-                    />
-
-                    {/* Quick View Button */}
-                    <div className="quick-view-btn" onClick={(e) => handleQuickView(e, book)}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path
-                                d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-                            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="2" />
-                        </svg>
-                        <span>Xem nhanh</span>
-                    </div>
-                </div>
-
-                <div className="book-info">
-                    <h4 className="book-title">{book.title}</h4>
-
-                    {book.author && (
-                        <p className="book-author">
-                            {typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author'}
-                        </p>
-                    )}
-
-                    {/* Rating with stars */}
-                    <div className="book-rating">
-                        <div className="stars-container">{renderStars(parseFloat(book.rating_avg))}</div>
-                        <span className="rating-number">{book.rating_avg}</span>
-                    </div>
-
-                    {book.genre && (
-                        <div className="book-genre">
-                            {Array.isArray(book.genre)
-                                ? book.genre.map((g) => (typeof g === 'string' ? g : g.name)).join(', ')
-                                : typeof book.genre === 'string'
-                                ? book.genre
-                                : book.genre.name || ''}
-                        </div>
-                    )}
-
-                    {book.categories && (
-                        <div className="book-categories">
-                            {Array.isArray(book.categories)
-                                ? book.categories.map((c) => (typeof c === 'string' ? c : c.name)).join(', ')
-                                : typeof book.categories === 'string'
-                                ? book.categories
-                                : book.categories.name || ''}
-                        </div>
-                    )}
-
-                    {book.format && (
-                        <div className="book-format">
-                            <span className="format-label">{book.format}</span>
-                        </div>
-                    )}
-
-                    {book.is_physical === 1 && book.price && (
-                        <div
-                            className={`book-price-container ${book.discount_price > 0 ? 'text-left' : 'text-center'}`}
-                        >
-                            {book.discount_price > 0 ? (
+                        {book.author && (
+                            <Text className="book-author" type="secondary">
+                                {typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author'}
+                            </Text>
+                        )}
+                        <div className="price-container">
+                            {book.discount_price > 0 && book.discount_price < book.price ? (
                                 <>
-                                    <span className="original-price mr-2 line-through text-gray-500 inline-block">
+                                    <Text delete className="original-price">
                                         {formatPrice(book.price)}
-                                    </span>
-                                    <span className="book-price font-semibold text-red-600 inline-block">
+                                    </Text>
+                                    <Text strong className="discount-price">
                                         {formatPrice(book.discount_price)}
-                                    </span>
+                                    </Text>
                                 </>
+                            ) : book.price ? (
+                                <Text strong className="current-price">
+                                    {formatPrice(book.price)}
+                                </Text>
                             ) : (
-                                <span className="book-price font-semibold inline-block">{formatPrice(book.price)}</span>
+                                <Text className="free-text">Miễn phí</Text>
                             )}
                         </div>
-                    )}
-
-                    {showViews && book.views && (
-                        <div className="book-views">
-                            <span className="views-icon"></span>
-                            <span className="views-count">{book.views.toLocaleString('vi-VN')} lượt xem</span>
-                        </div>
-                    )}
-                </div>
+                    </div>
+                </Card>
             </div>
         );
-    };
-
-    const handleBookClick = (bookId) => {
-        window.location.href = `/book/${bookId}`;
     };
 
     if (loading) {
         return (
             <div className="bookstore-container">
-                <div className="loading-container">
-                    <div className="loading-spinner"></div>
-                    <p>Đang tải sách...</p>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="bookstore-container">
-                <div className="error-container">
-                    <p>❌ {error}</p>
-                    <button onClick={() => window.location.reload()}>Thử lại</button>
+                <div className="books-grid">
+                    {[...Array(10)].map((_, index) => (
+                        <div key={index} className="book-grid-item">
+                            <Card>
+                                <Skeleton.Image style={{ width: '100%', height: 300 }} active />
+                                <Skeleton active paragraph={{ rows: 3 }} />
+                            </Card>
+                        </div>
+                    ))}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bookstore-container">
-            {/* Categories Section */}
-            <section className="categories-section">
-                <h2>❤️ Sách được yêu thích nhất</h2>
-                <div className="category-grid">
-                    {books.topRated.slice(0, 8).map((book) => (
-                        <BookCard key={book.id} book={book} />
-                    ))}
+        <>
+            <div className="bookstore-container">
+                {/* Featured Books Section */}
+                <div className="section">
+                    <Title level={2} className="section-title">
+                        📚 Sách Nổi Bật
+                    </Title>
+                    <div className="books-grid">
+                        {books.featured.map((book) => (
+                            <div key={book.id} className="book-grid-item">
+                                <BookCard book={book} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </section>
 
-            {/* Most Viewed Section */}
-            <section className="most-viewed-section">
-                <h2>🔥 Sách được xem nhiều nhất</h2>
-                <div className="book-grid">
-                    {books.mostViewed.slice(0, 8).map((book) => (
-                        <BookCard key={book.id} book={book} showViews={true} />
-                    ))}
+                {/* Top Rated Books Section */}
+                <div className="section">
+                    <Title level={2} className="section-title">
+                        ⭐ Sách Được Yêu Thích Nhất
+                    </Title>
+                    <div className="books-grid">
+                        {books.topRated.slice(0, 10).map((book) => (
+                            <div key={book.id} className="book-grid-item">
+                                <BookCard book={book} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </section>
 
-            {/* EBooks Section */}
-            <section className="romance-section">
-                <h2>📖 Sách Giấy Mới Nhất</h2>
-                <div className="romance-grid">
-                    {books.ebooks.slice(0, 6).map((book) => (
-                        <BookCard key={book.id} book={book} />
-                    ))}
+                {/* Most Viewed Books Section */}
+                <div className="section">
+                    <Title level={2} className="section-title">
+                        🔥 Sách Được Xem Nhiều Nhất
+                    </Title>
+                    <div className="books-grid">
+                        {books.mostViewed.slice(0, 10).map((book) => (
+                            <div key={book.id} className="book-grid-item">
+                                <BookCard book={book} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </section>
 
-            {/* Paper Books Section */}
-            <section className="romance-section">
-                <h2>📚 EBooks Mới Nhất</h2>
-                <div className="romance-grid">
-                    {books.paperBooks.slice(0, 6).map((book) => (
-                        <BookCard key={book.id} book={book} showPrice={true} />
-                    ))}
+                {/* EBooks Section */}
+                <div className="section">
+                    <Title level={2} className="section-title">
+                        💻 EBooks Mới Nhất
+                    </Title>
+                    <div className="books-grid">
+                        {books.ebooks.slice(0, 10).map((book) => (
+                            <div key={book.id} className="book-grid-item">
+                                <BookCard book={book} />
+                            </div>
+                        ))}
+                    </div>
                 </div>
-            </section>
 
-            {/* Quick View Popup */}
-            {showQuickView && <QuickViewPopup book={selectedBook} onClose={closeQuickView} />}
-        </div>
+                {/* Paper Books Section */}
+                <div className="section">
+                    <Title level={2} className="section-title">
+                        📖 Sách Giấy Mới Nhất
+                    </Title>
+                    <div className="books-grid">
+                        {books.paperBooks.slice(0, 10).map((book) => (
+                            <div key={book.id} className="book-grid-item">
+                                <BookCard book={book} />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <QuickViewModal
+                visible={quickViewVisible}
+                onClose={() => setQuickViewVisible(false)}
+                book={selectedBook}
+                quantity={quantity}
+                setQuantity={setQuantity}
+                handleAddToCart={handleAddToCart}
+                toggleFavorite={handleToggleWishlist}
+                isFavorite={selectedBook && isFavorite(selectedBook.id)}
+                isAddingToCart={isAddingToCart}
+            />
+        </>
     );
 };
 
-export default BookStore;
+export default WatchStyleBookStore;
