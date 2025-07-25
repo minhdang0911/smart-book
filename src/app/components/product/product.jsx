@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { apiGetAllBook } from '../../../../apis/allbook';
 import { apiAddToCart } from '../../../../apis/cart';
 import { apiGetMe } from '../../../../apis/user';
+import { useAllBooks } from '../../hooks/useAllBooks';
 import { handleAddToCartHelper } from '../../utils/addToCartHandler';
 import { toggleWishlist } from '../../utils/wishlist';
 import './product.css'; // Import CSS file
@@ -14,14 +15,6 @@ import QuickViewModal from './QuickViewModal';
 const { Title, Text } = Typography;
 
 const WatchStyleBookStore = () => {
-    const [books, setBooks] = useState({
-        featured: [],
-        topRated: [],
-        mostViewed: [],
-        ebooks: [],
-        paperBooks: [],
-    });
-
     const isFavorite = (bookId) => wishlist.includes(bookId);
     const handleToggle = () => {
         toggleWishlist({
@@ -40,6 +33,7 @@ const WatchStyleBookStore = () => {
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [wishlist, setWishlist] = useState([]);
+    const { books, isLoading, error } = useAllBooks();
 
     // Fetch user info and books data
     useEffect(() => {

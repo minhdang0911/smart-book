@@ -3,10 +3,8 @@ import {
     BookOutlined,
     CaretRightOutlined,
     DollarOutlined,
-    DownloadOutlined,
     EditOutlined,
     EyeOutlined,
-    FileTextOutlined,
     HeartFilled,
     HeartOutlined,
     HomeOutlined,
@@ -18,19 +16,20 @@ import {
     ReadOutlined,
     ShareAltOutlined,
     ShoppingCartOutlined,
-    TagOutlined,
     UserOutlined,
 } from '@ant-design/icons';
 import {
     Avatar,
-    Badge,
+    Breadcrumb,
     Button,
     Card,
     Col,
     Collapse,
+    Descriptions,
     Divider,
     Empty,
     Form,
+    Image,
     Input,
     List,
     message,
@@ -40,400 +39,496 @@ import {
     Row,
     Space,
     Spin,
+    Tabs,
     Tag,
-    Tooltip,
     Typography,
 } from 'antd';
 import { marked } from 'marked';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import ReactImageMagnify from 'react-image-magnify';
-
-import axios from 'axios';
 import { toast } from 'react-toastify';
-import { apiGetMe } from '../../../../apis/user';
+
+// Import custom hooks
+import { useBookDetail } from '../../hooks/useBookDetail';
+import { useBookImages } from '../../hooks/useBookImages';
+import { useCart } from '../../hooks/useCart';
+import { useReviewActions } from '../../hooks/useReviewActions';
+import { useReviews } from '../../hooks/useReviews';
+import { useReviewStats } from '../../hooks/useReviewStats';
+import { useSameAuthorBooks } from '../../hooks/useSameAuthorBooks';
+import { useSameCategoryBooks } from '../../hooks/useSameCategoryBooks';
+import { useUser } from '../../hooks/useUser';
+import { useWishlist } from '../../hooks/useWishlist';
+
 import './BookDetail.css';
-import BookList from './BookList';
+
+// Sample BookList component (replace with your actual BookList if different)
+const BookList = ({ books }) => {
+    // Debug: Log để xem books có data không
+    console.log('📚 BookList received books:', books);
+    console.log('📊 Books length:', books?.length);
+    console.log('📋 Books type:', typeof books);
+    console.log('🔍 Is array?', Array.isArray(books));
+
+    const getNames = (field) => {
+        if (!field) return 'Không rõ';
+        if (Array.isArray(field)) {
+            return field.map((item) => (typeof item === 'string' ? item : item.name)).join(', ');
+        }
+        if (typeof field === 'object' && field.name) return field.name;
+        if (typeof field === 'string') return field;
+        return 'Không rõ';
+    };
+
+    // Debug: Kiểm tra books có empty không
+    if (!books) {
+        console.log('❌ Books is null/undefined');
+        return <div>Books data is null/undefined</div>;
+    }
+
+    if (!Array.isArray(books)) {
+        console.log('❌ Books is not an array:', typeof books);
+        return <div>Books is not an array: {typeof books}</div>;
+    }
+
+    if (books.length === 0) {
+        console.log('📭 Books array is empty');
+        return <div>Books array is empty</div>;
+    }
+
+    // Debug: Log từng book
+    books.forEach((book, index) => {
+        console.log(`📖 Book ${index}:`, {
+            id: book.id,
+            title: book.title,
+            author: book.author,
+            category: book.category,
+            publisher: book.publisher,
+        });
+    });
+
+    return (
+        <div className="book-list">
+            <div style={{ marginBottom: '20px', padding: '10px', background: '#f0f0f0' }}>
+                <strong>Debug Info:</strong> {books.length} books found
+            </div>
+
+            {books.map((book, index) => (
+                <div
+                    key={book.id || index}
+                    className="book-item"
+                    style={{
+                        border: '1px solid #ddd',
+                        padding: '15px',
+                        margin: '10px 0',
+                        borderRadius: '8px',
+                    }}
+                >
+                    <h3>{book.title || 'No title'}</h3>
+
+                    <div className="book-details">
+                        <p>
+                            <strong>ID:</strong> {book.id}
+                        </p>
+                        <p>
+                            <strong>Tác giả:</strong> {getNames(book.author)}
+                        </p>
+                        <p>
+                            <strong>Thể loại:</strong> {getNames(book.category)}
+                        </p>
+                        <p>
+                            <strong>NXB:</strong> {getNames(book.publisher)}
+                        </p>
+                        <p>
+                            <strong>Giá:</strong>{' '}
+                            {book.price ? `${Number(book.price).toLocaleString('vi-VN')} đ` : 'Chưa có giá'}
+                        </p>
+                        <p>
+                            <strong>Rating:</strong> {book.rating_avg || 'Chưa có đánh giá'}
+                        </p>
+                    </div>
+
+                    {book.cover_image && (
+                        <img
+                            src={book.cover_image}
+                            alt={book.title}
+                            style={{ width: '100px', height: '150px', objectFit: 'cover' }}
+                        />
+                    )}
+
+                    {/* Debug: Raw book data */}
+                    <details style={{ marginTop: '10px' }}>
+                        <summary>🔍 Raw Data</summary>
+                        <pre style={{ fontSize: '12px', background: '#f5f5f5', padding: '10px' }}>
+                            {JSON.stringify(book, null, 2)}
+                        </pre>
+                    </details>
+                </div>
+            ))}
+        </div>
+    );
+};
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
+const { TabPane } = Tabs;
 
 const BookDetailPage = () => {
     const router = useRouter();
     const params = useParams();
     const { id } = params;
-    const [book, setBook] = useState(null);
-    const [sameAuthorBooks, setSameAuthorBooks] = useState([]);
-    const [sameCategoryBooks, setSameCategoryBooks] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [reviews, setReviews] = useState([]);
-    const [reviewStats, setReviewStats] = useState({
-        totalReviews: 0,
-        averageRating: 0,
-        ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-        starPercentages: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-    });
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+    // Helper functions to safely extract string values from objects
+    const getAuthorName = (author) => {
+        if (!author) return 'Không rõ';
+        if (typeof author === 'string') return author;
+        if (typeof author === 'object' && author.name) return author.name;
+        return 'Không rõ';
+    };
+
+    const getCategoryName = (category) => {
+        if (!category) return 'Không rõ';
+        if (typeof category === 'string') return category;
+        if (typeof category === 'object' && category.name) return category.name;
+        return 'Không rõ';
+    };
+
+    const getAuthorId = (author) => {
+        if (!author) return null;
+        if (typeof author === 'object' && author.id) return author.id;
+        return null;
+    };
+
+    const getCategoryId = (category) => {
+        if (!category) return null;
+        if (typeof category === 'object' && category._id) return category._id;
+        if (typeof category === 'object' && category.id) return category.id;
+        return null;
+    };
+
+    // Local state
     const [showReviewModal, setShowReviewModal] = useState(false);
-    const [userReview, setUserReview] = useState({ rating: 0, comment: '' });
-    const [user, setUser] = useState([]);
-    const [form] = Form.useForm();
     const [selectedStarFilter, setSelectedStarFilter] = useState('all');
-    const [reviewsLoading, setReviewsLoading] = useState(false);
-    const [wishlist, setWishlist] = useState([]);
     const [quantity, setQuantity] = useState(1);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
-    const [images, setImages] = useState([]);
     const [mainImage, setMainImage] = useState(null);
+    const [activeTab, setActiveTab] = useState('1');
+    const [form] = Form.useForm();
 
-    const token = localStorage.getItem('token');
+    // Custom hooks
+    const { book, isLoading: bookLoading, error: bookError, mutate: mutateBook } = useBookDetail(id);
+    const { images, isLoading: imagesLoading } = useBookImages(book?.id);
+    const { reviewStats, isLoading: statsLoading, mutate: mutateStats } = useReviewStats(book?.id);
+    const { reviews, isLoading: reviewsLoading, mutate: mutateReviews } = useReviews(book?.id, selectedStarFilter);
 
+    // Use helper functions for the hooks that need string values
+    const { books: sameAuthorBooks, isLoading: authorBooksLoading } = useSameAuthorBooks(
+        book?.author, // Truyền cả object author
+        book?.id,
+    );
+
+    const { books: sameCategoryBooks, isLoading: categoryBooksLoading } = useSameCategoryBooks(
+        book?.category, // Truyền cả object category
+        book?.id,
+    );
+
+    const { wishlist, toggleWishlist, isLoading: wishlistLoading } = useWishlist();
+    const { user, isLoggedIn, isLoading: userLoading } = useUser();
+    const { addToCart } = useCart();
+    const { checkCanReview, submitReview } = useReviewActions();
+
+    // Debugging data structure
     useEffect(() => {
-        const fetchImages = async () => {
-            try {
-                const res = await axios.get(`http://localhost:8000/api/books/${book?.id}/images`);
-                const data = res.data.data;
-                setImages(data);
-                const main = data.find((img) => img.is_main === 1);
-                setMainImage(main?.image_url || data[0]?.image_url);
-            } catch (err) {
-                console.error('Lỗi khi lấy ảnh:', err);
-            }
-        };
-        fetchImages();
-    }, [book?.id]);
+        console.log('book:', book);
+        console.log('sameAuthorBooks:', sameAuthorBooks);
+        console.log('sameCategoryBooks:', sameCategoryBooks);
+    }, [book, sameAuthorBooks, sameCategoryBooks]);
 
+    // Set main image when images load
     useEffect(() => {
-        if (token) {
-            const getUserInfo = async () => {
-                try {
-                    const response = await apiGetMe(token);
-                    if (response?.status === true) {
-                        setUser(response?.user);
-                        // Fetch cart count when user is logged in
-                        fetchCartCount();
-                    }
-                } catch (error) {
-                    console.error('Error getting user info:', error);
-                }
+        if (images.length > 0 && !mainImage) {
+            const main = images.find((img) => img.is_main === 1);
+            setMainImage(main?.image_url || images[0]?.image_url);
+        }
+    }, [images, mainImage]);
+
+    // Add chapters data if ebook
+    useEffect(() => {
+        if (book && book.format === 'ebook' && !book.chaptersData) {
+            const getRandomChapterTitle = () => {
+                const titles = [
+                    'Khởi đầu cuộc hành trình',
+                    'Bí ẩn được hé lộ',
+                    'Cuộc gặp gỡ định mệnh',
+                    'Thử thách đầu tiên',
+                    'Sự thật bị che giấu',
+                    'Chuyển biến bất ngờ',
+                    'Cuộc chiến quyết định',
+                    'Khoảnh khắc quan trọng',
+                    'Hồi kết đầy cảm xúc',
+                    'Tương lai tươi sáng',
+                ];
+                return titles[Math.floor(Math.random() * titles.length)];
             };
-            getUserInfo();
-        }
-    }, []);
 
-    useEffect(() => {
-        const fetchBookDetail = async () => {
-            try {
-                setLoading(true);
-                const res = await fetch(`http://localhost:8000/api/books/${id}`);
-                const data = await res.json();
+            const chaptersData = [];
+            const totalChapters = 10;
 
-                // Fake data cho số chương nếu là ebook
-                if (data.format === 'ebook') {
-                    const getRandomChapterTitle = () => {
-                        const titles = [
-                            'Khởi đầu cuộc hành trình',
-                            'Bí ẩn được hé lộ',
-                            'Cuộc gặp gỡ định mệnh',
-                            'Thử thách đầu tiên',
-                            'Sự thật bị che giấu',
-                            'Chuyển biến bất ngờ',
-                            'Cuộc chiến quyết định',
-                            'Khoảnh khắc quan trọng',
-                            'Hồi kết đầy cảm xúc',
-                            'Tương lai tươi sáng',
-                        ];
-                        return titles[Math.floor(Math.random() * titles.length)];
-                    };
+            for (let i = 1; i <= totalChapters; i++) {
+                const pagesCount = Math.floor(Math.random() * 6) + 3;
+                const pages = [];
 
-                    const chaptersData = [];
-                    const totalChapters = 10;
-
-                    for (let i = 1; i <= totalChapters; i++) {
-                        const pagesCount = Math.floor(Math.random() * 6) + 3;
-                        const pages = [];
-
-                        for (let j = 1; j <= pagesCount; j++) {
-                            pages.push({
-                                pageNumber: j,
-                                content: `Nội dung trang ${j} của chương ${i}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.`,
-                            });
-                        }
-
-                        chaptersData.push({
-                            chapterNumber: i,
-                            title: `Chương ${i}: ${getRandomChapterTitle()}`,
-                            pages: pages,
-                            totalPages: pagesCount,
-                        });
-                    }
-
-                    data.chapters = totalChapters;
-                    data.chaptersData = chaptersData;
+                for (let j = 1; j <= pagesCount; j++) {
+                    pages.push({
+                        pageNumber: j,
+                        content: `Nội dung trang ${j} của chương ${i}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
+                    });
                 }
 
-                setBook(data);
-
-                // Fetch review stats và reviews
-                await fetchReviewStats();
-                await fetchReviews();
-
-                // Check login status
-                checkLoginStatus();
-
-                // Fetch sách cùng tác giả
-                const authorRes = await fetch(
-                    `http://localhost:8000/api/books/search?author=${encodeURIComponent(data.author.name)}`,
-                );
-                const authorBooks = await authorRes.json();
-                setSameAuthorBooks(authorBooks.data.filter((b) => b.id !== data.id));
-
-                // Fetch sách cùng thể loại
-                const categoryRes = await fetch(
-                    `http://localhost:8000/api/books/search?category=${encodeURIComponent(data.category.name)}`,
-                );
-                const categoryBooks = await categoryRes.json();
-                setSameCategoryBooks(categoryBooks.data.filter((b) => b.id !== data.id));
-            } catch (err) {
-                console.error('Lỗi khi tải chi tiết sách:', err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (id) fetchBookDetail();
-    }, [id]);
-    useEffect(() => {
-        const fetchWishlist = async () => {
-            try {
-                const res = await fetch('http://localhost:8000/api/books/followed', {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
-
-                const data = await res.json();
-                if (data.status && data.followed_books) {
-                    setWishlist(data.followed_books.map((book) => book.id));
-                }
-            } catch (error) {
-                console.error('Lỗi khi lấy danh sách yêu thích:', error);
-            }
-        };
-
-        fetchWishlist();
-    }, []);
-
-    const toggleWishlist = async () => {
-        try {
-            const isFollowed = wishlist.includes(book.id);
-            const url = isFollowed
-                ? 'http://localhost:8000/api/books/unfollow'
-                : 'http://localhost:8000/api/books/follow';
-
-            const response = await fetch(url, {
-                method: isFollowed ? 'DELETE' : 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ book_id: book.id }),
-            });
-
-            const result = await response.json();
-            if (result.status) {
-                setWishlist((prev) => (isFollowed ? prev.filter((id) => id !== book.id) : [...prev, book.id]));
-            }
-        } catch (error) {
-            console.error('Lỗi khi toggle wishlist:', error);
-        }
-    };
-
-    const checkLoginStatus = () => {
-        const token = localStorage.getItem('token');
-        setIsLoggedIn(!!token);
-    };
-
-    const fetchReviewStats = async () => {
-        try {
-            const response = await fetch(`http://localhost:8000/api/ratings/book/${id}/stats`);
-            const data = await response.json();
-
-            if (data.status) {
-                const stats = {
-                    totalReviews: data.data.total_ratings || 0,
-                    averageRating: data.data.total_ratings > 0 ? parseFloat(data.data.average_display) : 0,
-                    ratingDistribution: {
-                        5: data.data.star_distribution?.[5]?.count || 0,
-                        4: data.data.star_distribution?.[4]?.count || 0,
-                        3: data.data.star_distribution?.[3]?.count || 0,
-                        2: data.data.star_distribution?.[2]?.count || 0,
-                        1: data.data.star_distribution?.[1]?.count || 0,
-                    },
-                    starPercentages: {
-                        5: data.data.star_distribution?.[5]?.percentage || 0,
-                        4: data.data.star_distribution?.[4]?.percentage || 0,
-                        3: data.data.star_distribution?.[3]?.percentage || 0,
-                        2: data.data.star_distribution?.[2]?.percentage || 0,
-                        1: data.data.star_distribution?.[1]?.percentage || 0,
-                    },
-                };
-                setReviewStats(stats);
-            } else {
-                // Nếu API trả về lỗi hoặc không có data, set default values
-                setReviewStats({
-                    totalReviews: 0,
-                    averageRating: 0,
-                    ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-                    starPercentages: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+                chaptersData.push({
+                    chapterNumber: i,
+                    title: `Chương ${i}: ${getRandomChapterTitle()}`,
+                    pages: pages,
+                    totalPages: pagesCount,
                 });
             }
-        } catch (error) {
-            console.error('Lỗi khi tải thống kê đánh giá:', error);
-            // Set default values on error
-            setReviewStats({
-                totalReviews: 0,
-                averageRating: 0,
-                ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-                starPercentages: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-            });
-        }
-    };
 
-    const fetchReviews = async (starLevel = 'all') => {
-        try {
-            setReviewsLoading(true);
-            let url = `http://localhost:8000/api/ratings/book/${id}/filter`;
-
-            if (starLevel !== 'all') {
-                url += `?star_level=${starLevel}`;
-            }
-
-            const response = await fetch(url);
-            const data = await response.json();
-
-            if (data.status && data.data.ratings) {
-                const formattedReviews = data.data.ratings.map((rating) => ({
-                    id: rating.rating_id,
-                    user: {
-                        name: rating?.user_name,
-                        avatar: rating?.user_avatar,
-                    },
-                    rating: rating.rating_star,
-                    comment: rating.comment,
-                    date: rating.created_at,
-                    timeAgo: rating.time_ago,
-                    likes: Math.floor(Math.random() * 20),
-                }));
-
-                setReviews(formattedReviews);
-            } else {
-                setReviews([]);
-            }
-        } catch (error) {
-            console.error('Lỗi khi tải danh sách đánh giá:', error);
-            setReviews([]);
-        } finally {
-            setReviewsLoading(false);
-        }
-    };
-
-    // Hàm kiểm tra xem user có thể đánh giá sách này không
-    const checkCanReview = async (bookId) => {
-        try {
-            const token = localStorage.getItem('token');
-            if (user.length === 0) {
-                toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-                // router.push('/login');
-                return;
-            }
-
-            // Gọi API lấy danh sách đơn hàng
-            const response = await fetch('http://localhost:8000/api/orders', {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json',
+            // Update book data with chapters
+            mutateBook(
+                {
+                    ...book,
+                    chapters: totalChapters,
+                    chaptersData: chaptersData,
                 },
-            });
+                false,
+            );
+        }
+    }, [book, mutateBook]);
 
-            const data = await response.json();
+    // Event handlers
+    const handleStarFilterChange = (starLevel) => {
+        setSelectedStarFilter(starLevel);
+    };
 
-            if (!data.success) {
-                return { canReview: false, message: 'Không thể lấy thông tin đơn hàng!' };
-            }
-
-            // Kiểm tra xem có đơn hàng nào chứa sách này và có shipping code không
-            const canReview = data.data.orders.some((order) => {
-                // Chỉ kiểm tra các đơn hàng có shipping code (đã được giao)
-                if (!order.shipping_code) return false;
-
-                // Kiểm tra xem trong đơn hàng có chứa sách với bookId không
-                return order.items.some((item) => item.book.id === parseInt(bookId));
-            });
-
-            if (!canReview) {
-                return {
-                    canReview: false,
-                    message: 'Bạn cần mua và nhận được sản phẩm này để có thể đánh giá!',
-                };
-            }
-
-            return { canReview: true, message: 'Có thể đánh giá sản phẩm' };
-        } catch (error) {
-            console.error('Error checking review permission:', error);
-            return { canReview: false, message: 'Có lỗi xảy ra khi kiểm tra quyền đánh giá!' };
+    const handleQuantityChange = (action) => {
+        if (action === 'increase' && quantity < 99) {
+            setQuantity((prev) => prev + 1);
+        } else if (action === 'decrease' && quantity > 1) {
+            setQuantity((prev) => prev - 1);
         }
     };
 
+    const handleQuantityInputChange = (value) => {
+        const numValue = parseInt(value) || 1;
+        if (numValue >= 1 && numValue <= 99) {
+            setQuantity(numValue);
+        }
+    };
+
+    console.log(isLoggedIn);
     const handleSubmitReview = async (values) => {
+        // Sử dụng isLoggedIn từ hook thay vì gọi checkUser
+        if (!isLoggedIn) {
+            toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+            // Có thể redirect đến trang login
+            router.push('/login');
+            return;
+        }
+
         try {
-            const token = localStorage.getItem('token');
-            if (user.length === 0) {
-                toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-                // router.push('/login');
-                return;
-            }
-
-            const response = await fetch('http://localhost:8000/api/ratings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    book_id: parseInt(id),
-                    rating_star: values.rating,
-                    comment: values.comment,
-                }),
-            });
-
-            const data = await response.json();
+            const data = await submitReview(id, values.rating, values.comment);
 
             if (data.status) {
                 message.success('Đánh giá của bạn đã được gửi thành công!');
                 setShowReviewModal(false);
                 form.resetFields();
 
-                // Refresh reviews and stats
-                await fetchReviewStats();
-                await fetchReviews(selectedStarFilter);
+                // Cập nhật lại data
+                mutateStats();
+                mutateReviews();
             } else {
                 message.error(data.message || 'Có lỗi xảy ra khi gửi đánh giá!');
             }
         } catch (error) {
             console.error('Error submitting review:', error);
-            message.error('Có lỗi xảy ra khi gửi đánh giá!');
+
+            // Handle specific error cases
+            if (error.response?.status === 401) {
+                toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+                // Clear token và redirect
+                localStorage.removeItem('token');
+                router.push('/login');
+            } else {
+                message.error('Có lỗi xảy ra khi gửi đánh giá!');
+            }
         }
     };
 
-    const handleStarFilterChange = (starLevel) => {
-        setSelectedStarFilter(starLevel);
-        fetchReviews(starLevel);
+    const handleAddToCart = async () => {
+        try {
+            if (!isLoggedIn) {
+                toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+                // Có thể redirect đến trang login
+                router.push('/login');
+                return;
+            }
+
+            setIsAddingToCart(true);
+            const result = await addToCart(book.id, quantity);
+
+            if (result.success) {
+                toast.success('🎉 Đã thêm sách vào giỏ hàng!');
+            } else {
+                toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
+            }
+        } catch (error) {
+            toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
+        } finally {
+            setIsAddingToCart(false);
+        }
+    };
+
+    const handleBuyNow = async () => {
+        if (!isLoggedIn) {
+            toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+            // Có thể redirect đến trang login
+            router.push('/login');
+            return;
+        }
+        try {
+            const checkoutData = {
+                items: [
+                    {
+                        id: book.id,
+                        name: book.title || book.name,
+                        price: book.price,
+                        quantity: 1,
+                        image: book.cover_image,
+                        author: getAuthorName(book.author),
+                    },
+                ],
+                totalAmount: book.price,
+                totalDiscount: 0,
+            };
+
+            setIsAddingToCart(true);
+            toast.info('🔄 Đang thêm vào giỏ hàng...');
+
+            const result = await addToCart(book.id, 1);
+
+            if (result.success) {
+                toast.success(`✅ Đã thêm "${book.title}" vào giỏ hàng!`);
+
+                localStorage.setItem(
+                    'buyNowData',
+                    JSON.stringify({
+                        isBuyNow: true,
+                        bookId: book.id,
+                        checkoutData,
+                        processed: false,
+                        timestamp: Date.now(),
+                    }),
+                );
+
+                setTimeout(() => {
+                    toast.info('🛒 Chuyển đến trang đặt đơn...');
+                    router.push('/cart');
+                }, 800);
+            } else {
+                toast.error(`🚫 ${result.message || 'Không thể thêm vào giỏ hàng'}`);
+            }
+        } catch (error) {
+            console.error('Lỗi khi thêm vào giỏ hàng:', error);
+            toast.error(`🚨 Lỗi hệ thống: ${error.message}`);
+        } finally {
+            setIsAddingToCart(false);
+        }
+    };
+
+    const handleToggleWishlist = async () => {
+        if (!isLoggedIn) {
+            toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+            // Có thể redirect đến trang login
+            router.push('/login');
+            return;
+        }
+
+        const success = await toggleWishlist(book.id);
+        if (success) {
+            const isInWishlist = wishlist.includes(book.id);
+            toast.success(isInWishlist ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!');
+        } else {
+            toast.error('Có lỗi xảy ra!');
+        }
+    };
+
+    const handleOpenReviewModal = async () => {
+        if (!isLoggedIn) {
+            toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
+            // Có thể redirect đến trang login
+            router.push('/login');
+            return;
+        }
+
+        const { canReview, message: msg } = await checkCanReview(book.id);
+        if (!canReview) {
+            toast.error(msg);
+            return;
+        }
+
+        setShowReviewModal(true);
+    };
+
+    // Utility functions
+    const formatPrice = (price) => {
+        if (book?.is_physical === 1) {
+            return new Intl.NumberFormat('vi-VN').format(price);
+        }
+        return 'miễn phí';
+    };
+
+    // Render functions
+    const renderStats = () => {
+        const baseStats = [
+            {
+                title: 'Lượt xem',
+                value: book?.views || 0,
+                prefix: <EyeOutlined />,
+                color: '#3f8600',
+            },
+            {
+                title: 'Giá',
+                value: (
+                    <span style={{ color: 'red' }}>
+                        <DollarOutlined /> {formatPrice(book?.price)} {book?.is_physical === 1 ? 'VND' : ''}
+                    </span>
+                ),
+                color: 'red',
+            },
+        ];
+
+        if (book?.format === 'ebook') {
+            baseStats.push({
+                title: 'Số chương',
+                value: book.chapters || 0,
+                prefix: <NumberOutlined />,
+                color: '#1890ff',
+            });
+        }
+
+        return baseStats;
     };
 
     const renderReviewStats = () => {
+        if (statsLoading) {
+            return (
+                <Card className="review-stats-card" bordered={false}>
+                    <Spin />
+                </Card>
+            );
+        }
+
         return (
             <Card
                 title={
@@ -459,12 +554,12 @@ const BookDetailPage = () => {
                                     lineHeight: 1,
                                 }}
                             >
-                                {reviewStats.totalReviews > 0 ? reviewStats.averageRating : '0'}
+                                {reviewStats?.totalReviews > 0 ? reviewStats.averageRating.toFixed(1) : '0'}
                             </div>
                             <div className="rating-stars" style={{ margin: '8px 0' }}>
                                 <Rate
                                     disabled
-                                    value={reviewStats.totalReviews > 0 ? reviewStats.averageRating : 0}
+                                    value={reviewStats?.totalReviews > 0 ? reviewStats.averageRating : 0}
                                     allowHalf
                                     style={{ fontSize: '20px' }}
                                 />
@@ -476,13 +571,13 @@ const BookDetailPage = () => {
                                     fontSize: '14px',
                                 }}
                             >
-                                {reviewStats.totalReviews} đánh giá
+                                {reviewStats?.totalReviews || 0} đánh giá
                             </div>
                         </div>
                     </Col>
 
                     <Col xs={24} md={12} lg={16}>
-                        {reviewStats.totalReviews > 0 ? (
+                        {reviewStats?.totalReviews > 0 ? (
                             <div className="rating-breakdown">
                                 {[5, 4, 3, 2, 1].map((rating) => (
                                     <div
@@ -509,7 +604,7 @@ const BookDetailPage = () => {
                                             {rating}
                                         </span>
                                         <Progress
-                                            percent={reviewStats.starPercentages[rating] || 0}
+                                            percent={reviewStats.starPercentages?.[rating] || 0}
                                             showInfo={false}
                                             strokeColor="#faad14"
                                             size="small"
@@ -528,7 +623,7 @@ const BookDetailPage = () => {
                                                 color: '#595959',
                                             }}
                                         >
-                                            {reviewStats.ratingDistribution[rating]}
+                                            {reviewStats.ratingDistribution?.[rating] || 0}
                                         </span>
                                     </div>
                                 ))}
@@ -563,34 +658,8 @@ const BookDetailPage = () => {
                                 → Xem tất cả đánh giá
                             </Button>
 
-                            <Button
-                                type="primary"
-                                icon={<EditOutlined />}
-                                onClick={async () => {
-                                    if (!isLoggedIn) {
-                                        toast.warning('Vui lòng đăng nhập để viết đánh giá!');
-                                        return;
-                                    }
-
-                                    // Kiểm tra điều kiện đánh giá
-                                    const checkResult = await checkCanReview(id); // id là bookId từ trang detail
-
-                                    if (!checkResult.canReview) {
-                                        toast.warning(checkResult.message);
-                                        return;
-                                    }
-
-                                    // Nếu pass tất cả điều kiện thì mở modal đánh giá
-                                    setShowReviewModal(true);
-                                }}
-                                style={{
-                                    borderRadius: '20px',
-                                    height: '36px',
-                                    paddingLeft: '16px',
-                                    paddingRight: '16px',
-                                }}
-                            >
-                                Viết bài đánh giá
+                            <Button type="primary" icon={<EditOutlined />} onClick={handleOpenReviewModal} size="small">
+                                Viết đánh giá
                             </Button>
                         </div>
                     </Col>
@@ -599,684 +668,405 @@ const BookDetailPage = () => {
         );
     };
 
-    const renderReviewsList = () => {
+    const renderReviews = () => {
+        if (reviewsLoading) {
+            return <Spin />;
+        }
+
+        if (!reviews || reviews.length === 0) {
+            return <Empty description="Chưa có đánh giá nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+        }
+
         return (
-            <Card
-                title={
-                    <Space>
-                        <MessageOutlined />
-                        <span>
-                            Đánh giá từ độc giả ({reviewStats.totalReviews})
-                            {selectedStarFilter !== 'all' && (
-                                <Tag color="blue" style={{ marginLeft: 8 }}>
-                                    {selectedStarFilter} sao
-                                </Tag>
-                            )}
-                        </span>
-                    </Space>
-                }
-                className="reviews-list-card"
-                bordered={false}
-                loading={reviewsLoading}
-            >
-                {reviews.length === 0 ? (
-                    <Empty
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description={
-                            selectedStarFilter !== 'all'
-                                ? `Chưa có đánh giá ${selectedStarFilter} sao nào.`
-                                : 'Chưa có đánh giá nào. Hãy là người đầu tiên để lại đánh giá!'
-                        }
-                    />
-                ) : (
-                    <List
-                        dataSource={reviews}
-                        renderItem={(review) => (
-                            <List.Item className="review-item">
-                                <List.Item.Meta
-                                    avatar={
-                                        <Avatar
-                                            src={review?.user?.avatar}
-                                            icon={!review?.user?.avatar && <UserOutlined />}
-                                            size={40}
-                                        />
-                                    }
-                                    title={
-                                        <div className="review-header">
-                                            <span className="reviewer-name" style={{ fontWeight: 500 }}>
-                                                {review.user.name}
-                                            </span>
-                                            <span
-                                                className="review-date"
-                                                style={{ color: '#8c8c8c', fontSize: '12px' }}
-                                            >
-                                                {review.timeAgo}
-                                            </span>
-                                        </div>
-                                    }
-                                    description={
-                                        <div className="review-content">
-                                            <Rate
-                                                disabled
-                                                defaultValue={review.rating}
-                                                size="small"
-                                                style={{ marginBottom: '8px' }}
-                                            />
-                                            <Paragraph
-                                                className="review-comment"
-                                                style={{
-                                                    marginBottom: '8px',
-                                                    color: '#262626',
-                                                }}
-                                            >
-                                                {review.comment}
-                                            </Paragraph>
-                                            <div className="review-actions">
-                                                <Button
-                                                    type="text"
-                                                    size="small"
-                                                    icon={<HeartOutlined />}
-                                                    style={{ color: '#8c8c8c' }}
-                                                >
-                                                    Hữu ích ({review.likes})
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    }
-                                />
-                            </List.Item>
-                        )}
-                    />
+            <List
+                dataSource={reviews}
+                renderItem={(review) => (
+                    <List.Item>
+                        <List.Item.Meta
+                            avatar={<Avatar src={review.user?.avatar} icon={<UserOutlined />} />}
+                            title={
+                                <Space>
+                                    <Text strong>{review.user?.name || 'Người dùng ẩn danh'}</Text>
+                                    <Rate disabled defaultValue={review.rating} style={{ fontSize: '12px' }} />
+                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                        {review.timeAgo}
+                                    </Text>
+                                </Space>
+                            }
+                            description={
+                                <div>
+                                    <Paragraph style={{ marginBottom: 8 }}>{review.comment}</Paragraph>
+                                    <Space>
+                                        <Button type="text" size="small" icon={<MessageOutlined />}>
+                                            Phản hồi
+                                        </Button>
+                                        <Text type="secondary">{review.likes} lượt thích</Text>
+                                    </Space>
+                                </div>
+                            }
+                        />
+                    </List.Item>
                 )}
-            </Card>
+            />
         );
     };
 
-    const renderLoginPrompt = () => {
-        if (isLoggedIn) return null;
+    const renderBookImages = () => {
+        if (imagesLoading) {
+            return <Spin />;
+        }
 
-        return (
-            <Card className="login-prompt-card" bordered={false}>
-                <div
-                    className="login-prompt"
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '16px',
-                        backgroundColor: '#f6f6f6',
-                        borderRadius: '8px',
-                    }}
-                ></div>
-            </Card>
-        );
-    };
-
-    const renderChaptersAccordion = () => {
-        if (book.format !== 'ebook' || !book.chaptersData) return null;
-
-        const items = book.chaptersData.map((chapter) => ({
-            key: chapter.chapterNumber.toString(),
-            label: (
-                <Space>
-                    <Text strong>{chapter.title}</Text>
-                    <Tag color="blue">{chapter.totalPages} trang</Tag>
-                </Space>
-            ),
-            children: (
-                <div className="chapter-pages">
-                    {chapter.pages.map((page) => (
-                        <Card
-                            key={page.pageNumber}
-                            size="small"
-                            title={`Trang ${page.pageNumber}`}
-                            className="page-card"
-                            style={{ marginBottom: 8 }}
-                        >
-                            <Paragraph ellipsis={{ rows: 2, expandable: true }}>{page.content}</Paragraph>
-                        </Card>
-                    ))}
+        if (!images || images.length === 0) {
+            return (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                    <Image
+                        src={book?.cover_image || '/placeholder-book.jpg'}
+                        alt={book?.title}
+                        width={300}
+                        height={400}
+                        style={{ objectFit: 'cover' }}
+                    />
                 </div>
-            ),
-        }));
+            );
+        }
 
         return (
-            <Card
-                title={
-                    <Space>
-                        <BookOutlined />
-                        <span>Danh sách chương</span>
-                    </Space>
-                }
-                className="chapters-card"
-                bordered={false}
-            >
-                <Collapse
-                    items={items}
-                    expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} />}
-                    ghost
-                />
-            </Card>
+            <div>
+                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    <ReactImageMagnify
+                        {...{
+                            smallImage: {
+                                alt: book?.title,
+                                isFluidWidth: true,
+                                src: mainImage || book?.cover_image,
+                            },
+                            largeImage: {
+                                src: mainImage || book?.cover_image,
+                                width: 1200,
+                                height: 1800,
+                            },
+                            enlargedImageContainerStyle: { zIndex: 1500 },
+                        }}
+                        style={{ maxWidth: '300px', maxHeight: '400px' }}
+                    />
+                </div>
+
+                {images.length > 1 && (
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        {images.map((img, index) => (
+                            <div
+                                key={index}
+                                style={{
+                                    width: '60px',
+                                    height: '80px',
+                                    cursor: 'pointer',
+                                    border: mainImage === img.image_url ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                                    borderRadius: '4px',
+                                    overflow: 'hidden',
+                                }}
+                                onClick={() => setMainImage(img.image_url)}
+                            >
+                                <Image
+                                    src={img.image_url}
+                                    alt={`${book?.title} - ${index + 1}`}
+                                    width={60}
+                                    height={80}
+                                    style={{ objectFit: 'cover' }}
+                                    preview={false}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
         );
     };
-    console.log('user', user);
 
-    const renderActionButtons = () => {
-        if (book.format === 'paper') {
-            return (
-                <Space className="action-buttons">
-                    <Button
-                        type="primary"
-                        size="large"
-                        icon={<ShoppingCartOutlined />}
-                        onClick={handleAddToCart}
-                        loading={isAddingToCart}
-                        style={{
-                            height: '48px',
-                            padding: '0 32px',
-                            fontSize: '16px',
-                        }}
-                    >
-                        Thêm vào giỏ hàng
-                    </Button>
-                    <Button
-                        size="large"
-                        icon={<DollarOutlined />}
-                        style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
-                        onClick={async () => {
-                            if (user.length === 0) {
-                                toast.error('🔒 Vui lòng đăng nhập để mua sách!');
-                                router.push('/login');
-                                return;
-                            }
+    // Loading state
+    if (bookLoading || userLoading) {
+        return (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                <Spin size="large" />
+            </div>
+        );
+    }
 
-                            try {
-                                const checkoutData = {
-                                    items: [
-                                        {
-                                            id: book.id,
-                                            name: book.title || book.name,
-                                            price: book.price,
-                                            quantity: 1,
-                                            image: book.cover_image,
-                                            author:
-                                                typeof book.author === 'string'
-                                                    ? book.author
-                                                    : book.author?.name || 'Unknown Author',
-                                        },
-                                    ],
-                                    totalAmount: book.price,
-                                    totalDiscount: 0,
-                                };
-
-                                setIsAddingToCart(true);
-                                toast.info('🔄 Đang thêm vào giỏ hàng...');
-
-                                const item = checkoutData.items[0];
-
-                                const response = await fetch('http://localhost:8000/api/cart/add', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        Authorization: `Bearer ${token}`,
-                                    },
-                                    body: JSON.stringify({
-                                        book_id: item.id,
-                                        quantity: item.quantity,
-                                    }),
-                                });
-
-                                if (!response.ok) {
-                                    if (response.status === 401) {
-                                        toast.error('🔒 Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
-                                        localStorage.removeItem('authToken');
-                                        localStorage.removeItem('token');
-                                        localStorage.removeItem('access_token');
-                                        setToken(null);
-                                        router.push('/login');
-                                        return;
-                                    }
-                                    throw new Error(`HTTP error! status: ${response.status}`);
-                                }
-
-                                const result = await response.json();
-
-                                if (result.success || response.ok) {
-                                    toast.success(`✅ Đã thêm "${item.name}" vào giỏ hàng!`);
-
-                                    window.updateCartCount?.();
-                                    window.dispatchEvent(new CustomEvent('cartUpdated'));
-
-                                    localStorage.setItem(
-                                        'buyNowData',
-                                        JSON.stringify({
-                                            isBuyNow: true,
-                                            bookId: book.id,
-                                            checkoutData,
-                                            processed: false,
-                                            timestamp: Date.now(),
-                                        }),
-                                    );
-
-                                    console.log('Saved buyNowData:', {
-                                        isBuyNow: true,
-                                        bookId: book.id,
-                                        checkoutData,
-                                        processed: false,
-                                        timestamp: Date.now(),
-                                    });
-
-                                    setTimeout(() => {
-                                        toast.info('🛒 Chuyển đến trang đặt đơn...');
-                                        router.push('/cart');
-                                    }, 800);
-                                } else {
-                                    toast.error(`🚫 ${result.message || 'Không thể thêm vào giỏ hàng'}`);
-                                }
-                            } catch (error) {
-                                console.error('Lỗi khi thêm vào giỏ hàng:', error);
-                                toast.error(`🚨 Lỗi hệ thống: ${error.message}`);
-                            } finally {
-                                setIsAddingToCart(false);
-                            }
-                        }}
-                    >
-                        Mua ngay
-                    </Button>
-
-                    <Tooltip title="Chia sẻ">
-                        <Button size="large" icon={<ShareAltOutlined />} />
-                    </Tooltip>
-                </Space>
-            );
-        } else {
-            return (
-                <Space className="action-buttons">
-                    <Button type="primary" size="large" icon={<ReadOutlined />}>
-                        Đọc ngay
-                    </Button>
-                    <Button size="large" icon={<DownloadOutlined />}>
-                        Tải xuống
-                    </Button>
-                    <Tooltip title="Chia sẻ">
-                        <Button size="large" icon={<ShareAltOutlined />} />
-                    </Tooltip>
-                </Space>
-            );
-        }
-    };
-
-    const formatPrice = (price, is_physical) => {
-        if (book.is_physical === 1) {
-            return new Intl.NumberFormat('vi-VN').format(price);
-        }
-        return 'miễn phí';
-    };
-
-    const renderStats = () => {
-        const baseStats = [
-            {
-                title: 'Lượt xem',
-                value: book.views,
-                prefix: <EyeOutlined />,
-                color: '#3f8600',
-            },
-            {
-                title: 'Giá',
-                value: (
-                    <span style={{ color: 'red' }}>
-                        <DollarOutlined /> {formatPrice(book.price)} {book?.is_physical === 1 ? 'vnd' : ''}
-                    </span>
-                ),
-                color: 'red',
-            },
-            {
-                title: '',
-                value: (
-                    <Button
-                        type="text"
-                        icon={
-                            wishlist.includes(book.id) ? (
-                                <HeartFilled style={{ color: 'red', fontSize: 20 }} />
-                            ) : (
-                                <HeartOutlined style={{ fontSize: 20 }} />
-                            )
-                        }
-                        onClick={toggleWishlist}
-                        style={{ padding: 0 }}
-                    >
-                        {wishlist.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
-                    </Button>
-                ),
-                prefix: null,
-                color: '#cf1322',
-            },
-        ];
-
-        if (book.format === 'ebook') {
-            baseStats.push({
-                title: 'Số chương',
-                value: book.chapters,
-                prefix: <NumberOutlined />,
-                color: '#1890ff',
-            });
-        }
-
-        return baseStats;
-    };
-
-    if (loading) return <Spin size="large" className="loading-spinner" />;
-
-    if (!book) return <div className="error-message">Không tìm thấy thông tin sách</div>;
-
-    // Hàm xử lý tăng/giảm quantity
-    const handleQuantityChange = (action) => {
-        if (action === 'increase' && quantity < 99) {
-            setQuantity((prev) => prev + 1);
-        } else if (action === 'decrease' && quantity > 1) {
-            setQuantity((prev) => prev - 1);
-        }
-    };
-
-    // Hàm xử lý khi nhập trực tiếp
-    const handleQuantityInputChange = (value) => {
-        const numValue = parseInt(value) || 1;
-        if (numValue >= 1 && numValue <= 99) {
-            setQuantity(numValue);
-        }
-    };
-
-    const addToCart = async (bookId, quantity) => {
-        try {
-            const response = await fetch('http://localhost:8000/api/cart/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    // Thêm authorization header nếu cần
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    book_id: bookId,
-                    quantity: quantity,
-                }),
-            });
-
-            // Kiểm tra response status
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const data = await response.json();
-            return {
-                success: true,
-                data: data,
-            };
-        } catch (error) {
-            console.error('Lỗi khi thêm vào giỏ hàng:', error);
-            return {
-                success: false,
-                error: error.message,
-            };
-        }
-    };
-
-    const handleAddToCart = async () => {
-        try {
-            if (user.length === 0) {
-                toast.error('🔒 Vui lòng đăng nhập để mua sách!');
-                // router.push('/login');
-                return;
-            }
-
-            setIsAddingToCart(true);
-
-            const result = await addToCart(book.id, quantity);
-
-            if (result.success) {
-                toast.success('🎉 Đã thêm sách vào giỏ hàng!');
-                window.updateCartCount?.();
-                window.dispatchEvent(new CustomEvent('cartUpdated'));
-            } else {
-                toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
-            }
-        } catch (error) {
-            toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
-            console.error('Lỗi khi gọi API addToCart:', error);
-        } finally {
-            setIsAddingToCart(false);
-        }
-    };
-
-    console.log(book.id);
+    // Error state
+    if (bookError || !book) {
+        return (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                <Empty description="Không tìm thấy sách" />
+            </div>
+        );
+    }
 
     return (
-        <div className="book-detail-container">
-            {/* Hero Section */}
-            <Card className="book-hero-card" bordered={false}>
-                <Row gutter={[32, 32]} align="top">
-                    <Col xs={24} md={8} lg={6}>
-                        <div className="book-cover-wrapper">
-                            <Badge.Ribbon
-                                text={book.format === 'paper' ? 'Sách giấy' : 'Sách điện tử'}
-                                color={book.format === 'paper' ? 'orange' : 'blue'}
-                            >
-                                <div className="book-image-container">
-                                    {/* Ảnh chính */}
-                                    <div className="main-image-wrapper">
-                                        <ReactImageMagnify
-                                            {...{
-                                                smallImage: {
-                                                    alt: 'Ảnh chính',
-                                                    isFluidWidth: true,
-                                                    src: book?.cover_image,
-                                                },
-                                                largeImage: {
-                                                    src: mainImage,
-                                                    width: 1200,
-                                                    height: 1600,
-                                                },
-                                                enlargedImageContainerDimensions: {
-                                                    width: '150%',
-                                                    height: '150%',
-                                                },
-                                                enlargedImagePosition: 'over', // Hiển thị overlay thay vì beside
-                                                isEnlargedImagePortalEnabledForTouch: true,
-                                            }}
-                                        />
-                                    </div>
+        <div className="book-detail-page" style={{ padding: '24px' }}>
+            {/* Breadcrumb */}
+            <Breadcrumb style={{ marginBottom: '24px' }}>
+                <Breadcrumb.Item>
+                    <HomeOutlined />
+                    <span>Trang chủ</span>
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>
+                    <BookOutlined />
+                    <span>Sách</span>
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>{book.title}</Breadcrumb.Item>
+            </Breadcrumb>
 
-                                    {/* Ảnh thumbnail - nằm ngang */}
-                                    <div className="thumbnail-container">
-                                        {images.map((img) => (
-                                            <img
-                                                key={img.id}
-                                                src={img.image_url}
-                                                alt={`Ảnh phụ ${img.id}`}
-                                                onClick={() => {
-                                                    setMainImage(img.image_url);
-                                                    console.log('Click ảnh id:', img.id);
-                                                }}
-                                                className={`thumbnail-image ${
-                                                    mainImage === img.image_url ? 'active' : ''
-                                                }`}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            </Badge.Ribbon>
-                        </div>
-                    </Col>
+            <Row gutter={[24, 24]}>
+                {/* Left Column - Book Images */}
+                <Col xs={24} md={8} lg={6}>
+                    <Card bordered={false}>{renderBookImages()}</Card>
+                </Col>
 
-                    <Col xs={24} md={16} lg={18}>
-                        <div className="book-info-section">
-                            <Title level={1} className="book-title">
-                                {book.title}
-                            </Title>
+                {/* Middle Column - Book Info */}
+                <Col xs={24} md={12} lg={12}>
+                    <Card bordered={false}>
+                        <Title level={2} style={{ marginBottom: '16px' }}>
+                            {book.title}
+                        </Title>
 
-                            <Space size="large" wrap className="book-meta">
-                                <Space align="center">
-                                    <Avatar
-                                        size="small"
-                                        icon={<UserOutlined />}
-                                        style={{ backgroundColor: '#1890ff' }}
-                                    />
-                                    <Text className="meta-text">
-                                        <Text strong>Tác giả:</Text> {book.author.name}
-                                    </Text>
-                                </Space>
-
-                                <Space align="center">
-                                    <Avatar
-                                        size="small"
-                                        icon={<HomeOutlined />}
-                                        style={{ backgroundColor: '#52c41a' }}
-                                    />
-                                    <Text className="meta-text">
-                                        <Text strong>NXB:</Text> {book.publisher.name}
-                                    </Text>
-                                </Space>
-                            </Space>
-
-                            <div className="book-category-section">
-                                <Tag icon={<TagOutlined />} color="geekblue" className="category-tag">
-                                    {book.category.name}
+                        <Descriptions column={1} size="small" style={{ marginBottom: '24px' }}>
+                            <Descriptions.Item label="Tác giả">
+                                <Text strong>{getAuthorName(book?.author)}</Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Thể loại">
+                                <Tag color="blue">{getCategoryName(book?.category)}</Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Nhà xuất bản">
+                                {/* <Text>{safeRender(book?.publisher)}</Text> */}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Năm xuất bản">
+                                {/* <Text>{safeRender(book?.publication_year)}</Text> */}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Định dạng">
+                                <Tag color={book?.format === 'ebook' ? 'green' : 'orange'}>
+                                    {book?.format === 'ebook' ? 'Sách điện tử' : 'Sách giấy'}
                                 </Tag>
-                            </div>
+                            </Descriptions.Item>
+                        </Descriptions>
 
-                            <div className="book-stats">
-                                {renderStats().map((stat, index) => (
-                                    <div key={index} className="stat-item">
-                                        {stat.prefix && <span className="stat-prefix">{stat.prefix}</span>}
-                                        <strong className="stat-title">
-                                            {stat.title} {stat?.title ? ':' : ''}
-                                        </strong>
-                                        <span className="stat-value" style={{ color: stat.color }}>
-                                            {stat.value}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {/* Price Section */}
-                            <div className="price-section">
-                                <Space size="middle" align="center" wrap>
-                                    <div className="price-wrapper">
-                                        <Text className="current-price">{book.price?.toLocaleString('vi-VN')}đ</Text>
-                                        {book.original_price && book.original_price > book.price && (
-                                            <Text delete className="original-price">
-                                                {book.original_price?.toLocaleString('vi-VN')}đ
+                        {/* Stats */}
+                        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                            {renderStats().map((stat, index) => (
+                                <Col span={8} key={index}>
+                                    <Card size="small" style={{ textAlign: 'center' }}>
+                                        <Space>
+                                            {stat.prefix}
+                                            <Text style={{ color: stat.color }}>
+                                                {stat.title && `${stat.title}: `}
+                                                {stat.value}
                                             </Text>
-                                        )}
-                                    </div>
-                                    {book.discount_percentage && (
-                                        <Tag color="red" className="discount-tag">
-                                            -{book.discount_percentage}%
-                                        </Tag>
-                                    )}
-                                </Space>
+                                        </Space>
+                                    </Card>
+                                </Col>
+                            ))}
+                        </Row>
+
+                        {/* Description */}
+                        <Collapse ghost>
+                            <Collapse.Panel
+                                header={<Text strong>Mô tả sách</Text>}
+                                key="1"
+                                extra={<CaretRightOutlined />}
+                            >
+                                <div
+                                    dangerouslySetInnerHTML={{
+                                        __html: marked(book.description || 'Chưa có mô tả'),
+                                    }}
+                                />
+                            </Collapse.Panel>
+                        </Collapse>
+                    </Card>
+                </Col>
+
+                {/* Right Column - Actions */}
+                <Col xs={24} md={4} lg={6}>
+                    <Card title="Thao tác" bordered={false}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                            {/* Price */}
+                            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                                <Text style={{ fontSize: '24px', fontWeight: 'bold', color: 'red' }}>
+                                    {formatPrice(book.price)} {book.is_physical === 1 ? 'VND' : ''}
+                                </Text>
                             </div>
 
-                            {/* Quantity Selector Section */}
-                            <div className="quantity-selector-section">
-                                <Space size="middle" align="center" wrap>
-                                    <Text strong className="quantity-label">
-                                        Số lượng:
-                                    </Text>
-                                    <div className="quantity-controls">
+                            {/* Quantity */}
+                            {book.is_physical === 1 && (
+                                <div>
+                                    <Text strong>Số lượng:</Text>
+                                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '8px' }}>
                                         <Button
-                                            type="text"
                                             icon={<MinusOutlined />}
+                                            size="small"
                                             onClick={() => handleQuantityChange('decrease')}
                                             disabled={quantity <= 1}
-                                            className="quantity-btn minus-btn"
                                         />
                                         <Input
                                             value={quantity}
                                             onChange={(e) => handleQuantityInputChange(e.target.value)}
-                                            className="quantity-input"
-                                            min={1}
-                                            max={99}
+                                            style={{ width: '60px', textAlign: 'center', margin: '0 8px' }}
+                                            size="small"
                                         />
                                         <Button
-                                            type="text"
                                             icon={<PlusOutlined />}
+                                            size="small"
                                             onClick={() => handleQuantityChange('increase')}
                                             disabled={quantity >= 99}
-                                            className="quantity-btn plus-btn"
                                         />
                                     </div>
-                                    {book.stock_quantity && (
-                                        <Text type="secondary" className="stock-info">
-                                            (Còn lại: {book.stock_quantity} sản phẩm)
-                                        </Text>
-                                    )}
+                                </div>
+                            )}
+
+                            {/* Action Buttons */}
+                            <Button
+                                type="primary"
+                                size="large"
+                                block
+                                icon={<ShoppingCartOutlined />}
+                                onClick={handleBuyNow}
+                                loading={isAddingToCart}
+                            >
+                                Mua ngay
+                            </Button>
+
+                            {book.is_physical === 1 && (
+                                <Button
+                                    size="large"
+                                    block
+                                    icon={<ShoppingCartOutlined />}
+                                    onClick={handleAddToCart}
+                                    loading={isAddingToCart}
+                                >
+                                    Thêm vào giỏ hàng
+                                </Button>
+                            )}
+
+                            <Button
+                                size="large"
+                                block
+                                icon={
+                                    wishlist?.includes(book.id) ? (
+                                        <HeartFilled style={{ color: 'red' }} />
+                                    ) : (
+                                        <HeartOutlined />
+                                    )
+                                }
+                                onClick={handleToggleWishlist}
+                                loading={wishlistLoading}
+                            >
+                                {wishlist?.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
+                            </Button>
+
+                            {book.format === 'ebook' && (
+                                <Button
+                                    size="large"
+                                    block
+                                    icon={<ReadOutlined />}
+                                    onClick={() => router.push(`/reader/${book.id}`)}
+                                >
+                                    Đọc sách
+                                </Button>
+                            )}
+
+                            <Button size="large" block icon={<ShareAltOutlined />}>
+                                Chia sẻ
+                            </Button>
+                        </Space>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* Tabs Section */}
+            <Row style={{ marginTop: '32px' }}>
+                <Col span={24}>
+                    <Tabs activeKey={activeTab} onChange={setActiveTab}>
+                        <TabPane tab="Đánh giá" key="1">
+                            <div style={{ marginBottom: '24px' }}>{renderReviewStats()}</div>
+
+                            {/* Star Filter */}
+                            <div style={{ marginBottom: '16px' }}>
+                                <Space>
+                                    <Text>Lọc theo sao:</Text>
+                                    <Button
+                                        size="small"
+                                        type={selectedStarFilter === 'all' ? 'primary' : 'default'}
+                                        onClick={() => handleStarFilterChange('all')}
+                                    >
+                                        Tất cả
+                                    </Button>
+                                    {[5, 4, 3, 2, 1].map((star) => (
+                                        <Button
+                                            key={star}
+                                            size="small"
+                                            type={selectedStarFilter === star.toString() ? 'primary' : 'default'}
+                                            onClick={() => handleStarFilterChange(star.toString())}
+                                        >
+                                            {star} sao
+                                        </Button>
+                                    ))}
                                 </Space>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="action-buttons-section">{renderActionButtons()}</div>
-                        </div>
-                    </Col>
-                </Row>
-            </Card>
+                            {renderReviews()}
+                        </TabPane>
 
-            {/* Description Section */}
-            <Card
-                title={
-                    <Space>
-                        <FileTextOutlined />
-                        <span>Mô tả sách</span>
-                    </Space>
-                }
-                className="description-card"
-                bordered={false}
-            >
-                {book?.description && (
-                    <div
-                        className="book-description"
-                        dangerouslySetInnerHTML={{ __html: marked(book?.description || '') }}
-                    />
-                )}
-            </Card>
+                        <TabPane tab="Sách cùng tác giả" key="2">
+                            {authorBooksLoading ? (
+                                <div style={{ textAlign: 'center', padding: '40px' }}>
+                                    <Spin size="large" />
+                                </div>
+                            ) : sameAuthorBooks.length > 0 ? (
+                                <BookList books={sameAuthorBooks} />
+                            ) : (
+                                <Empty description="Không có sách cùng tác giả" />
+                            )}
+                        </TabPane>
 
-            {/* Reviews Section */}
-            <div className="reviews-section">
-                {renderReviewStats()}
-                {!isLoggedIn && renderLoginPrompt()}
-                {renderReviewsList()}
-            </div>
+                        <TabPane tab="Sách cùng thể loại" key="3">
+                            {categoryBooksLoading ? (
+                                <div style={{ textAlign: 'center', padding: '40px' }}>
+                                    <Spin size="large" />
+                                </div>
+                            ) : sameCategoryBooks.length > 0 ? (
+                                <BookList books={sameCategoryBooks} />
+                            ) : null}
+                        </TabPane>
 
-            {/* Chapters Section for Ebook only */}
-            {book.format === 'ebook' && renderChaptersAccordion()}
-
-            {/* Related Books Section */}
-            <div className="related-books-section">
-                <Card
-                    title={
-                        <Space>
-                            <UserOutlined />
-                            <span>Sách cùng tác giả</span>
-                        </Space>
-                    }
-                    className="related-card"
-                    bordered={false}
-                >
-                    <BookList books={sameAuthorBooks} />
-                </Card>
-
-                <Card
-                    title={
-                        <Space>
-                            <TagOutlined />
-                            <span>Sách cùng thể loại</span>
-                        </Space>
-                    }
-                    className="related-card"
-                    bordered={false}
-                >
-                    <BookList books={sameCategoryBooks} />
-                </Card>
-            </div>
+                        {book.format === 'ebook' && book.chaptersData && (
+                            <TabPane tab="Mục lục" key="4">
+                                <List
+                                    dataSource={book.chaptersData}
+                                    renderItem={(chapter) => (
+                                        <List.Item
+                                            actions={[
+                                                <Button
+                                                    type="link"
+                                                    icon={<ReadOutlined />}
+                                                    onClick={() =>
+                                                        router.push(
+                                                            `/reader/${book.id}?chapter=${chapter.chapterNumber}`,
+                                                        )
+                                                    }
+                                                >
+                                                    Đọc
+                                                </Button>,
+                                            ]}
+                                        >
+                                            <List.Item.Meta
+                                                title={<Text strong>{chapter.title}</Text>}
+                                                description={<Text type="secondary">{chapter.totalPages} trang</Text>}
+                                            />
+                                        </List.Item>
+                                    )}
+                                />
+                            </TabPane>
+                        )}
+                    </Tabs>
+                </Col>
+            </Row>
 
             {/* Review Modal */}
             <Modal
@@ -1289,47 +1079,33 @@ const BookDetailPage = () => {
                 footer={null}
                 width={600}
             >
-                <Form form={form} onFinish={handleSubmitReview} layout="vertical" initialValues={{ rating: 0.5 }}>
+                <Form form={form} layout="vertical" onFinish={handleSubmitReview}>
                     <Form.Item
                         name="rating"
-                        label="Đánh giá của bạn"
-                        rules={[
-                            { required: true, message: 'Vui lòng chọn số sao!' },
-                            {
-                                validator: (_, value) => {
-                                    if (value >= 0.5 && value <= 5) {
-                                        return Promise.resolve();
-                                    }
-                                    return Promise.reject(new Error('Đánh giá phải từ 0.5 đến 5 sao'));
-                                },
-                            },
-                        ]}
+                        label="Đánh giá"
+                        rules={[{ required: true, message: 'Vui lòng chọn số sao!' }]}
                     >
-                        <Rate style={{ fontSize: '24px' }} allowHalf allowClear={false} />
-                    </Form.Item>
-
-                    <Form.Item>
-                        <Text type="secondary">Đánh giá từ 0.5 - 5.0 sao</Text>
+                        <Rate allowHalf />
                     </Form.Item>
 
                     <Form.Item
                         name="comment"
                         label="Nhận xét"
-                        rules={[{ required: true, message: 'Vui lòng nhập nhận xét!' }]}
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập nhận xét!' },
+                            { min: 10, message: 'Nhận xét phải có ít nhất 10 ký tự!' },
+                        ]}
                     >
                         <TextArea
                             rows={4}
                             placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
-                            showCount
                             maxLength={500}
+                            showCount
                         />
                     </Form.Item>
 
-                    <Form.Item>
+                    <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
                         <Space>
-                            <Button type="primary" htmlType="submit">
-                                Gửi đánh giá
-                            </Button>
                             <Button
                                 onClick={() => {
                                     setShowReviewModal(false);
@@ -1337,6 +1113,9 @@ const BookDetailPage = () => {
                                 }}
                             >
                                 Hủy
+                            </Button>
+                            <Button type="primary" htmlType="submit">
+                                Gửi đánh giá
                             </Button>
                         </Space>
                     </Form.Item>

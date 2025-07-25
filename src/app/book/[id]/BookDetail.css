@@ -7,6 +7,11 @@
     max-width: 80%;
 }
 
+.book-detail-page {
+    width: 80%;
+    margin: 0 auto;
+}
+
 /* Loading spinner */
 .loading-spinner {
     display: flex;
