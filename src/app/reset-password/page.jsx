@@ -1,7 +1,8 @@
 'use client';
 
 import { Suspense } from 'react';
-import {ResetPasswordLogic} from './ResetPasswordLogic';
+import ResetPasswordLogic from './ResetPasswordLogic';
+
 
 // Loading component
 function ResetPasswordLoading() {
