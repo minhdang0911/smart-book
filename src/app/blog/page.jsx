@@ -1,13 +1,13 @@
 'use client';
-import { EyeOutlined, HeartOutlined, MoreOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { EyeOutlined, HeartOutlined } from '@ant-design/icons';
 import { Avatar, Button, Card, Col, Pagination, Row, Space, Spin, Tag, Typography, message } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import './BlogInterface.css';
+import './BlogInterface.css'; // Import CSS file for styling
 
 const { Title, Text, Paragraph } = Typography;
 
-const BlogInterface = () => {
+const CoffeeBlogInterface = () => {
     const [posts, setPosts] = useState([]);
     const [pinnedPosts, setPinnedPosts] = useState([]);
     const [popularPosts, setPopularPosts] = useState([]);
@@ -34,7 +34,7 @@ const BlogInterface = () => {
     }, [currentPage, pageSize, selectedTopic]);
 
     const getAuthHeaders = () => {
-        const token = localStorage.getItem('token');
+        const token = localStorage?.getItem('token');
         return token ? { Authorization: `Bearer ${token}` } : {};
     };
 
@@ -120,7 +120,7 @@ const BlogInterface = () => {
     };
 
     const handleLike = async (postId) => {
-        const token = localStorage.getItem('token');
+        const token = localStorage?.getItem('token');
         if (!token) return message.warning('Vui lòng đăng nhập để thả tim');
 
         try {
@@ -147,23 +147,29 @@ const BlogInterface = () => {
     };
 
     const getTopicColor = (name) => {
-        const map = {
+        const colorMap = {
             'Công nghệ': 'blue',
             'Thông báo': 'orange',
             'Hướng dẫn': 'green',
             'Sự kiện': 'purple',
+            'Cà phê': 'orange',
+            'Pha chế': 'green',
+            'Rang xay': 'blue',
+            'Tin tức': 'red',
         };
-        return map[name] || 'default';
+        return colorMap[name] || 'default';
     };
 
     const handleClick = (slug, id) => {
         const viewedKey = `viewed_${slug}`;
-        if (!sessionStorage.getItem(viewedKey)) {
+        if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) {
             fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
             sessionStorage.setItem(viewedKey, 'true');
         }
         router.push(`/blog/${slug}`);
-        localStorage.setItem('postid', id);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('postid', id);
+        }
     };
 
     const handleTopicClick = (id) => {
@@ -175,120 +181,267 @@ const BlogInterface = () => {
         setSelectedTopic(null);
     };
 
-    const formatDate = (dateString) => new Date(dateString).toLocaleDateString('vi-VN');
+    const formatDate = (dateString) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        });
+    };
 
     const renderPostCard = (post, isPinned = false) => (
-        <Card key={post.id} className={`post-card ${isPinned ? 'pinned' : ''}`} hoverable>
-            <div className="post-header">
-                <Space>
-                    <Avatar size={40} src="https://api.dicebear.com/7.x/miniavs/svg?seed=admin" />
-                    <div className="post-author-info">
-                        <Text strong>Admin</Text>
-                        <div className="post-meta">
-                            <Text type="secondary">{formatDate(post.created_at)}</Text>
-                            <Space size={4}>
-                                {post.topics.map((topic) => (
-                                    <Tag
-                                        key={topic.id}
-                                        color={getTopicColor(topic.name)}
-                                        onClick={() => handleTopicClick(topic.id)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        {topic.name}
-                                    </Tag>
-                                ))}
-                            </Space>
+        <Col xs={24} sm={12} lg={8} key={post.id}>
+            <Card
+                className="post-card"
+                cover={
+                    post.thumbnail && (
+                        <div
+                            style={{
+                                height: '200px',
+                                overflow: 'hidden',
+                                position: 'relative',
+                                cursor: 'pointer',
+                            }}
+                            onClick={() => handleClick(post.slug, post.id)}
+                        >
+                            <img
+                                src={post.thumbnail}
+                                alt={post.title}
+                                style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    objectFit: 'cover',
+                                }}
+                                onError={(e) => {
+                                    e.target.style.display = 'none';
+                                }}
+                            />
+                            {isPinned && (
+                                <div
+                                    style={{
+                                        position: 'absolute',
+                                        top: '8px',
+                                        left: '8px',
+                                        background: '#ff4d4f',
+                                        color: 'white',
+                                        padding: '2px 8px',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                    }}
+                                >
+                                    31/07/2023
+                                </div>
+                            )}
                         </div>
-                    </div>
-                </Space>
-                <Button type="text" icon={<MoreOutlined />} />
-            </div>
+                    )
+                }
+                hoverable
+                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+                bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
+            >
+                <div style={{ flex: 1 }}>
+                    <Space size={4} wrap style={{ marginBottom: '8px' }}>
+                        {post.topics?.map((topic) => (
+                            <Tag
+                                key={topic.id}
+                                color={getTopicColor(topic.name)}
+                                onClick={() => handleTopicClick(topic.id)}
+                                style={{ cursor: 'pointer', fontSize: '11px' }}
+                            >
+                                {topic.name}
+                            </Tag>
+                        ))}
+                    </Space>
 
-            <div className="post-content">
-                <div className="post-text">
                     <Title
-                        level={4}
-                        className="post-title"
+                        level={5}
+                        style={{
+                            cursor: 'pointer',
+                            marginBottom: '8px',
+                            fontSize: '14px',
+                            lineHeight: '1.4',
+                            height: '40px',
+                            overflow: 'hidden',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                        }}
                         onClick={() => handleClick(post.slug, post.id)}
-                        style={{ cursor: 'pointer' }}
                     >
-                        {post.title} {isPinned && <Tag color="red">Ghim</Tag>}
+                        {post.title}
                     </Title>
-                    <Paragraph>{post.excerpt || 'Không có mô tả'}</Paragraph>
                 </div>
-                {post.thumbnail && (
-                    <div
-                        className="post-thumbnail"
-                        onClick={() => handleClick(post.slug, post.id)}
-                        style={{ cursor: 'pointer' }}
-                    >
-                        <img src={post.thumbnail} alt={post.title} onError={(e) => (e.target.style.display = 'none')} />
-                    </div>
-                )}
-            </div>
 
-            <div className="post-actions">
-                <Space>
-                    <Button
-                        type="text"
-                        icon={<HeartOutlined />}
-                        onClick={() => handleLike(post.id)}
-                        className={post.has_liked ? 'liked' : ''}
+                <div style={{ marginTop: 'auto' }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingTop: '8px',
+                            borderTop: '1px solid #f0f0f0',
+                        }}
                     >
-                        {post.like_count}
-                    </Button>
-                    <Button type="text" icon={<EyeOutlined />}>
-                        {post.views}
-                    </Button>
-                    <Button type="text" icon={<ShareAltOutlined />}>
-                        Chia sẻ
-                    </Button>
-                </Space>
-            </div>
-        </Card>
+                        <Space size={4}>
+                            <Avatar
+                                size={24}
+                                src="https://api.dicebear.com/7.x/miniavs/svg?seed=admin"
+                                style={{ background: '#0096dbff' }}
+                            />
+                            <Text style={{ fontSize: '12px' }}>Admin</Text>
+                        </Space>
+
+                        <Space size={12}>
+                            <Button
+                                type="text"
+                                icon={<HeartOutlined />}
+                                size="small"
+                                onClick={() => handleLike(post.id)}
+                                className={post.has_liked ? 'liked' : ''}
+                                style={{ fontSize: '12px' }}
+                            >
+                                {post.like_count || 0}
+                            </Button>
+                            <Button type="text" icon={<EyeOutlined />} size="small" style={{ fontSize: '12px' }}>
+                                {post.views || 0}
+                            </Button>
+                        </Space>
+                    </div>
+                </div>
+            </Card>
+        </Col>
     );
+
+    const allPosts = [...pinnedPosts, ...popularPosts, ...posts];
 
     if (loading) {
         return (
-            <div className="blog-loading">
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '400px',
+                }}
+            >
                 <Spin size="large" />
             </div>
         );
     }
 
     return (
-        <div className="blog-container">
-            <div className="blog-header">
-                <Title level={2}>Bài viết nổi bật</Title>
-                <Text type="secondary">Tổng hợp các bài viết hữu ích đang phổ biến với các tín đồ công nghệ</Text>
+        <div
+            style={{
+                minHeight: '100vh',
+                background: 'linear-gradient(135deg, #f5f3f0 0%, #e8e2d8 100%)',
+            }}
+        >
+            {/* Header Banner */}
+            <div
+                style={{
+                    background: 'linear-gradient(135deg, rgba(161, 221, 255, 0.9) 0%, rgba(76, 83, 187, 0.9) 100%)',
+                    backgroundImage:
+                        'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+                    color: 'white',
+                    textAlign: 'center',
+                    padding: '80px 20px 60px',
+                    position: 'relative',
+                }}
+            >
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundImage: 'url("https://i.imgur.com/4A46ADc.jpg")',
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.3,
+                        zIndex: 0,
+                    }}
+                />
+                <div style={{ position: 'relative', zIndex: 1 }}>
+                    <Title level={1} style={{ color: 'white', fontSize: '48px', marginBottom: '16px' }}>
+                        Tin tức
+                    </Title>
+                    <Text
+                        style={{
+                            color: 'white',
+                            fontSize: '18px',
+                            display: 'block',
+                            maxWidth: '600px',
+                            margin: '0 auto',
+                        }}
+                    >
+                        Khám phá thế giới cà phê qua các bài viết hấp dẫn và hữu ích
+                    </Text>
+                </div>
             </div>
 
-            {selectedTopic && (
-                <div style={{ marginBottom: 16 }}>
-                    <Text strong>Bộ lọc chủ đề đang áp dụng</Text>{' '}
-                    <Button size="small" type="link" onClick={handleResetFilter}>
-                        (Hiển thị tất cả)
-                    </Button>
-                </div>
-            )}
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
+                {/* Filter notification */}
+                {selectedTopic && (
+                    <div
+                        style={{
+                            background: '#fff3cd',
+                            border: '1px solid #afd5ffff',
+                            borderRadius: '8px',
+                            padding: '12px 16px',
+                            marginBottom: '24px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                        }}
+                    >
+                        <Text strong>
+                            Đang hiển thị bài viết theo chủ đề: {topics.find((t) => t.id === selectedTopic)?.name}
+                        </Text>
+                        <Button size="small" type="link" onClick={handleResetFilter}>
+                            Hiển thị tất cả
+                        </Button>
+                    </div>
+                )}
 
-            <div className="blog-content">
-                <Row gutter={[16, 16]}>
-                    <Col xs={24} md={16}>
-                        <div className="posts-list">
-                            {pinnedPosts.map((post) => renderPostCard(post, true))}
-                            {popularPosts
-                                .filter((post) => !pinnedPosts.find((p) => p.id === post.id))
-                                .map((post) => renderPostCard(post))}
-                            {posts.length > 0 ? (
-                                posts.map((post) => renderPostCard(post))
+                <Row gutter={[24, 32]}>
+                    {/* Main content */}
+                    <Col xs={24} lg={18}>
+                        <Row gutter={[20, 24]}>
+                            {allPosts.length > 0 ? (
+                                allPosts.map((post, index) => renderPostCard(post, pinnedPosts.includes(post)))
                             ) : (
-                                <Text type="secondary">Không có bài viết nào thuộc chủ đề này.</Text>
+                                <Col span={24}>
+                                    <div
+                                        style={{
+                                            textAlign: 'center',
+                                            padding: '60px 20px',
+                                            background: 'white',
+                                            borderRadius: '12px',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                        }}
+                                    >
+                                        <Text type="secondary" style={{ fontSize: '16px' }}>
+                                            Không có bài viết nào thuộc chủ đề này.
+                                        </Text>
+                                    </div>
+                                </Col>
                             )}
-                        </div>
+                        </Row>
 
-                        {!selectedTopic && (
-                            <div className="pagination-container">
+                        {/* Pagination */}
+                        {!selectedTopic && total > pageSize && (
+                            <div
+                                style={{
+                                    textAlign: 'center',
+                                    marginTop: '40px',
+                                    padding: '20px',
+                                    background: 'white',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                }}
+                            >
                                 <Pagination
                                     current={currentPage}
                                     total={total}
@@ -300,36 +453,148 @@ const BlogInterface = () => {
                                         setPageSize(size);
                                     }}
                                     showTotal={(total, range) => `${range[0]}-${range[1]} trong tổng ${total} bài viết`}
-                                    pageSizeOptions={['5', '10', '20', '50']}
+                                    pageSizeOptions={['6', '12', '24', '48']}
                                 />
                             </div>
                         )}
                     </Col>
 
-                    <Col xs={24} md={8}>
-                        <div className="sidebar">
-                            <Card className="sidebar-card">
-                                <Title level={4}>XEM CÁC BÀI VIẾT THEO CHỦ ĐỀ</Title>
-                                <div className="topic-filter">
+                    {/* Sidebar */}
+                    <Col xs={24} lg={6}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Topics filter */}
+                            <Card
+                                title="TỪ KHOÁ"
+                                style={{
+                                    borderRadius: '12px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                }}
+                                headStyle={{
+                                    background: '#0096dbff',
+                                    color: 'white',
+                                    borderRadius: '12px 12px 0 0',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: '8px',
+                                    }}
+                                >
                                     {topics.map((topic) => (
-                                        <Button
+                                        <Tag
                                             key={topic.id}
-                                            type="default"
+                                            style={{
+                                                cursor: 'pointer',
+                                                borderRadius: '12px',
+                                                border:
+                                                    selectedTopic === topic.id
+                                                        ? '2px solid #0096dbff'
+                                                        : '1px solid #d9d9d9',
+                                            }}
                                             onClick={() => handleTopicClick(topic.id)}
                                         >
                                             {topic.name}
-                                        </Button>
+                                        </Tag>
+                                    ))}
+                                </div>
+                            </Card>
+                            {/* <Card 
+                                title="CHUYÊN MỤC"
+                                style={{ 
+                                    borderRadius: '12px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                }}
+                                headStyle={{ 
+                                    background: '#d4a574',
+                                    color: 'white',
+                                    borderRadius: '12px 12px 0 0'
+                                }}
+                            >
+                                <div style={{ 
+                                    display: 'flex', 
+                                    flexDirection: 'column',
+                                    gap: '12px'
+                                }}>
+                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        🔥 Cà phê & văn hóa đọc sách
+                                    </Text>
+                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        ☕ Các công thức cà phê độc đáo
+                                    </Text>
+                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        📰 Cà phế và những câu chuyện
+                                    </Text>
+                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        🎯 Tin tức về cà phê
+                                    </Text>
+                                </div>
+                            </Card> */}
+
+                            {/* Recent posts */}
+                            <Card
+                                title="TIN TỨC MỚI NHẤT"
+                                style={{
+                                    borderRadius: '12px',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                                }}
+                                headStyle={{
+                                    background: '#d4a574',
+                                    color: 'white',
+                                    borderRadius: '12px 12px 0 0',
+                                }}
+                            >
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                    {allPosts.slice(0, 3).map((post) => (
+                                        <div
+                                            key={post.id}
+                                            style={{
+                                                display: 'flex',
+                                                gap: '12px',
+                                                cursor: 'pointer',
+                                                padding: '8px',
+                                                borderRadius: '8px',
+                                                transition: 'background 0.2s',
+                                            }}
+                                            onClick={() => handleClick(post.slug, post.id)}
+                                            onMouseEnter={(e) => (e.target.style.background = '#f5f5f5')}
+                                            onMouseLeave={(e) => (e.target.style.background = 'transparent')}
+                                        >
+                                            {post.thumbnail && (
+                                                <img
+                                                    src={post.thumbnail}
+                                                    alt={post.title}
+                                                    style={{
+                                                        width: '60px',
+                                                        height: '60px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '6px',
+                                                    }}
+                                                />
+                                            )}
+                                            <div style={{ flex: 1 }}>
+                                                <Text
+                                                    strong
+                                                    style={{
+                                                        fontSize: '13px',
+                                                        lineHeight: '1.4',
+                                                        display: 'block',
+                                                        marginBottom: '4px',
+                                                    }}
+                                                >
+                                                    {post.title}
+                                                </Text>
+                                                <Text type="secondary" style={{ fontSize: '11px' }}>
+                                                    {formatDate(post.created_at)}
+                                                </Text>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             </Card>
 
-                            <Card className="sidebar-card ad-card">
-                                <img
-                                    src="https://via.placeholder.com/300x200/4CAF50/white?text=HTML+CSS+Pro"
-                                    alt="HTML CSS Pro"
-                                    className="ad-image"
-                                />
-                            </Card>
+                            {/* Tags */}
                         </div>
                     </Col>
                 </Row>
@@ -338,4 +603,4 @@ const BlogInterface = () => {
     );
 };
 
-export default BlogInterface;
+export default CoffeeBlogInterface;

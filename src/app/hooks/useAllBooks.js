@@ -17,7 +17,7 @@ const fetcher = async (url) => {
 export const useAllBooks = () => {
     const { data, error, isLoading, mutate } = useSWR(`${BASE_URL}/books`, fetcher, {
         revalidateOnFocus: false,
-        dedupingInterval: 300000, // 5 phút
+        dedupingInterval: 3600000, // 1 hour
     });
 
     const books = {

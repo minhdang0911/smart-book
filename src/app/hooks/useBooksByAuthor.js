@@ -21,7 +21,7 @@ export const useBooksByAuthor = (author) => {
         fetcher,
         {
             revalidateOnFocus: false,
-            dedupingInterval: 300000,
+            dedupingInterval: 3600000,
         },
     );
 

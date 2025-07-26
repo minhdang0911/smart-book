@@ -662,17 +662,19 @@
 /* Section styling */
 .section {
     margin-bottom: 48px;
+
 }
 
 .section-title {
     margin-bottom: 24px !important;
+    text-align: center;
     padding-bottom: 8px;
     border-bottom: 2px solid #f0f0f0;
 }
 
 .bookstore-container {
     padding: 24px;
-    max-width: 1400px;
+    max-width: 80%;
     margin: 0 auto;
 }
 

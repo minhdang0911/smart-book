@@ -8,7 +8,7 @@ export const useBookImages = (bookId) => {
         fetcher,
         {
             revalidateOnFocus: false,
-            dedupingInterval: 300000, // 5 minutes
+            dedupingInterval: 3600000, //  1hour
         },
     );
 
