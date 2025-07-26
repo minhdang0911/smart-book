@@ -1,4 +1,6 @@
 import CheckoutPageContent from './CheckoutPageContent'
+import { Suspense } from 'react';
+
 const CheckoutPage = () => {
     return (
         <Suspense fallback={
