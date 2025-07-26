@@ -1,9 +1,0 @@
-{
-  "buildCommand": "npm run build",
-  "framework": "nextjs",
-  "functions": {
-    "app/[[...route]]/route.ts": {
-      "maxDuration": 30
-    }
-  }
-}
