@@ -1,5 +1,5 @@
 import { Spin } from 'antd';
-import CheckoutPageContent from './CheckoutPageContent'
+import CheckoutPageContent from './CheckoutPageContent';
 import { Suspense } from 'react';
 
 const CheckoutPage = () => {

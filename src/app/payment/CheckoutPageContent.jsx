@@ -869,3 +869,5 @@ const CheckoutPageContent = () => {
         </div>
     );
 };
+
+export default CheckoutPageContent;
