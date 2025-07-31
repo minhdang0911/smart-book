@@ -34,8 +34,11 @@ const CoffeeBlogInterface = () => {
     }, [currentPage, pageSize, selectedTopic]);
 
     const getAuthHeaders = () => {
-        const token = localStorage?.getItem('token');
-        return token ? { Authorization: `Bearer ${token}` } : {};
+        if (typeof window !== 'undefined') {
+            const token = localStorage?.getItem('token');
+            return token ? { Authorization: `Bearer ${token}` } : {};
+        }
+        return {};
     };
 
     const fetchWithAuth = async (url) => {
@@ -83,11 +86,8 @@ const CoffeeBlogInterface = () => {
             const res = await fetchWithAuth(`http://localhost:8000/api/posts?page=${page}&per_page=${size}`);
             const result = await res.json();
             if (result.success) {
-                const pinnedIds = new Set(pinnedPosts.map((p) => p.id));
-                const popularIds = new Set(popularPosts.map((p) => p.id));
-                const filtered = result.data.filter((p) => !pinnedIds.has(p.id) && !popularIds.has(p.id));
-                setPosts(filtered);
-                setTotal(result.meta.total);
+                setPosts(result.data);
+                setTotal(result.meta?.total || result.data.length);
             }
         } catch (err) {
             console.error('Lỗi tải bài viết:', err);
@@ -120,6 +120,8 @@ const CoffeeBlogInterface = () => {
     };
 
     const handleLike = async (postId) => {
+        if (typeof window === 'undefined') return;
+
         const token = localStorage?.getItem('token');
         if (!token) return message.warning('Vui lòng đăng nhập để thả tim');
 
@@ -162,14 +164,14 @@ const CoffeeBlogInterface = () => {
 
     const handleClick = (slug, id) => {
         const viewedKey = `viewed_${slug}`;
-        if (typeof window !== 'undefined' && !sessionStorage.getItem(viewedKey)) {
-            fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
-            sessionStorage.setItem(viewedKey, 'true');
-        }
-        router.push(`/blog/${slug}`);
         if (typeof window !== 'undefined') {
+            if (!sessionStorage.getItem(viewedKey)) {
+                fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
+                sessionStorage.setItem(viewedKey, 'true');
+            }
             localStorage.setItem('postid', id);
         }
+        router.push(`/blog/${slug}`);
     };
 
     const handleTopicClick = (id) => {
@@ -179,6 +181,7 @@ const CoffeeBlogInterface = () => {
 
     const handleResetFilter = () => {
         setSelectedTopic(null);
+        setCurrentPage(1);
     };
 
     const formatDate = (dateString) => {
@@ -188,6 +191,21 @@ const CoffeeBlogInterface = () => {
             month: '2-digit',
             year: 'numeric',
         });
+    };
+
+    // Hàm để clean HTML tags và cắt ngắn text
+    const cleanAndTruncateText = (htmlText, maxLength = 100) => {
+        if (!htmlText) return '';
+
+        // Remove HTML tags
+        const textOnly = htmlText
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .trim();
+
+        if (textOnly.length <= maxLength) return textOnly;
+
+        return textOnly.substring(0, maxLength) + '...';
     };
 
     const renderPostCard = (post, isPinned = false) => (
@@ -225,12 +243,13 @@ const CoffeeBlogInterface = () => {
                                         left: '8px',
                                         background: '#ff4d4f',
                                         color: 'white',
-                                        padding: '2px 8px',
+                                        padding: '4px 8px',
                                         borderRadius: '4px',
                                         fontSize: '12px',
+                                        fontWeight: 'bold',
                                     }}
                                 >
-                                    31/07/2023
+                                    Ghim
                                 </div>
                             )}
                         </div>
@@ -271,6 +290,35 @@ const CoffeeBlogInterface = () => {
                     >
                         {post.title}
                     </Title>
+
+                    {/* Hiển thị excerpt */}
+                    {post.excerpt && (
+                        <div style={{ marginBottom: '12px' }}>
+                            <Paragraph
+                                style={{
+                                    fontSize: '13px',
+                                    lineHeight: '1.5',
+                                    color: '#666',
+                                    marginBottom: '8px',
+                                }}
+                            >
+                                {cleanAndTruncateText(post.excerpt, 120)}
+                            </Paragraph>
+                            <Button
+                                type="link"
+                                size="small"
+                                onClick={() => handleClick(post.slug, post.id)}
+                                style={{
+                                    padding: '0',
+                                    height: 'auto',
+                                    fontSize: '12px',
+                                    color: '#1890ff',
+                                }}
+                            >
+                                Xem thêm →
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ marginTop: 'auto' }}>
@@ -290,6 +338,9 @@ const CoffeeBlogInterface = () => {
                                 style={{ background: '#0096dbff' }}
                             />
                             <Text style={{ fontSize: '12px' }}>Admin</Text>
+                            <Text type="secondary" style={{ fontSize: '11px' }}>
+                                • {formatDate(post.created_at)}
+                            </Text>
                         </Space>
 
                         <Space size={12}>
@@ -313,7 +364,61 @@ const CoffeeBlogInterface = () => {
         </Col>
     );
 
-    const allPosts = [...pinnedPosts, ...popularPosts, ...posts];
+    // Sửa lại logic hiển thị bài viết
+    const getDisplayPosts = () => {
+        if (selectedTopic) {
+            return posts;
+        }
+
+        // Chỉ hiển thị bài ghim ở trang đầu tiên
+        const shouldShowPinned = currentPage === 1;
+        const shouldShowPopular = currentPage === 1;
+
+        // Lọc bài thường: loại bỏ bài ghim khỏi danh sách posts
+        const regularPosts = posts.filter((post) => !post.is_pinned);
+
+        let displayList = [];
+
+        if (shouldShowPinned && pinnedPosts.length > 0) {
+            displayList = [...pinnedPosts];
+        }
+
+        if (shouldShowPopular && popularPosts.length > 0) {
+            // Tạo Set ID của bài ghim để tránh trùng lặp
+            const pinnedIds = new Set(pinnedPosts.map((p) => p.id));
+            const uniquePopularPosts = popularPosts.filter((p) => !pinnedIds.has(p.id));
+            displayList = [...displayList, ...uniquePopularPosts];
+        }
+
+        // Thêm bài thường (đã loại bỏ bài ghim)
+        if (regularPosts.length > 0) {
+            // Tạo Set ID của bài đã có để tránh trùng lặp
+            const existingIds = new Set(displayList.map((p) => p.id));
+            const uniqueRegularPosts = regularPosts.filter((p) => !existingIds.has(p.id));
+            displayList = [...displayList, ...uniqueRegularPosts];
+        }
+
+        return displayList;
+    };
+
+    // Tính toán total chính xác cho phân trang
+    const getTotalForPagination = () => {
+        if (selectedTopic) {
+            return posts.length;
+        }
+
+        // Tổng số bài viết thường (không bao gồm bài ghim)
+        const regularPostsCount = posts.filter((post) => !post.is_pinned).length;
+
+        // Nếu có bài ghim hoặc phổ biến, chỉ tính vào trang đầu
+        const pinnedCount = pinnedPosts.length;
+        const popularCount = popularPosts.filter((p) => !pinnedPosts.some((pin) => pin.id === p.id)).length;
+
+        return regularPostsCount;
+    };
+
+    const displayPosts = getDisplayPosts();
+    const totalForPagination = getTotalForPagination();
 
     if (loading) {
         return (
@@ -409,8 +514,10 @@ const CoffeeBlogInterface = () => {
                     {/* Main content */}
                     <Col xs={24} lg={18}>
                         <Row gutter={[20, 24]}>
-                            {allPosts.length > 0 ? (
-                                allPosts.map((post, index) => renderPostCard(post, pinnedPosts.includes(post)))
+                            {displayPosts.length > 0 ? (
+                                displayPosts.map((post) =>
+                                    renderPostCard(post, !selectedTopic && currentPage === 1 && post.is_pinned),
+                                )
                             ) : (
                                 <Col span={24}>
                                     <div
@@ -423,15 +530,17 @@ const CoffeeBlogInterface = () => {
                                         }}
                                     >
                                         <Text type="secondary" style={{ fontSize: '16px' }}>
-                                            Không có bài viết nào thuộc chủ đề này.
+                                            {selectedTopic
+                                                ? 'Không có bài viết nào thuộc chủ đề này.'
+                                                : 'Không có bài viết nào.'}
                                         </Text>
                                     </div>
                                 </Col>
                             )}
                         </Row>
 
-                        {/* Pagination */}
-                        {!selectedTopic && total > pageSize && (
+                        {/* Pagination - chỉ hiển thị khi không lọc theo topic và có đủ bài viết */}
+                        {!selectedTopic && totalForPagination > pageSize && (
                             <div
                                 style={{
                                     textAlign: 'center',
@@ -444,7 +553,7 @@ const CoffeeBlogInterface = () => {
                             >
                                 <Pagination
                                     current={currentPage}
-                                    total={total}
+                                    total={totalForPagination}
                                     pageSize={pageSize}
                                     showSizeChanger
                                     showQuickJumper
@@ -500,37 +609,6 @@ const CoffeeBlogInterface = () => {
                                     ))}
                                 </div>
                             </Card>
-                            {/* <Card 
-                                title="CHUYÊN MỤC"
-                                style={{ 
-                                    borderRadius: '12px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                                }}
-                                headStyle={{ 
-                                    background: '#d4a574',
-                                    color: 'white',
-                                    borderRadius: '12px 12px 0 0'
-                                }}
-                            >
-                                <div style={{ 
-                                    display: 'flex', 
-                                    flexDirection: 'column',
-                                    gap: '12px'
-                                }}>
-                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        🔥 Cà phê & văn hóa đọc sách
-                                    </Text>
-                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        ☕ Các công thức cà phê độc đáo
-                                    </Text>
-                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        📰 Cà phế và những câu chuyện
-                                    </Text>
-                                    <Text style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        🎯 Tin tức về cà phê
-                                    </Text>
-                                </div>
-                            </Card> */}
 
                             {/* Recent posts */}
                             <Card
@@ -546,7 +624,7 @@ const CoffeeBlogInterface = () => {
                                 }}
                             >
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {allPosts.slice(0, 3).map((post) => (
+                                    {displayPosts.slice(0, 3).map((post) => (
                                         <div
                                             key={post.id}
                                             style={{
@@ -593,8 +671,6 @@ const CoffeeBlogInterface = () => {
                                     ))}
                                 </div>
                             </Card>
-
-                            {/* Tags */}
                         </div>
                     </Col>
                 </Row>

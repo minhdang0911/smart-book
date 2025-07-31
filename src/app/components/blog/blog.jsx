@@ -28,13 +28,31 @@ const PostList = () => {
         );
 
     const handlePostClick = (slug) => {
-        router.push(`/posts/${slug}`);
+        router.push(`/blog/${slug}`);
+    };
+
+    // Function to truncate excerpt
+    const truncateExcerpt = (text, maxLength = 100) => {
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength).trim() + '...';
     };
 
     return (
         <div className="post-list-container">
-         
-
+            <h1
+                style={{
+                    textAlign: 'center',
+                    fontSize: '24px',
+                    fontWeight: '700',
+                    color: '#000000ff',
+                    marginBottom: '30px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '2px',
+                }}
+            >
+                Tin tức
+            </h1>
             <Swiper
                 modules={[Navigation, Pagination, Autoplay]}
                 spaceBetween={20}
@@ -49,7 +67,7 @@ const PostList = () => {
                     bulletActiveClass: 'swiper-pagination-bullet-active',
                 }}
                 autoplay={{
-                    delay: 4000,
+                    delay: 3000,
                     disableOnInteraction: false,
                     pauseOnMouseEnter: true,
                 }}
@@ -75,21 +93,24 @@ const PostList = () => {
                         <div className="post-card" onClick={() => handlePostClick(post.slug)}>
                             <div className="post-image-container">
                                 <img src={post.thumbnail} alt={post.title} className="post-image" />
-                                <div className="category-badge">{post.category || 'LIFESTYLE'}</div>
+                                <div className="category-badge">
+                                    {post.topics && post.topics.length > 0 ? post.topics[0].name : 'LIFESTYLE'}
+                                </div>
                             </div>
 
                             <div className="post-content">
                                 <h3 className="post-title">{post.title}</h3>
 
+                                {/* Thêm excerpt vào đây */}
+                                {post.excerpt && <p className="post-excerpt">{truncateExcerpt(post.excerpt, 120)}</p>}
+
                                 <div className="post-meta">
-                                    <span className="post-date">
-                                        📅 {new Date(post.created_at).toLocaleDateString('vi-VN')}
-                                    </span>
-                                    <span className="post-author">👤 {post.author || 'monamedia'}</span>
+                                    <span className="post-date">📅 {post.created_at}</span>
+                                    <span className="post-views">👁️ {post.views || 0}</span>
                                 </div>
 
                                 <div className="read-more">
-                                    <span>Read more</span>
+                                    <span>Xem thêm</span>
                                 </div>
                             </div>
                         </div>
@@ -145,7 +166,7 @@ const PostList = () => {
                     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
                     cursor: pointer;
                     transition: all 0.3s ease;
-                    height: 420px;
+                    height: 480px; /* Tăng chiều cao để chứa excerpt */
                     display: flex;
                     flex-direction: column;
                 }
@@ -157,7 +178,7 @@ const PostList = () => {
 
                 .post-image-container {
                     position: relative;
-                    height: 240px;
+                    height: 220px; /* Giảm một chút để có chỗ cho excerpt */
                     overflow: hidden;
                 }
 
@@ -198,13 +219,27 @@ const PostList = () => {
                     font-size: 1.1rem;
                     font-weight: 600;
                     color: #333;
-                    margin: 0 0 15px 0;
+                    margin: 0 0 12px 0;
                     line-height: 1.4;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
                     text-overflow: ellipsis;
+                }
+
+                /* Style cho excerpt */
+                .post-excerpt {
+                    font-size: 0.85rem;
+                    color: #666;
+                    line-height: 1.5;
+                    margin: 0 0 15px 0;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 3;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    flex: 1;
                 }
 
                 .post-meta {
@@ -217,7 +252,7 @@ const PostList = () => {
                 }
 
                 .post-date,
-                .post-author {
+                .post-views {
                     display: flex;
                     align-items: center;
                     gap: 4px;
@@ -316,15 +351,20 @@ const PostList = () => {
                     }
 
                     .post-card {
-                        height: 380px;
+                        height: 420px;
                     }
 
                     .post-image-container {
-                        height: 220px;
+                        height: 200px;
                     }
 
                     .post-content {
                         padding: 15px;
+                    }
+
+                    .post-excerpt {
+                        font-size: 0.8rem;
+                        -webkit-line-clamp: 2;
                     }
 
                     .custom-nav-btn {
