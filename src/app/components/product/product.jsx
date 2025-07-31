@@ -9,21 +9,12 @@ import { apiGetMe } from '../../../../apis/user';
 import { useAllBooks } from '../../hooks/useAllBooks';
 import { handleAddToCartHelper } from '../../utils/addToCartHandler';
 import { toggleWishlist } from '../../utils/wishlist';
-import './product.css'; // Import CSS file
+import './product.css';
 import QuickViewModal from './QuickViewModal';
 
 const { Title, Text } = Typography;
 
 const WatchStyleBookStore = () => {
-    const isFavorite = (bookId) => wishlist.includes(bookId);
-    const handleToggle = () => {
-        toggleWishlist({
-            bookId: book.id,
-            token,
-            wishlist,
-            setWishlist,
-        });
-    };
     const [loading, setLoading] = useState(true);
     const [favorites, setFavorites] = useState(new Set());
     const [user, setUser] = useState(null);
@@ -33,33 +24,36 @@ const WatchStyleBookStore = () => {
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [wishlist, setWishlist] = useState([]);
-    const { books, isLoading, error } = useAllBooks();
+    const { books, setBooks } = useAllBooks();
 
-    // Fetch user info and books data
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-
-                // Get user info
                 const token = localStorage.getItem('token');
+
                 if (token) {
-                    try {
-                        const userResponse = await apiGetMe(token);
-                        if (userResponse?.status === true) {
-                            setUser(userResponse.user);
-                        }
-                    } catch (error) {
-                        console.error('Error getting user info:', error);
+                    const userResponse = await apiGetMe(token);
+                    if (userResponse?.status === true) {
+                        setUser(userResponse.user);
+                    }
+
+                    // ✅ Gọi đúng API lấy sách yêu thích
+                    const followedRes = await fetch('http://localhost:8000/api/books/followed', {
+                        headers: { Authorization: `Bearer ${token}` },
+                    });
+                    const followedData = await followedRes.json();
+
+                    if (followedData?.status === true) {
+                        const followedIds = followedData.followed_books.map((book) => book.id);
+                        setWishlist(followedIds); // 👉 Gán đúng danh sách id
                     }
                 }
 
-                // Get all books
                 const response = await apiGetAllBook();
-
                 if (response?.status === 'success') {
                     setBooks({
-                        featured: response.latest_ebooks?.slice(0, 5) || [], // Thay đổi từ 4 thành 5
+                        featured: response.latest_ebooks?.slice(0, 5) || [],
                         topRated: response.top_rated_books || [],
                         mostViewed: response.top_viewed_books || [],
                         ebooks: response.latest_ebooks || [],
@@ -79,7 +73,6 @@ const WatchStyleBookStore = () => {
         fetchData();
     }, []);
 
-    // Format price to Vietnamese currency
     const formatPrice = (price) => {
         if (!price) return '';
         return new Intl.NumberFormat('vi-VN', {
@@ -90,24 +83,11 @@ const WatchStyleBookStore = () => {
         }).format(price);
     };
 
-    // Calculate discount percentage
     const calculateDiscount = (originalPrice, discountPrice) => {
         if (!originalPrice || !discountPrice) return 0;
         return Math.round(((originalPrice - discountPrice) / originalPrice) * 100);
     };
 
-    // Toggle favorite
-    const toggleFavorite = (bookId) => {
-        const newFavorites = new Set(favorites);
-        if (newFavorites.has(bookId)) {
-            newFavorites.delete(bookId);
-        } else {
-            newFavorites.add(bookId);
-        }
-        setFavorites(newFavorites);
-    };
-
-    // Handle quick view
     const handleQuickView = (book) => {
         setSelectedBook(book);
         setQuickViewVisible(true);
@@ -133,7 +113,6 @@ const WatchStyleBookStore = () => {
         });
     };
 
-    // Fixed handleAddToCart function
     const handleAddToCart = async (book, qty = 1) => {
         await handleAddToCartHelper({
             user,
@@ -145,12 +124,13 @@ const WatchStyleBookStore = () => {
         });
     };
 
-    // Book Card Component
     const BookCard = ({ book }) => {
         const cardRef = useRef(null);
         const actionsRef = useRef(null);
         const discount = calculateDiscount(book.price, book.discount_price);
-        const isFavoriteBook = isFavorite(book.id);
+
+        // ✅ Đảm bảo luôn lấy đúng dữ liệu mới nhất
+        const isFavoriteBook = wishlist.includes(book.id);
 
         useEffect(() => {
             const card = cardRef.current;
@@ -160,7 +140,6 @@ const WatchStyleBookStore = () => {
 
             const buttons = actions.querySelectorAll('.ant-btn');
 
-            // Set initial state for buttons
             gsap.set(buttons, {
                 y: 30,
                 opacity: 0,
@@ -168,7 +147,6 @@ const WatchStyleBookStore = () => {
             });
 
             const handleMouseEnter = () => {
-                // Animate buttons with stagger effect
                 gsap.to(buttons, {
                     y: 0,
                     opacity: 1,
@@ -210,7 +188,6 @@ const WatchStyleBookStore = () => {
                             {book.discount_price > 0 && book.discount_price < book.price && (
                                 <div className="discount-badge">-{discount}%</div>
                             )}
-
                             <img
                                 src={book.cover_image || 'https://via.placeholder.com/300x400?text=No+Image'}
                                 alt={book.title}
@@ -229,7 +206,6 @@ const WatchStyleBookStore = () => {
                                         handleToggleWishlist(book.id);
                                     }}
                                 />
-
                                 <Button
                                     type="text"
                                     icon={<ShoppingCartOutlined />}
@@ -258,7 +234,6 @@ const WatchStyleBookStore = () => {
                         <Title level={5} className="book-title" ellipsis={{ rows: 2 }}>
                             {book.title}
                         </Title>
-
                         {book.author && (
                             <Text className="book-author" type="secondary">
                                 {typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author'}
@@ -308,75 +283,31 @@ const WatchStyleBookStore = () => {
     return (
         <>
             <div className="bookstore-container">
-                {/* Featured Books Section */}
-                <div className="section">
-                    <Title level={2} className="section-title">
-                        📚 Sách Nổi Bật
-                    </Title>
-                    <div className="books-grid">
-                        {books.featured.map((book) => (
-                            <div key={book.id} className="book-grid-item">
-                                <BookCard book={book} />
+                {/* Các section hiển thị sách */}
+                {[
+                    'Sách Nổi Bật',
+                    'Sách Được Yêu Thích Nhất',
+                    'Sách Được Xem Nhiều Nhất',
+                    'EBooks Mới Nhất',
+                    'Sách Giấy Mới Nhất',
+                ].map((title, i) => {
+                    const keys = ['featured', 'topRated', 'mostViewed', 'ebooks', 'paperBooks'];
+                    const currentKey = keys[i];
+                    return (
+                        <div key={title} className="section">
+                            <Title level={2} className="section-title">
+                                {['📚', '⭐', '🔥', '💻', '📖'][i]} {title}
+                            </Title>
+                            <div className="books-grid">
+                                {books[currentKey].slice(0, 10).map((book) => (
+                                    <div key={book.id} className="book-grid-item">
+                                        <BookCard book={book} />
+                                    </div>
+                                ))}
                             </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Top Rated Books Section */}
-                <div className="section">
-                    <Title level={2} className="section-title">
-                        ⭐ Sách Được Yêu Thích Nhất
-                    </Title>
-                    <div className="books-grid">
-                        {books.topRated.slice(0, 10).map((book) => (
-                            <div key={book.id} className="book-grid-item">
-                                <BookCard book={book} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Most Viewed Books Section */}
-                <div className="section">
-                    <Title level={2} className="section-title">
-                        🔥 Sách Được Xem Nhiều Nhất
-                    </Title>
-                    <div className="books-grid">
-                        {books.mostViewed.slice(0, 10).map((book) => (
-                            <div key={book.id} className="book-grid-item">
-                                <BookCard book={book} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* EBooks Section */}
-                <div className="section">
-                    <Title level={2} className="section-title">
-                        💻 EBooks Mới Nhất
-                    </Title>
-                    <div className="books-grid">
-                        {books.ebooks.slice(0, 10).map((book) => (
-                            <div key={book.id} className="book-grid-item">
-                                <BookCard book={book} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Paper Books Section */}
-                <div className="section">
-                    <Title level={2} className="section-title">
-                        📖 Sách Giấy Mới Nhất
-                    </Title>
-                    <div className="books-grid">
-                        {books.paperBooks.slice(0, 10).map((book) => (
-                            <div key={book.id} className="book-grid-item">
-                                <BookCard book={book} />
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                        </div>
+                    );
+                })}
             </div>
 
             <QuickViewModal
@@ -387,7 +318,7 @@ const WatchStyleBookStore = () => {
                 setQuantity={setQuantity}
                 handleAddToCart={handleAddToCart}
                 toggleFavorite={handleToggleWishlist}
-                isFavorite={selectedBook && isFavorite(selectedBook.id)}
+                isFavorite={selectedBook && wishlist.includes(selectedBook.id)}
                 isAddingToCart={isAddingToCart}
             />
         </>

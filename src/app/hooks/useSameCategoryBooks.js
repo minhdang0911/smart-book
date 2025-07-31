@@ -30,7 +30,7 @@ export const useSameCategoryBooks = (category, currentBookId) => {
 
             if (categoryId) {
                 // Thử search theo ID trước
-                searchUrl = `http://localhost:8000/api/books/search?category_id=${encodeURIComponent(categoryId)}`;
+                searchUrl = `http://localhost:8000/api/books/search?category=${encodeURIComponent(categoryId)}`;
             } else if (categoryName) {
                 // Fallback về name
                 searchUrl = `http://localhost:8000/api/books/search?category=${encodeURIComponent(categoryName)}`;

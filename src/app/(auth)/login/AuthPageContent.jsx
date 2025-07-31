@@ -1,23 +1,11 @@
 'use client';
 
-import {
-    EyeInvisibleOutlined,
-    EyeTwoTone,
-    GoogleOutlined,
-    LockOutlined,
-    MailOutlined,
-    UserOutlined,
-} from '@ant-design/icons';
+import { EyeInvisibleOutlined, EyeTwoTone, GoogleOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Divider, Form, Input, message, Modal, Typography } from 'antd';
+import { User2Icon } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import {
-    apiForgotPassword,
-    apiLoginUser,
-    apiRegisterUser,
-    apiSendOtp,
-    apiVerifyOtp,
-} from '../../../../apis/user';
+import { apiForgotPassword, apiLoginUser, apiRegisterUser, apiSendOtp, apiVerifyOtp } from '../../../../apis/user';
 import './AuthPage.css';
 import CustomNotification from './Notifi';
 
@@ -390,7 +378,7 @@ export default function AuthPage() {
                             ]}
                         >
                             <Input.Password
-                                prefix={<LockOutlined />}
+                                prefix={<User2Icon />}
                                 placeholder="Mật khẩu"
                                 iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                                 autoComplete={isLogin ? 'current-password' : 'new-password'}
@@ -412,7 +400,7 @@ export default function AuthPage() {
                                 ]}
                             >
                                 <Input.Password
-                                    prefix={<LockOutlined />}
+                                    prefix={<UserOutlined />}
                                     placeholder="Xác nhận mật khẩu"
                                     iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
                                     autoComplete="new-password"
