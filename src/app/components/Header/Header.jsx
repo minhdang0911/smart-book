@@ -34,14 +34,14 @@ const Header = () => {
             color: '#1890ff',
         },
         {
-            label: 'Ebooks',
-            path: '/ebooks',
+            label: 'Sách điện tử',
+            path: '/search?type=ebook',
             icon: <BookOutlined />,
             color: '#52c41a',
         },
         {
             label: 'Sách bán',
-            path: '/buybooks',
+            path: '/search?type=physical',
             icon: <ShoppingCartOutlined />,
             color: '#fa8c16',
         },

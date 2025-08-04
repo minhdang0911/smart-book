@@ -9,8 +9,8 @@ export default async function PostList() {
         <section className="post-list-section">
             <div className="container">
                 <div className="section-header">
-                    <h2 className="section-title">Vietnam Post Logistics Tin tức</h2>
-                    <div className="section-nav">
+                    {/* <h2 className="section-title">Vietnam Post Logistics Tin tức</h2> */}
+                    {/* <div className="section-nav">
                         <Link href="/blog" className="nav-item active">
                             Blog
                         </Link>
@@ -20,17 +20,17 @@ export default async function PostList() {
                         <Link href="/logistics" className="nav-item">
                             Bản tin Viet Nam Logistics
                         </Link>
-                    </div>
+                    </div> */}
                 </div>
 
                 {posts && posts.length > 0 ? (
                     <>
                         <PostSwiper posts={posts} />
-                        <div className="section-footer">
+                        {/* <div className="section-footer">
                             <Link href="/blog" className="view-all-btn">
                                 XEM TẤT CẢ TIN
                             </Link>
-                        </div>
+                        </div> */}
                     </>
                 ) : (
                     <div className="no-posts">

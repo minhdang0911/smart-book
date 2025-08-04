@@ -12,8 +12,8 @@ export default function Home() {
 
             <CouponSlider />
             <Event />
-            <Product />
             <Author />
+            <Product />
             <Blog />
             <Gift />
         </div>
