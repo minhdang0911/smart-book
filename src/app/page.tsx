@@ -4,7 +4,7 @@ import Blog from './components/blog/blog';
 import CouponSlider from './components/coupon/coupon';
 import Event from './components/event/page';
 import Gift from './components/Gift/gift';
-import Product from './components/product/product';
+import Product from './components/product/page';
 export default function Home() {
     return (
         <div>

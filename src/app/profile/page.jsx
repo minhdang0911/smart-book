@@ -69,6 +69,7 @@ const ChangePassword = ({ token }) => {
 
     const onFinish = async (values) => {
         setLoading(true);
+        const token = localStorage?.getItem('token');
 
         try {
             const response = await fetch('http://localhost:8000/api/user/change-password', {
@@ -76,6 +77,7 @@ const ChangePassword = ({ token }) => {
                 headers: {
                     'Content-Type': 'application/json',
                     Authorization: `Bearer ${token}`,
+                    Accept: 'application/json',
                 },
                 body: JSON.stringify({
                     current_password: values.currentPassword,
@@ -85,6 +87,11 @@ const ChangePassword = ({ token }) => {
             });
 
             const data = await response.json();
+            if (data?.success === true) {
+                window.message.success('Đổi mật khẩu thành công!');
+                form.resetFields();
+                setPasswordStrength('');
+            }
 
             if (!response.ok) {
                 if (response.status === 422) {
@@ -97,10 +104,6 @@ const ChangePassword = ({ token }) => {
                     throw new Error(data.message || 'Không thể đổi mật khẩu');
                 }
             }
-
-            message.success('Đổi mật khẩu thành công!');
-            form.resetFields();
-            setPasswordStrength('');
         } catch (error) {
             message.error(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
         } finally {

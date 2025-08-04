@@ -69,6 +69,7 @@ import './BookDetail.css';
 const BookList = ({ books }) => {
     const router = useRouter();
     const [showNavigation, setShowNavigation] = useState(false);
+    const { user, isLoading, mutate: mutateUser } = useUser();
 
     console.log('📚 BookList received books:', books);
 
@@ -549,13 +550,16 @@ const BookDetailPage = () => {
     console.log(isLoggedIn);
     const handleSubmitReview = async (values) => {
         // Sử dụng isLoggedIn từ hook thay vì gọi checkUser
-        // if (!isLoggedIn) {
-        //     toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-        //     // Có thể redirect đến trang login
-        //     router.push('/login');
-        //     return;
-        // }
+        if (!user) {
+            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+        }
 
+        if (!user) {
+            toast.error(customMessage || '🔒 Vui1 lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return false;
+        }
         try {
             const data = await submitReview(id, values.rating, values.comment);
 
@@ -587,13 +591,10 @@ const BookDetailPage = () => {
 
     const handleAddToCart = async () => {
         try {
-            // if (!isLoggedIn) {
-            //     toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-            //     // Có thể redirect đến trang login
-            //     router.push('/login');
-            //     return;
-            // }
-
+            if (!user) {
+                toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+                router.push('/login');
+            }
             setIsAddingToCart(true);
             const result = await addToCart(book.id, quantity);
 
@@ -610,12 +611,10 @@ const BookDetailPage = () => {
     };
 
     const handleBuyNow = async () => {
-        // if (!isLoggedIn) {
-        //     toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-        //     // Có thể redirect đến trang login
-        //     router.push('/login');
-        //     return;
-        // }
+        if (!user) {
+            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+        }
         try {
             const checkoutData = {
                 items: [
@@ -667,12 +666,10 @@ const BookDetailPage = () => {
     };
 
     const handleToggleWishlist = async () => {
-        // if (!isLoggedIn) {
-        //     toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-        //     // Có thể redirect đến trang login
-        //     router.push('/login');
-        //     return;
-        // }
+        if (!user) {
+            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+        }
 
         const success = await toggleWishlist(book.id);
         if (success) {
@@ -684,12 +681,10 @@ const BookDetailPage = () => {
     };
 
     const handleOpenReviewModal = async () => {
-        // if (!isLoggedIn) {
-        //     toast.error('🔒 Vui lòng đăng nhập để đánh giá!');
-        //     // Có thể redirect đến trang login
-        //     router.push('/login');
-        //     return;
-        // }
+        if (!user) {
+            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+        }
 
         const { canReview, message: msg } = await checkCanReview(book.id);
         if (!canReview) {

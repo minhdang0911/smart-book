@@ -1,5 +1,5 @@
 'use client';
-import { ClearOutlined, FilterOutlined } from '@ant-design/icons';
+import { ClearOutlined, FilterOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import {
     Button,
     Card,
@@ -20,7 +20,7 @@ import axios from 'axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { apiGetAuthors, apiGetCategories } from '../../../apis/user';
-import './search.css';
+import styles from './search.module.css';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -103,8 +103,8 @@ const SearchContent = () => {
             if (filters.bookType) {
                 if (filters.bookType === 'physical') {
                     params.type = 'paper';
-                } else {
-                    params.type = filters.bookType;
+                } else if (filters.bookType === 'ebook') {
+                    params.type = 'ebook';
                 }
             }
             if (filters.available) {
@@ -212,10 +212,7 @@ const SearchContent = () => {
     };
 
     const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN', {
-            style: 'currency',
-            currency: 'VND',
-        }).format(price);
+        return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
     };
 
     const handleBookClick = (bookId) => {
@@ -223,8 +220,8 @@ const SearchContent = () => {
     };
 
     return (
-        <div className="search-page">
-            <div className="search-container">
+        <div className={styles.bookstoreContainer}>
+            <div className={styles.section}>
                 <Row gutter={24}>
                     <Col xs={24} md={6}>
                         <Card
@@ -239,43 +236,47 @@ const SearchContent = () => {
                                     Xóa bộ lọc
                                 </Button>
                             }
-                            className="filter-card"
+                            className={styles.filterCard}
                         >
-                            <div className="filter-section">
+                            <div className={styles.filterSection}>
                                 <Title level={5}>Tác giả</Title>
-                                <Checkbox.Group
-                                    value={filters.selectedAuthors}
-                                    onChange={handleAuthorChange}
-                                    className="filter-checkbox-group"
-                                >
-                                    {authors.map((author) => (
-                                        <Checkbox key={author.id} value={author.name}>
-                                            {author.name}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
+                                <div className={styles.filterCheckboxContainer}>
+                                    <Checkbox.Group
+                                        value={filters.selectedAuthors}
+                                        onChange={handleAuthorChange}
+                                        className={styles.filterCheckboxGroup}
+                                    >
+                                        {authors.map((author) => (
+                                            <Checkbox key={author.id} value={author.name}>
+                                                {author.name}
+                                            </Checkbox>
+                                        ))}
+                                    </Checkbox.Group>
+                                </div>
                             </div>
 
                             <Divider />
 
-                            <div className="filter-section">
+                            <div className={styles.filterSection}>
                                 <Title level={5}>Thể loại</Title>
-                                <Checkbox.Group
-                                    value={filters.selectedCategories}
-                                    onChange={handleCategoryChange}
-                                    className="filter-checkbox-group"
-                                >
-                                    {categories.map((category) => (
-                                        <Checkbox key={category.id} value={category.name}>
-                                            {category.name}
-                                        </Checkbox>
-                                    ))}
-                                </Checkbox.Group>
+                                <div className={styles.filterCheckboxContainer}>
+                                    <Checkbox.Group
+                                        value={filters.selectedCategories}
+                                        onChange={handleCategoryChange}
+                                        className={styles.filterCheckboxGroup}
+                                    >
+                                        {categories.map((category) => (
+                                            <Checkbox key={category.id} value={category.name}>
+                                                {category.name}
+                                            </Checkbox>
+                                        ))}
+                                    </Checkbox.Group>
+                                </div>
                             </div>
 
                             <Divider />
 
-                            <div className="filter-section">
+                            <div className={styles.filterSection}>
                                 <Title level={5}>Khoảng giá</Title>
                                 <Slider
                                     range
@@ -288,7 +289,7 @@ const SearchContent = () => {
                                         formatter: (value) => formatPrice(value),
                                     }}
                                 />
-                                <div className="price-range-display">
+                                <div className={styles.priceRangeDisplay}>
                                     <Text>{formatPrice(filters.priceRange[0])}</Text>
                                     <Text>{formatPrice(filters.priceRange[1])}</Text>
                                 </div>
@@ -296,7 +297,7 @@ const SearchContent = () => {
 
                             <Divider />
 
-                            <div className="filter-section">
+                            <div className={styles.filterSection}>
                                 <Title level={5}>Loại sách</Title>
                                 <Select
                                     value={filters.bookType}
@@ -312,7 +313,7 @@ const SearchContent = () => {
 
                             <Divider />
 
-                            <div className="filter-section">
+                            <div className={styles.filterSection}>
                                 <Checkbox checked={filters.available} onChange={handleAvailableChange}>
                                     Chỉ hiển thị sách còn hàng
                                 </Checkbox>
@@ -321,15 +322,17 @@ const SearchContent = () => {
                     </Col>
 
                     <Col xs={24} md={18}>
-                        <div className="search-header">
-                            <div className="search-info">
-                                <Title level={3}>
-                                    {filters.name ? `Kết quả tìm kiếm: "${filters.name}"` : 'Tất cả sách'}
-                                </Title>
+                        <div className={styles.searchHeader}>
+                            <div className={styles.searchInfo}>
+                                <div className={styles.sectionTitle}>
+                                    <Title level={2}>
+                                        {filters.name ? `Kết quả tìm kiếm: "${filters.name}"` : 'Tất cả sách'}
+                                    </Title>
+                                </div>
                                 {pagination.total && <Text type="secondary">Tìm thấy {pagination.total} kết quả</Text>}
                             </div>
 
-                            <div className="search-controls">
+                            <div className={styles.searchControls}>
                                 <Select value={filters.sort} onChange={handleSortChange} style={{ width: 200 }}>
                                     <Option value="popular">Phổ biến nhất</Option>
                                     <Option value="price_low">Giá thấp đến cao</Option>
@@ -343,7 +346,7 @@ const SearchContent = () => {
                             filters.selectedCategories.length > 0 ||
                             filters.bookType ||
                             filters.available) && (
-                            <div className="active-filters">
+                            <div className={styles.activeFilters}>
                                 <Text strong>Bộ lọc đang áp dụng: </Text>
                                 {filters.selectedAuthors.map((author) => (
                                     <Tag
@@ -384,57 +387,83 @@ const SearchContent = () => {
 
                         <Spin spinning={loading}>
                             {books.length > 0 ? (
-                                <Row gutter={[16, 16]} className="books-grid">
+                                <div className={styles.booksGrid}>
                                     {books.map((book) => (
-                                        <Col xs={24} sm={12} md={8} lg={6} key={book.id}>
-                                            <Card
-                                                hoverable
-                                                cover={
-                                                    <div className="book-cover">
-                                                        <img
-                                                            alt={book.title}
-                                                            src={book.cover_image || '/default-book-cover.jpg'}
-                                                            onError={(e) => {
-                                                                e.target.src = '/default-book-cover.jpg';
+                                        <div key={book.id} className={styles.bookGridItem}>
+                                            <Card className={styles.bookCard} onClick={() => handleBookClick(book.id)}>
+                                                <div className={styles.bookImageContainer}>
+                                                    <img
+                                                        src={book.cover_image || book.thumb || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                        alt={book.title}
+                                                        className={styles.bookImage}
+                                                        onError={(e) => {
+                                                            e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
+                                                        }}
+                                                    />
+                                                    
+                                                    {book.discount_percent && (
+                                                        <div className={styles.discountBadge}>
+                                                            -{Math.round(book.discount_percent)}%
+                                                        </div>
+                                                    )}
+
+                                                    {book.stock === 0 && (
+                                                        <div className={styles.outOfStockOverlay}>
+                                                            <span>Hết hàng</span>
+                                                        </div>
+                                                    )}
+
+                                                    <div className={styles.bookActions}>
+                                                        <Button 
+                                                            type="text" 
+                                                            icon={<ShoppingCartOutlined />} 
+                                                            className={styles.cartBtn}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                // Handle add to cart
                                                             }}
                                                         />
                                                     </div>
-                                                }
-                                                onClick={() => handleBookClick(book.id)}
-                                                className="book-card"
-                                            >
-                                                <Card.Meta
-                                                    title={
-                                                        <div className="book-title" title={book.title}>
-                                                            {book.title}
-                                                        </div>
-                                                    }
-                                                    description={
-                                                        <div className="book-info">
-                                                            <Text type="secondary" className="book-author">
-                                                                {book.author?.name}
-                                                            </Text>
-                                                            <Text strong className="book-price">
-                                                                {formatPrice(book.price)}
-                                                            </Text>
-                                                            <div className="book-meta">
-                                                                <Tag color="blue">{book.category?.name}</Tag>
-                                                                {book.stock === 0 && <Tag color="red">Hết hàng</Tag>}
-                                                            </div>
-                                                        </div>
-                                                    }
-                                                />
+                                                </div>
+
+                                                <div className={styles.bookInfo}>
+                                                    <h3 className={styles.bookTitle}>{book.title}</h3>
+                                                    <span className={styles.bookAuthor}>{book.author?.name}</span>
+
+                                                    <div className={styles.priceContainer}>
+                                                        <span className={styles.currentPrice}>
+                                                            {formatPrice(book.price)}
+                                                        </span>
+                                                        {book.original_price && book.original_price > book.price && (
+                                                            <>
+                                                                <span className={styles.originalPrice}>{formatPrice(book.original_price)}</span>
+                                                                <span className={styles.discountPrice}>
+                                                                    -{Math.round(((book.original_price - book.price) / book.original_price) * 100)}%
+                                                                </span>
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    <div className={styles.bookMeta}>
+                                                        <Tag color="blue">{book.category?.name}</Tag>
+                                                        {book.type && (
+                                                            <Tag color="green">
+                                                                {book.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
+                                                            </Tag>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </Card>
-                                        </Col>
+                                        </div>
                                     ))}
-                                </Row>
+                                </div>
                             ) : (
                                 <Empty description="Không tìm thấy sách nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                             )}
                         </Spin>
 
                         {pagination.total > 0 && (
-                            <div className="pagination-container">
+                            <div className={styles.paginationContainer}>
                                 <Pagination
                                     current={currentPage}
                                     total={pagination.total}

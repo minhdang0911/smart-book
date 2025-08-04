@@ -1,12 +1,21 @@
+'use client';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
+import { useUser } from './useUser';
+
 export const useReviewActions = () => {
     const token = localStorage.getItem('token');
+    const router = useRouter();
+    const { user, isLoading, mutate: mutateUser } = useUser();
 
-    const checkCanReview = async (bookId) => {
+    const checkCanReview = async (bookId, customMessage) => {
+        if (!user) {
+            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return { canReview: false, message: 'Chưa đăng nhập' };
+        }
+
         try {
-            if (!token) {
-                return { canReview: false, message: 'Vui lòng đăng nhập để đánh giá!' };
-            }
-
             const response = await fetch('http://localhost:8000/api/orders', {
                 method: 'GET',
                 headers: {

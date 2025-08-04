@@ -3,9 +3,10 @@ import { CreditCardOutlined, DownloadOutlined, QrcodeOutlined } from '@ant-desig
 import { Button, Card, Col, Divider, Form, Image, Input, message, Radio, Row, Select, Spin, Typography } from 'antd';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { useContext, useEffect, useState, Suspense } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { apiGetDistricts, apiGetProvinces, apiGetShippingFee, apiGetWardsByDistrict } from '../../../apis/ghtk';
+import { apiSendOtp } from '../../../apis/user'; // Thêm import này
 import { CartContext } from '../../app/contexts/CartContext';
 import './CheckoutPage.css';
 import './responsive.css';
@@ -216,6 +217,31 @@ const CheckoutPageContent = () => {
         }
     };
 
+    // Function gửi email đặt hàng thành công
+    const sendOrderSuccessEmail = async (orderResult, customerInfo) => {
+        try {
+            console.log('📧 [EMAIL] Sending order success email...');
+
+            const orderData = {
+                name: customerInfo.fullName,
+                phone: customerInfo.phone,
+                order_id: orderResult.order?.id || orderResult.data?.id,
+                total_amount: checkoutData?.totalAmount + shippingFee,
+                items: selectedCartItems,
+                address: `${selectedWard?.WardName || ''}, ${selectedDistrict?.DistrictName || ''}, ${
+                    selectedProvince?.ProvinceName || ''
+                }`,
+                payment_method:
+                    paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'Thanh toán online qua ZaloPay',
+            };
+
+            await apiSendOtp(customerInfo.email, 'order_success', orderData);
+            console.log('📧 [EMAIL] Order success email sent successfully');
+        } catch (error) {
+            console.error('📧 [EMAIL] Error sending order success email:', error);
+        }
+    };
+
     const handlePaymentMethodChange = (e) => {
         const selectedMethod = e.target.value;
         setPaymentMethod(selectedMethod);
@@ -277,8 +303,16 @@ const CheckoutPageContent = () => {
                 }
 
                 if (result.success === true) {
-                    console.log('🛒 [COD] Order created successfully - Clearing cart');
-                    message.success('Đặt hàng thành công! Bạn sẽ thanh toán khi nhận hàng.');
+                    console.log('🛒 [COD] Order created successfully - Sending email');
+
+                    // Gửi email đặt hàng thành công
+                    await sendOrderSuccessEmail(result, {
+                        fullName: values.fullName,
+                        email: values.email,
+                        phone: values.phone,
+                    });
+
+                    message.success('Đặt hàng thành công! Email xác nhận đã được gửi.');
 
                     if (clearCart) {
                         clearCart();
@@ -288,7 +322,7 @@ const CheckoutPageContent = () => {
                     window.dispatchEvent(new CustomEvent('cartUpdated'));
                     form.resetFields();
                     toast.success('Đặt hàng thành công!');
-                    router.push('/order-success');
+                    router.push('/');
                 } else {
                     throw new Error(result.message || 'Đặt hàng thất bại');
                 }
@@ -300,6 +334,12 @@ const CheckoutPageContent = () => {
                     checkoutData: { ...checkoutData },
                     selectedItems: [...selectedItems],
                     orderData: { ...orderData },
+                    customerInfo: {
+                        // Thêm customerInfo vào cartState
+                        fullName: values.fullName,
+                        email: values.email,
+                        phone: values.phone,
+                    },
                 };
 
                 try {
@@ -349,7 +389,7 @@ const CheckoutPageContent = () => {
                             console.log(`🛒 [ZALOPAY] Status check (attempt ${checkAttempts}):`, data);
 
                             if (data.return_code === 1) {
-                                console.log('🛒 [ZALOPAY] Payment successful - Creating order now');
+                                console.log('🛒 [ZALOPAY] Payment successful - Creating order and sending email');
 
                                 if (statusCheckInterval) {
                                     clearInterval(statusCheckInterval);
@@ -360,6 +400,7 @@ const CheckoutPageContent = () => {
                                         localStorage.getItem('pending_zaloPay_payment') || '{}',
                                     );
                                     const storedOrderData = storedPaymentInfo.cartState?.orderData || orderData;
+                                    const storedCustomerInfo = storedPaymentInfo.cartState?.customerInfo;
 
                                     const orderResponse = await fetch('http://localhost:8000/api/orders', {
                                         method: 'POST',
@@ -379,9 +420,12 @@ const CheckoutPageContent = () => {
                                         );
                                     }
 
-                                    console.log(
-                                        '🛒 [ZALOPAY] Order created successfully after payment - Clearing cart',
-                                    );
+                                    console.log('🛒 [ZALOPAY] Order created successfully - Sending email');
+
+                                    // Gửi email đặt hàng thành công cho ZaloPay
+                                    if (storedCustomerInfo) {
+                                        await sendOrderSuccessEmail(orderResult, storedCustomerInfo);
+                                    }
 
                                     if (clearCart) {
                                         await clearCart();
@@ -390,7 +434,9 @@ const CheckoutPageContent = () => {
                                     localStorage.removeItem('pending_zaloPay_payment');
                                     localStorage.removeItem('app_trans_id');
 
-                                    toast.success('ZaloPay: Thanh toán thành công! Đơn hàng đã được tạo.');
+                                    toast.success(
+                                        'ZaloPay: Thanh toán thành công! Đơn hàng đã được tạo và email đã được gửi.',
+                                    );
                                     window.updateCartCount?.();
                                     window.dispatchEvent(new CustomEvent('cartUpdated'));
                                     form.resetFields();
@@ -492,8 +538,48 @@ const CheckoutPageContent = () => {
                         const data = statusResponse.data;
 
                         if (data.return_code === 1) {
-                            console.log('🛒 [ZALOPAY] Payment completed while away - Processing order');
-                            toast.success('Thanh toán đã hoàn thành! Đang xử lý đơn hàng...');
+                            console.log(
+                                '🛒 [ZALOPAY] Payment completed while away - Processing order and sending email',
+                            );
+
+                            // Xử lý đơn hàng và gửi email
+                            try {
+                                const storedOrderData = paymentInfo.cartState?.orderData;
+                                const storedCustomerInfo = paymentInfo.cartState?.customerInfo;
+
+                                if (storedOrderData && storedCustomerInfo) {
+                                    const token = localStorage.getItem('token');
+                                    const orderResponse = await fetch('http://localhost:8000/api/orders', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            Authorization: `Bearer ${token}`,
+                                        },
+                                        body: JSON.stringify(storedOrderData),
+                                    });
+
+                                    const orderResult = await orderResponse.json();
+
+                                    if (orderResponse.ok && orderResult.success) {
+                                        // Gửi email đặt hàng thành công
+                                        await sendOrderSuccessEmail(orderResult, storedCustomerInfo);
+
+                                        toast.success(
+                                            'Thanh toán đã hoàn thành! Đơn hàng đã được tạo và email đã được gửi.',
+                                        );
+
+                                        // Clear cart and redirect
+                                        if (clearCart) {
+                                            await clearCart();
+                                        }
+                                        localStorage.removeItem('pending_zaloPay_payment');
+                                        localStorage.removeItem('app_trans_id');
+                                        router.push('/order-success');
+                                    }
+                                }
+                            } catch (error) {
+                                console.error('🛒 [ZALOPAY] Error processing order on focus:', error);
+                            }
                         }
                     } catch (error) {
                         console.error('🛒 [ZALOPAY] Error checking status on focus:', error);
@@ -562,9 +648,12 @@ const CheckoutPageContent = () => {
                                             <Form.Item
                                                 label="Email"
                                                 name="email"
-                                                rules={[{ type: 'email', message: 'Email không hợp lệ' }]}
+                                                rules={[
+                                                    { required: true, message: 'Vui lòng nhập email' },
+                                                    { type: 'email', message: 'Email không hợp lệ' },
+                                                ]}
                                             >
-                                                <Input placeholder="Nhập email" />
+                                                <Input placeholder="Nhập email để nhận thông báo đơn hàng" />
                                             </Form.Item>
                                         </Col>
                                     </Row>

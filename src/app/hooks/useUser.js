@@ -6,7 +6,7 @@ export const useUser = () => {
 
     const { data, error, isLoading, mutate } = useSWR(
         token ? ['user-info', token] : null,
-        async ([token]) => {
+        async ([, token]) => {
             const response = await apiGetMe(token);
             return response;
         },
@@ -30,7 +30,20 @@ export const useUser = () => {
     const user = data?.status ? data.user : null;
     const isLoggedIn = !!user && !!token;
 
-    console.log('🎯 RESULT:', { user, isLoggedIn });
+    // Thêm các helper methods
+    const isValidUser = () => {
+        return user && user.id && !error;
+    };
+
+    const getUserStatus = () => {
+        if (isLoading) return 'loading';
+        if (error) return 'error';
+        if (!token) return 'no_token';
+        if (!user) return 'no_user';
+        return 'authenticated';
+    };
+
+    console.log('🎯 RESULT:', { user, isLoggedIn, status: getUserStatus() });
 
     return {
         user,
@@ -39,6 +52,8 @@ export const useUser = () => {
         error,
         mutate,
         hasToken: !!token,
+        isValidUser,
+        getUserStatus,
         // Thêm raw data để debug
         rawData: data,
     };

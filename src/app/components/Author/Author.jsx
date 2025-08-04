@@ -1,312 +1,470 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { Card, Avatar, Rate } from 'antd';
-import { LeftOutlined, RightOutlined } from '@ant-design/icons';
+'use client';
+import { useEffect, useRef, useState } from 'react';
 
-const BrandTestimonialSlider = () => {
-  const [currentSlide, setCurrentSlide] = useState(0);
+const AdvancedPartnersMarquee = () => {
+    const [partners, setPartners] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const marqueeRef = useRef(null);
+    const containerRef = useRef(null);
 
-  // Fake data for brands
-  const brands = [
-    { name: 'Lady Daddy', logo: 'LD' },
-    { name: 'Scandinavia Club', logo: 'SC' },
-    { name: 'Mi Casa Es Tu Casa', logo: 'MC' },
-    { name: 'Oak & Park', logo: 'OP' },
-    { name: 'App & Games', logo: 'AG' },
-    { name: 'Bean Shop', logo: 'BS' },
-    { name: 'Mi Casa Es Tu Casa', logo: 'MC2' }
-  ];
+    // Fetch publishers from API
+    useEffect(() => {
+        const fetchPublishers = async () => {
+            try {
+                const response = await fetch('http://localhost:8000/api/publisher');
+                const data = await response.json();
+                if (data.status) {
+                    setPartners(data.data);
+                }
+            } catch (error) {
+                console.error('Error fetching publishers:', error);
+                // Fallback data nếu API không hoạt động
+                setPartners([
+                    {
+                        id: 19,
+                        name: 'NXB Dân Trí',
+                        image_url:
+                            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQoBtRquhZ2CHH_QpxL7tpDFD8QaF7sSdm9dA&s',
+                    },
+                    {
+                        id: 17,
+                        name: 'NXB Hà Nội',
+                        image_url:
+                            'https://play-lh.googleusercontent.com/J1iTXkL4lWni2x2iyhMJB-THqZnZyuwJyDB52H5DYo09s1AD7yIIFZikv9iiCFl0pg',
+                    },
+                    {
+                        id: 22,
+                        name: 'NXB Hội Nhà Văn',
+                        image_url: 'https://www.netabooks.vn/data/author/18246/logo--nxb-hoi-nha-van.jpg',
+                    },
+                    {
+                        id: 20,
+                        name: 'NXB Lao Động',
+                        image_url:
+                            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuvopYf5opN1k1TaIyBPhmxIHrZo3hhQ00yA&s',
+                    },
+                    {
+                        id: 21,
+                        name: 'NXB Thế Giới',
+                        image_url:
+                            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSdDuCUYMiVxHUd-NhA0gnWoJkXv8MNq6eDw&s',
+                    },
+                    {
+                        id: 18,
+                        name: 'NXB Văn Học',
+                        image_url:
+                            'https://bizweb.dktcdn.net/thumb/grande/100/370/339/articles/62546969-logo-nxb-van-hoc-1a3f50ce-15aa-4748-8c11-b7b494553f51.jpg?v=1576158807580',
+                    },
+                ]);
+            } finally {
+                setLoading(false);
+            }
+        };
 
-  // Fake testimonial data
-  const testimonials = [
-    {
-      id: 1,
-      name: 'Sâm Nguyên',
-      role: 'Khách hàng',
-      avatar: 'SN',
-      rating: 5,
-      comment: 'Tôi đã tìm thấy một hương thơm mà tôi đã lâu không thể mua được ở đây. Dịch vụ khách hàng cũng rất tốt, nhân viên hỗ trợ nhiệt tình và nhanh chóng giải đáp mọi thắc mắc của tôi.',
-      bgColor: '#ff6b6b'
-    },
-    {
-      id: 2,
-      name: 'Bạch Ngân',
-      role: 'Khách hàng',
-      avatar: 'BN',
-      rating: 5,
-      comment: 'Giao diện đẹp mắt và dễ sử dụng, tôi dễ dàng tìm kiếm và tìm thấy những sản phẩm nước hoa yêu thích của mình. Thông tin chi tiết về từng sản phẩm giúp tôi hiểu rõ hơn về hương thơm và thành phần.',
-      bgColor: '#4ecdc4'
-    },
-    {
-      id: 3,
-      name: 'Minh Châu',
-      role: 'Khách hàng',
-      avatar: 'MC',
-      rating: 5,
-      comment: 'Chất lượng sản phẩm tuyệt vời, giao hàng nhanh chóng. Tôi đã mua nhiều chai nước hoa ở đây và luôn hài lòng với chất lượng cũng như dịch vụ.',
-      bgColor: '#45b7d1'
-    },
-    {
-      id: 4,
-      name: 'Thu Hà',
-      role: 'Khách hàng',
-      avatar: 'TH',
-      rating: 5,
-      comment: 'Website rất chuyên nghiệp, sản phẩm đa dạng và giá cả hợp lý. Đội ngũ tư vấn nhiệt tình, giúp tôi chọn được những chai nước hoa phù hợp nhất.',
-      bgColor: '#f7b731'
-    }
-  ];
+        fetchPublishers();
+    }, []);
 
-  // Auto slide effect
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % testimonials.length);
-    }, 4000);
+    // Advanced GSAP-style animations with smoother effects
+    useEffect(() => {
+        if (!loading && partners.length > 0 && marqueeRef.current) {
+            const marqueeElement = marqueeRef.current;
+            const logos = marqueeElement.querySelectorAll('.partner-logo-container');
 
-    return () => clearInterval(timer);
-  }, [testimonials.length]);
+            // Smooth stagger animation for initial load
+            logos.forEach((logo, index) => {
+                logo.style.opacity = '0';
+                logo.style.transform = 'translateY(30px) scale(0.9)';
 
-  const nextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % testimonials.length);
-  };
+                setTimeout(() => {
+                    logo.style.transition = 'all 1.2s cubic-bezier(0.23, 1, 0.32, 1)';
+                    logo.style.opacity = '1';
+                    logo.style.transform = 'translateY(0) scale(1)';
+                }, index * 80);
+            });
 
-  const prevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + testimonials.length) % testimonials.length);
-  };
+            // Start smooth marquee animation
+            const startSmoothMarquee = () => {
+                marqueeElement.style.animation = 'none';
+                marqueeElement.offsetHeight; // Force reflow
+                marqueeElement.style.animation = 'smoothMarquee 40s linear infinite';
+            };
 
-  const buttonStyle = {
-    width: '50px',
-    height: '50px',
-    borderRadius: '50%',
-    border: 'none',
-    background: '#fff',
-    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '20px',
-    color: '#666',
-    transition: 'all 0.3s ease',
-    zIndex: 10
-  };
+            setTimeout(() => {
+                startSmoothMarquee();
+            }, 1500);
 
-  return (
-    <div style={{ 
-      background: 'linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%)',
-      padding: '40px 20px',
-      position: 'relative',
-      overflow: 'hidden'
-    }}>
-      {/* Decorative elements */}
-      <div style={{
-        position: 'absolute',
-        right: '5%',
-        top: '20%',
-        width: '100px',
-        height: '100px',
-        background: 'rgba(156, 39, 176, 0.1)',
-        borderRadius: '50%',
-        transform: 'rotate(15deg)'
-      }} />
-      <div style={{
-        position: 'absolute',
-        right: '10%',
-        bottom: '30%',
-        width: '80px',
-        height: '80px',
-        background: 'rgba(142, 68, 173, 0.1)',
-        borderRadius: '50%',
-        transform: 'rotate(-20deg)'
-      }} />
+            // Enhanced hover interactions
+            const handleMouseEnter = (e) => {
+                marqueeElement.style.animationPlayState = 'paused';
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        {/* Brand logos section */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: '20px',
-          marginBottom: '60px',
-          padding: '20px 0'
-        }}>
-          {brands.map((brand, index) => (
+                // Add subtle zoom to hovered item
+                const target = e.target.closest('.partner-logo-container');
+                if (target) {
+                    target.style.transform = 'scale(1.1) translateY(-5px)';
+                    target.style.zIndex = '10';
+                }
+            };
+
+            const handleMouseLeave = (e) => {
+                marqueeElement.style.animationPlayState = 'running';
+
+                // Reset transform
+                const target = e.target.closest('.partner-logo-container');
+                if (target) {
+                    target.style.transform = 'scale(1) translateY(0)';
+                    target.style.zIndex = '1';
+                }
+            };
+
+            // Add event listeners to each logo
+            logos.forEach((logo) => {
+                logo.addEventListener('mouseenter', handleMouseEnter);
+                logo.addEventListener('mouseleave', handleMouseLeave);
+            });
+
+            return () => {
+                logos.forEach((logo) => {
+                    logo.removeEventListener('mouseenter', handleMouseEnter);
+                    logo.removeEventListener('mouseleave', handleMouseLeave);
+                });
+            };
+        }
+    }, [loading, partners]);
+
+    if (loading) {
+        return (
             <div
-              key={index}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '140px',
-                height: '50px',
-                background: '#fff',
-                borderRadius: '25px',
-                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: '500',
-                color: '#666',
-                border: '1px solid #f0f0f0',
-                padding: '0 20px'
-              }}
+                style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    height: '200px',
+                    background: 'white',
+                }}
             >
-              {brand.name}
-            </div>
-          ))}
-        </div>
-
-        {/* Testimonial slider */}
-        <div style={{ 
-          position: 'relative',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '400px'
-        }}>
-          {/* Navigation buttons */}
-          <button
-            onClick={prevSlide}
-            style={{
-              ...buttonStyle,
-              position: 'absolute',
-              left: '20px',
-              top: '50%',
-              transform: 'translateY(-50%)'
-            }}
-          >
-            <LeftOutlined />
-          </button>
-
-          <button
-            onClick={nextSlide}
-            style={{
-              ...buttonStyle,
-              position: 'absolute',
-              right: '20px',
-              top: '50%',
-              transform: 'translateY(-50%)'
-            }}
-          >
-            <RightOutlined />
-          </button>
-
-          {/* Testimonial card container */}
-          <div style={{ 
-            width: '100%',
-            maxWidth: '700px',
-            position: 'relative',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              display: 'flex',
-              transform: `translateX(-${currentSlide * 100}%)`,
-              transition: 'transform 0.5s ease-in-out'
-            }}>
-              {testimonials.map((testimonial) => (
                 <div
-                  key={testimonial.id}
-                  style={{
-                    minWidth: '100%',
-                    padding: '0 20px'
-                  }}
-                >
-                  <Card
                     style={{
-                      borderRadius: '20px',
-                      background: '#fff',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                      border: 'none'
+                        textAlign: 'center',
+                        color: '#1e40af',
+                        fontSize: '16px',
+                        fontWeight: '500',
                     }}
-                    bodyStyle={{ 
-                      padding: '40px',
-                      textAlign: 'center'
-                    }}
-                  >
-                    <div style={{ marginBottom: '30px' }}>
-                      <Avatar
-                        size={80}
-                        style={{
-                          backgroundColor: testimonial.bgColor,
-                          fontSize: '24px',
-                          fontWeight: 'bold',
-                          color: '#fff'
-                        }}
-                      >
-                        {testimonial.avatar}
-                      </Avatar>
-                    </div>
-
-                    <div style={{ marginBottom: '20px' }}>
-                      <Rate 
-                        disabled 
-                        defaultValue={testimonial.rating} 
-                        style={{ color: '#ffd700', fontSize: '20px' }} 
-                      />
-                    </div>
-
-                    <p style={{
-                      fontSize: '16px',
-                      lineHeight: '1.8',
-                      color: '#666',
-                      marginBottom: '30px',
-                      fontStyle: 'italic',
-                      textAlign: 'center'
-                    }}>
-                      "{testimonial.comment}"
-                    </p>
-
-                    <div>
-                      <h4 style={{ 
-                        fontSize: '18px', 
-                        color: '#333',
-                        marginBottom: '5px',
-                        fontWeight: 'bold'
-                      }}>
-                        {testimonial.name}
-                      </h4>
-                      <p style={{ 
-                        fontSize: '14px', 
-                        color: '#999',
-                        margin: 0
-                      }}>
-                        {testimonial.role}
-                      </p>
-                    </div>
-                  </Card>
+                >
+                    Đang tải nhà xuất bản...
                 </div>
-              ))}
             </div>
-          </div>
-        </div>
+        );
+    }
 
-        {/* Slide indicators */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          gap: '10px',
-          marginTop: '30px'
-        }}>
-          {testimonials.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentSlide(index)}
-              style={{
-                width: index === currentSlide ? '30px' : '10px',
-                height: '10px',
-                borderRadius: '5px',
-                border: 'none',
-                background: index === currentSlide ? '#ff6b6b' : '#ddd',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease'
-              }}
-            />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    // Triple the partners for seamless loop
+    const triplePartners = [...partners, ...partners, ...partners];
+
+    return (
+        <>
+            <style jsx>{`
+                .partners-marquee-container {
+                    background: white;
+                    padding: 60px 0;
+                    position: relative;
+                    overflow: hidden;
+                    border-top: 1px solid #e5e7eb;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+
+                .container-content {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 0 40px;
+                }
+
+                .header-section {
+                    text-align: center;
+                    margin-bottom: 50px;
+                    position: relative;
+                    z-index: 2;
+                }
+
+                .header-title {
+                    font-size: 42px;
+                    font-weight: 700;
+                    color: #1e40af;
+                    margin-bottom: 20px;
+                    letter-spacing: -0.5px;
+                    position: relative;
+                }
+
+                .header-title::after {
+                    content: '';
+                    position: absolute;
+                    bottom: -10px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 80px;
+                    height: 4px;
+                    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+                    border-radius: 2px;
+                }
+
+                .header-subtitle {
+                    font-size: 18px;
+                    color: #64748b;
+                    max-width: 600px;
+                    margin: 0 auto;
+                    line-height: 1.6;
+                    font-weight: 400;
+                }
+
+                .marquee-track {
+                    position: relative;
+                    overflow: hidden;
+                    mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+                    -webkit-mask-image: linear-gradient(
+                        to right,
+                        transparent 0%,
+                        black 10%,
+                        black 90%,
+                        transparent 100%
+                    );
+                }
+
+                .marquee-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 80px;
+                    animation: smoothMarquee 40s linear infinite;
+                    width: max-content;
+                    will-change: transform;
+                }
+
+                @keyframes smoothMarquee {
+                    0% {
+                        transform: translateX(0);
+                    }
+                    100% {
+                        transform: translateX(-33.333%);
+                    }
+                }
+
+                .partner-logo-container {
+                    flex-shrink: 0;
+                    height: 80px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0 20px;
+                    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+                    cursor: pointer;
+                    position: relative;
+                    border-radius: 12px;
+                    backdrop-filter: blur(10px);
+                }
+
+                .partner-logo-container::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(29, 78, 216, 0.05));
+                    border-radius: 12px;
+                    opacity: 0;
+                    transition: all 0.3s ease;
+                }
+
+                .partner-logo-container:hover::before {
+                    opacity: 1;
+                }
+
+                .partner-logo-container:hover {
+                    box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15), 0 4px 20px rgba(0, 0, 0, 0.08);
+                }
+
+                .partner-logo {
+                    max-height: 60px;
+                    max-width: 140px;
+                    width: auto;
+                    height: auto;
+                    object-fit: contain;
+                    filter: grayscale(100%) opacity(0.7);
+                    transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+                }
+
+                .partner-logo-container:hover .partner-logo {
+                    filter: grayscale(0%) opacity(1);
+                    transform: scale(1.05);
+                }
+
+                .background-decoration {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    pointer-events: none;
+                    overflow: hidden;
+                }
+
+                .floating-shape {
+                    position: absolute;
+                    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(29, 78, 216, 0.08));
+                    border-radius: 50%;
+                    animation: floatShape 15s infinite ease-in-out;
+                }
+
+                .floating-shape:nth-child(1) {
+                    width: 120px;
+                    height: 120px;
+                    top: 20%;
+                    left: 85%;
+                    animation-delay: 0s;
+                }
+
+                .floating-shape:nth-child(2) {
+                    width: 80px;
+                    height: 80px;
+                    top: 70%;
+                    left: 10%;
+                    animation-delay: 5s;
+                }
+
+                .floating-shape:nth-child(3) {
+                    width: 100px;
+                    height: 100px;
+                    top: 40%;
+                    left: 75%;
+                    animation-delay: 10s;
+                }
+
+                @keyframes floatShape {
+                    0%,
+                    100% {
+                        transform: translate(0, 0) rotate(0deg);
+                        opacity: 0.3;
+                    }
+                    25% {
+                        transform: translate(-20px, -20px) rotate(90deg);
+                        opacity: 0.6;
+                    }
+                    50% {
+                        transform: translate(20px, -30px) rotate(180deg);
+                        opacity: 0.4;
+                    }
+                    75% {
+                        transform: translate(-30px, 10px) rotate(270deg);
+                        opacity: 0.7;
+                    }
+                }
+
+                @media (max-width: 1024px) {
+                    .container-content {
+                        padding: 0 20px;
+                    }
+
+                    .header-title {
+                        font-size: 36px;
+                    }
+
+                    .header-subtitle {
+                        font-size: 16px;
+                    }
+
+                    .marquee-content {
+                        gap: 60px;
+                    }
+
+                    .partner-logo {
+                        max-height: 50px;
+                        max-width: 120px;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .partners-marquee-container {
+                        padding: 40px 0;
+                    }
+
+                    .header-title {
+                        font-size: 28px;
+                    }
+
+                    .header-section {
+                        margin-bottom: 30px;
+                    }
+
+                    .marquee-content {
+                        gap: 40px;
+                    }
+
+                    .partner-logo-container {
+                        height: 60px;
+                        padding: 0 15px;
+                    }
+
+                    .partner-logo {
+                        max-height: 40px;
+                        max-width: 100px;
+                    }
+                }
+
+                @media (prefers-reduced-motion: reduce) {
+                    .marquee-content {
+                        animation-duration: 80s;
+                    }
+
+                    .floating-shape {
+                        animation: none;
+                    }
+                }
+            `}</style>
+
+            <div className="partners-marquee-container" ref={containerRef}>
+                {/* Background Decoration */}
+                <div className="background-decoration">
+                    <div className="floating-shape"></div>
+                    <div className="floating-shape"></div>
+                    <div className="floating-shape"></div>
+                </div>
+
+                <div className="container-content">
+                    {/* Header Section */}
+                    <div className="header-section">
+                        <h2 className="header-title">Nhà Xuất Bản Đối Tác</h2>
+                        <p className="header-subtitle">
+                            Kết nối với những nhà xuất bản uy tín nhất Việt Nam, mang đến nguồn tri thức phong phú và
+                            chất lượng cao
+                        </p>
+                    </div>
+
+                    {/* Marquee Track */}
+                    <div className="marquee-track">
+                        <div className="marquee-content" ref={marqueeRef}>
+                            {triplePartners.map((partner, index) => (
+                                <div key={`${partner.id}-${index}`} className="partner-logo-container">
+                                    <img
+                                        src={partner.image_url}
+                                        alt={partner.name}
+                                        className="partner-logo"
+                                        onError={(e) => {
+                                            e.target.src = `data:image/svg+xml;base64,${btoa(`
+                        <svg width="140" height="60" viewBox="0 0 140 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="140" height="60" fill="#f8fafc" rx="8"/>
+                          <text x="70" y="35" text-anchor="middle" fill="#64748b" font-family="Arial" font-size="12" font-weight="500">
+                            ${partner.name}
+                          </text>
+                        </svg>
+                      `)}`;
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
 };
 
-export default BrandTestimonialSlider;
+export default AdvancedPartnersMarquee;
