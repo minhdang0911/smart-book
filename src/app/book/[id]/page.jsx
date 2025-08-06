@@ -65,6 +65,41 @@ import { useWishlist } from '../../hooks/useWishlist';
 
 import './BookDetail.css';
 
+// Custom hook để fetch chapters data từ API
+const useBookChapters = (bookId) => {
+    const [chapters, setChapters] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        if (!bookId) return;
+
+        const fetchChapters = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const response = await fetch(`http://localhost:8000/api/admin/books/${bookId}/chapters`);
+                const data = await response.json();
+
+                if (data.success) {
+                    setChapters(data.chapters || []);
+                } else {
+                    setError('Không thể tải danh sách chương');
+                }
+            } catch (err) {
+                console.error('Error fetching chapters:', err);
+                setError('Lỗi khi tải danh sách chương');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchChapters();
+    }, [bookId]);
+
+    return { chapters, isLoading, error };
+};
+
 // Modern BookList component with Swiper slider
 const BookList = ({ books }) => {
     const router = useRouter();
@@ -414,19 +449,6 @@ const BookDetailPage = () => {
         return 'Không rõ';
     };
 
-    const getAuthorId = (author) => {
-        if (!author) return null;
-        if (typeof author === 'object' && author.id) return author.id;
-        return null;
-    };
-
-    const getCategoryId = (category) => {
-        if (!category) return null;
-        if (typeof category === 'object' && category._id) return category._id;
-        if (typeof category === 'object' && category.id) return category.id;
-        return null;
-    };
-
     // Local state
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [selectedStarFilter, setSelectedStarFilter] = useState('all');
@@ -435,6 +457,7 @@ const BookDetailPage = () => {
     const [mainImage, setMainImage] = useState(null);
     const [activeTab, setActiveTab] = useState('1');
     const [showAllChapters, setShowAllChapters] = useState(false);
+    const [showFullDescription, setShowFullDescription] = useState(false);
     const [form] = Form.useForm();
 
     // Custom hooks
@@ -443,14 +466,14 @@ const BookDetailPage = () => {
     const { reviewStats, isLoading: statsLoading, mutate: mutateStats } = useReviewStats(book?.id);
     const { reviews, isLoading: reviewsLoading, mutate: mutateReviews } = useReviews(book?.id, selectedStarFilter);
 
+    // Use the new chapters hook
+    const { chapters, isLoading: chaptersLoading, error: chaptersError } = useBookChapters(book?.id);
+
     // Use helper functions for the hooks that need string values
-    const { books: sameAuthorBooks, isLoading: authorBooksLoading } = useSameAuthorBooks(
-        book?.author, // Truyền cả object author
-        book?.id,
-    );
+    const { books: sameAuthorBooks, isLoading: authorBooksLoading } = useSameAuthorBooks(book?.author, book?.id);
 
     const { books: sameCategoryBooks, isLoading: categoryBooksLoading } = useSameCategoryBooks(
-        book?.category, // Truyền cả object category
+        book?.category,
         book?.id,
     );
 
@@ -459,13 +482,6 @@ const BookDetailPage = () => {
     const { addToCart } = useCart();
     const { checkCanReview, submitReview } = useReviewActions();
 
-    // Debugging data structure
-    useEffect(() => {
-        console.log('book:', book);
-        console.log('sameAuthorBooks:', sameAuthorBooks);
-        console.log('sameCategoryBooks:', sameCategoryBooks);
-    }, [book, sameAuthorBooks, sameCategoryBooks]);
-
     // Set main image when images load
     useEffect(() => {
         if (images.length > 0 && !mainImage) {
@@ -473,59 +489,6 @@ const BookDetailPage = () => {
             setMainImage(main?.image_url || images[0]?.image_url);
         }
     }, [images, mainImage]);
-
-    // Add chapters data if ebook
-    useEffect(() => {
-        if (book && book.format === 'ebook' && !book.chaptersData) {
-            const getRandomChapterTitle = () => {
-                const titles = [
-                    'Khởi đầu cuộc hành trình',
-                    'Bí ẩn được hé lộ',
-                    'Cuộc gặp gỡ định mệnh',
-                    'Thử thách đầu tiên',
-                    'Sự thật bị che giấu',
-                    'Chuyển biến bất ngờ',
-                    'Cuộc chiến quyết định',
-                    'Khoảnh khắc quan trọng',
-                    'Hồi kết đầy cảm xúc',
-                    'Tương lai tươi sáng',
-                ];
-                return titles[Math.floor(Math.random() * titles.length)];
-            };
-
-            const chaptersData = [];
-            const totalChapters = 15; // Tăng lên 15 chương để test scroll
-
-            for (let i = 1; i <= totalChapters; i++) {
-                const pagesCount = Math.floor(Math.random() * 6) + 3;
-                const pages = [];
-
-                for (let j = 1; j <= pagesCount; j++) {
-                    pages.push({
-                        pageNumber: j,
-                        content: `Nội dung trang ${j} của chương ${i}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
-                    });
-                }
-
-                chaptersData.push({
-                    chapterNumber: i,
-                    title: `Chương ${i}: ${getRandomChapterTitle()}`,
-                    pages: pages,
-                    totalPages: pagesCount,
-                });
-            }
-
-            // Update book data with chapters
-            mutateBook(
-                {
-                    ...book,
-                    chapters: totalChapters,
-                    chaptersData: chaptersData,
-                },
-                false,
-            );
-        }
-    }, [book, mutateBook]);
 
     // Event handlers
     const handleStarFilterChange = (starLevel) => {
@@ -547,19 +510,13 @@ const BookDetailPage = () => {
         }
     };
 
-    console.log(isLoggedIn);
     const handleSubmitReview = async (values) => {
-        // Sử dụng isLoggedIn từ hook thay vì gọi checkUser
         if (!user) {
-            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
-            router.push('/login');
-        }
-
-        if (!user) {
-            toast.error(customMessage || '🔒 Vui1 lòng đăng nhập để thực hiện hành động này!');
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
             router.push('/login');
             return false;
         }
+
         try {
             const data = await submitReview(id, values.rating, values.comment);
 
@@ -590,11 +547,13 @@ const BookDetailPage = () => {
     };
 
     const handleAddToCart = async () => {
+        if (!user) {
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return;
+        }
+
         try {
-            if (!user) {
-                toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
-                router.push('/login');
-            }
             setIsAddingToCart(true);
             const result = await addToCart(book.id, quantity);
 
@@ -612,9 +571,11 @@ const BookDetailPage = () => {
 
     const handleBuyNow = async () => {
         if (!user) {
-            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
             router.push('/login');
+            return;
         }
+
         try {
             const checkoutData = {
                 items: [
@@ -667,8 +628,9 @@ const BookDetailPage = () => {
 
     const handleToggleWishlist = async () => {
         if (!user) {
-            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
             router.push('/login');
+            return;
         }
 
         const success = await toggleWishlist(book.id);
@@ -682,8 +644,9 @@ const BookDetailPage = () => {
 
     const handleOpenReviewModal = async () => {
         if (!user) {
-            toast.error(customMessage || '🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
             router.push('/login');
+            return;
         }
 
         const { canReview, message: msg } = await checkCanReview(book.id);
@@ -697,10 +660,7 @@ const BookDetailPage = () => {
 
     // Utility functions
     const formatPrice = (price) => {
-        if (book?.is_physical === 1) {
-            return new Intl.NumberFormat('vi-VN').format(price);
-        }
-        return 'miễn phí';
+        return new Intl.NumberFormat('vi-VN').format(price);
     };
 
     // Render functions
@@ -712,21 +672,26 @@ const BookDetailPage = () => {
                 prefix: <EyeOutlined />,
                 color: '#3f8600',
             },
-            {
+        ];
+
+        // Chỉ hiển thị giá nếu là sách giấy (is_physical = 1)
+        if (book?.is_physical === 1) {
+            baseStats.push({
                 title: 'Giá',
                 value: (
                     <span style={{ color: 'red' }}>
-                        <DollarOutlined /> {formatPrice(book?.price)} {book?.is_physical === 1 ? 'VND' : ''}
+                        <DollarOutlined /> {formatPrice(book?.price)} VND
                     </span>
                 ),
                 color: 'red',
-            },
-        ];
+            });
+        }
 
-        if (book?.format === 'ebook') {
+        // Hiển thị số chương nếu là ebook
+        if (book?.is_physical === 0 && chapters.length > 0) {
             baseStats.push({
                 title: 'Số chương',
-                value: book.chapters || 0,
+                value: chapters.length,
                 prefix: <NumberOutlined />,
                 color: '#1890ff',
             });
@@ -997,13 +962,62 @@ const BookDetailPage = () => {
         );
     };
 
-    // Render Mục lục riêng biệt với scroll
+    // Render Mục lục với dữ liệu từ API
     const renderChaptersList = () => {
-        if (!book?.chaptersData || book.chaptersData.length === 0) {
-            return null;
+        if (chaptersLoading) {
+            return (
+                <Card
+                    title={
+                        <Space>
+                            <BookOutlined />
+                            <Text strong>Mục lục</Text>
+                        </Space>
+                    }
+                    style={{ marginBottom: '24px' }}
+                >
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                        <Spin size="large" />
+                        <Text style={{ display: 'block', marginTop: '16px', color: '#8c8c8c' }}>
+                            Đang tải danh sách chương...
+                        </Text>
+                    </div>
+                </Card>
+            );
         }
 
-        const displayChapters = showAllChapters ? book.chaptersData : book.chaptersData.slice(0, 5);
+        if (chaptersError) {
+            return (
+                <Card
+                    title={
+                        <Space>
+                            <BookOutlined />
+                            <Text strong>Mục lục</Text>
+                        </Space>
+                    }
+                    style={{ marginBottom: '24px' }}
+                >
+                    <Empty description={chaptersError} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </Card>
+            );
+        }
+
+        if (!chapters || chapters.length === 0) {
+            return (
+                <Card
+                    title={
+                        <Space>
+                            <BookOutlined />
+                            <Text strong>Mục lục</Text>
+                        </Space>
+                    }
+                    style={{ marginBottom: '24px' }}
+                >
+                    <Empty description="Chưa có chương nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </Card>
+            );
+        }
+
+        const displayChapters = showAllChapters ? chapters : chapters.slice(0, 5);
 
         return (
             <Card
@@ -1011,7 +1025,7 @@ const BookDetailPage = () => {
                     <Space>
                         <BookOutlined />
                         <Text strong>Mục lục</Text>
-                        <Text type="secondary">({book.chaptersData.length} chương)</Text>
+                        <Text type="secondary">({chapters.length} chương)</Text>
                     </Space>
                 }
                 style={{ marginBottom: '24px' }}
@@ -1030,28 +1044,30 @@ const BookDetailPage = () => {
                                 style={{
                                     padding: '12px 0',
                                     borderBottom: '1px solid #f0f0f0',
+                                    cursor: 'pointer',
                                 }}
-                                actions={[
-                                    <Button
-                                        type="link"
-                                        icon={<ReadOutlined />}
-                                        onClick={() =>
-                                            router.push(`/reader/${book.id}?chapter=${chapter.chapterNumber}`)
-                                        }
-                                    >
-                                        Đọc
-                                    </Button>,
-                                ]}
+                                onClick={() => {
+                                    localStorage.setItem('currentBookId', book.id.toString());
+                                    localStorage.setItem('currentChapterId', chapter.id.toString());
+
+                                    router.push(`/chapterdetail`);
+                                }}
                             >
                                 <List.Item.Meta
                                     title={<Text strong>{chapter.title}</Text>}
                                     description={
                                         <Space>
-                                            <Text type="secondary">{chapter.totalPages} trang</Text>
+                                            <Text type="secondary">Chương {chapter.chapter_order}</Text>
                                             <Text type="secondary">•</Text>
                                             <Text type="secondary">
-                                                Khoảng {Math.floor(Math.random() * 15) + 5} phút đọc
+                                                {chapter.content_type === 'pdf' ? 'Định dạng PDF' : 'Văn bản'}
                                             </Text>
+                                            {chapter.pdf_filename && (
+                                                <>
+                                                    <Text type="secondary">•</Text>
+                                                    <Text type="secondary">{chapter.pdf_filename}</Text>
+                                                </>
+                                            )}
                                         </Space>
                                     }
                                 />
@@ -1060,7 +1076,7 @@ const BookDetailPage = () => {
                     />
                 </div>
 
-                {book.chaptersData.length > 5 && (
+                {chapters.length > 5 && (
                     <div style={{ textAlign: 'center', marginTop: '16px' }}>
                         <Button
                             type="dashed"
@@ -1071,13 +1087,13 @@ const BookDetailPage = () => {
                                 color: '#1890ff',
                             }}
                         >
-                            {showAllChapters ? 'Thu gọn' : `Xem thêm ${book.chaptersData.length - 5} chương`}
+                            {showAllChapters ? 'Thu gọn' : `Xem thêm ${chapters.length - 5} chương`}
                         </Button>
                     </div>
                 )}
 
                 {/* Scroll indicator khi đang expand */}
-                {showAllChapters && book.chaptersData.length > 8 && (
+                {showAllChapters && chapters.length > 8 && (
                     <div
                         style={{
                             textAlign: 'center',
@@ -1207,6 +1223,59 @@ const BookDetailPage = () => {
         return tabs;
     };
 
+    // Render description với chức năng show more/less
+    const renderDescription = () => {
+        const description = book?.description || 'Chưa có mô tả';
+        const maxLength = 300; // Số ký tự tối đa hiển thị ban đầu
+
+        if (description.length <= maxLength) {
+            // Nếu mô tả ngắn, hiển thị toàn bộ
+            return (
+                <div
+                    dangerouslySetInnerHTML={{
+                        __html: marked(description),
+                    }}
+                />
+            );
+        }
+
+        // Nếu mô tả dài, cần show more/less
+        const shortDescription = showFullDescription ? description : description.substring(0, maxLength) + '...';
+
+        return (
+            <div>
+                <div
+                    dangerouslySetInnerHTML={{
+                        __html: marked(shortDescription),
+                    }}
+                />
+                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                    <Button
+                        type="link"
+                        onClick={() => setShowFullDescription(!showFullDescription)}
+                        style={{
+                            padding: 0,
+                            fontSize: '14px',
+                            color: '#1890ff',
+                        }}
+                    >
+                        {showFullDescription ? (
+                            <>
+                                <UpOutlined style={{ marginRight: '4px' }} />
+                                Thu gọn
+                            </>
+                        ) : (
+                            <>
+                                <DownOutlined style={{ marginRight: '4px' }} />
+                                Xem thêm
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
     // Loading state
     if (bookLoading || userLoading) {
         return (
@@ -1260,15 +1329,15 @@ const BookDetailPage = () => {
                             <Descriptions.Item label="Thể loại">
                                 <Tag color="blue">{getCategoryName(book?.category)}</Tag>
                             </Descriptions.Item>
-                            <Descriptions.Item label="Nhà xuất bản">
-                                {/* <Text>{safeRender(book?.publisher)}</Text> */}
-                            </Descriptions.Item>
+                            {/* <Descriptions.Item label="Nhà xuất bản">
+                                <Text>{book?.publisher || 'Không rõ'}</Text>
+                            </Descriptions.Item> */}
                             <Descriptions.Item label="Năm xuất bản">
-                                {/* <Text>{safeRender(book?.publication_year)}</Text> */}
+                                <Text>{book?.publication_year || 'Không rõ'}</Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="Định dạng">
-                                <Tag color={book?.format === 'ebook' ? 'green' : 'orange'}>
-                                    {book?.format === 'ebook' ? 'Sách điện tử' : 'Sách giấy'}
+                                <Tag color={book?.is_physical === 0 ? 'green' : 'orange'}>
+                                    {book?.is_physical === 0 ? 'Sách điện tử' : 'Sách giấy'}
                                 </Tag>
                             </Descriptions.Item>
                         </Descriptions>
@@ -1297,11 +1366,7 @@ const BookDetailPage = () => {
                                 key="1"
                                 extra={<CaretRightOutlined />}
                             >
-                                <div
-                                    dangerouslySetInnerHTML={{
-                                        __html: marked(book.description || 'Chưa có mô tả'),
-                                    }}
-                                />
+                                {renderDescription()}
                             </Collapse.Panel>
                         </Collapse>
                     </Card>
@@ -1311,14 +1376,16 @@ const BookDetailPage = () => {
                 <Col xs={24} md={4} lg={6}>
                     <Card title="Thao tác" bordered={false}>
                         <Space direction="vertical" style={{ width: '100%' }}>
-                            {/* Price */}
-                            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                                <Text style={{ fontSize: '24px', fontWeight: 'bold', color: 'red' }}>
-                                    {formatPrice(book.price)} {book.is_physical === 1 ? 'VND' : ''}
-                                </Text>
-                            </div>
+                            {/* Price - chỉ hiển thị nếu là sách giấy */}
+                            {book.is_physical === 1 && (
+                                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                                    <Text style={{ fontSize: '24px', fontWeight: 'bold', color: 'red' }}>
+                                        {formatPrice(book.price)} VND
+                                    </Text>
+                                </div>
+                            )}
 
-                            {/* Quantity */}
+                            {/* Quantity - chỉ hiển thị nếu là sách giấy */}
                             {book.is_physical === 1 && (
                                 <div>
                                     <Text strong>Số lượng:</Text>
@@ -1345,28 +1412,42 @@ const BookDetailPage = () => {
                                 </div>
                             )}
 
-                            {/* Action Buttons */}
-                            <Button
-                                type="primary"
-                                size="large"
-                                block
-                                icon={<ShoppingCartOutlined />}
-                                onClick={handleBuyNow}
-                                loading={isAddingToCart}
-                            >
-                                Mua ngay
-                            </Button>
-
-                            {book.is_physical === 1 && (
+                            {/* Action Buttons - Logic theo yêu cầu */}
+                            {book.is_physical === 0 ? (
+                                // Sách điện tử - chỉ hiển thị nút "Đọc sách"
                                 <Button
+                                    type="primary"
                                     size="large"
                                     block
-                                    icon={<ShoppingCartOutlined />}
-                                    onClick={handleAddToCart}
-                                    loading={isAddingToCart}
+                                    icon={<ReadOutlined />}
+                                    onClick={() => router.push(`/reader/${book.id}`)}
                                 >
-                                    Thêm vào giỏ hàng
+                                    Đọc sách
                                 </Button>
+                            ) : (
+                                // Sách giấy - hiển thị "Mua ngay" và "Thêm vào giỏ hàng"
+                                <>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        icon={<ShoppingCartOutlined />}
+                                        onClick={handleBuyNow}
+                                        loading={isAddingToCart}
+                                    >
+                                        Mua ngay
+                                    </Button>
+
+                                    <Button
+                                        size="large"
+                                        block
+                                        icon={<ShoppingCartOutlined />}
+                                        onClick={handleAddToCart}
+                                        loading={isAddingToCart}
+                                    >
+                                        Thêm vào giỏ hàng
+                                    </Button>
+                                </>
                             )}
 
                             <Button
@@ -1384,17 +1465,6 @@ const BookDetailPage = () => {
                             >
                                 {wishlist?.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
                             </Button>
-
-                            {book.format === 'ebook' && (
-                                <Button
-                                    size="large"
-                                    block
-                                    icon={<ReadOutlined />}
-                                    onClick={() => router.push(`/reader/${book.id}`)}
-                                >
-                                    Đọc sách
-                                </Button>
-                            )}
 
                             <Button size="large" block icon={<ShareAltOutlined />}>
                                 Chia sẻ
@@ -1416,7 +1486,7 @@ const BookDetailPage = () => {
             )}
 
             {/* Mục lục - chỉ hiển thị cho ebook (is_physical = 0) */}
-            {book?.is_physical === 0 && book?.format === 'ebook' && renderChaptersList()}
+            {book?.is_physical === 0 && renderChaptersList()}
 
             {/* Sách cùng tác giả - luôn hiển thị */}
             {renderSameAuthorBooks()}
