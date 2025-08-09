@@ -1,44 +1,101 @@
 'use client';
-import { EyeOutlined, HeartOutlined } from '@ant-design/icons';
-import { Avatar, Button, Card, Col, Pagination, Row, Space, Spin, Tag, Typography, message } from 'antd';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import './BlogInterface.css'; // Import CSS file for styling
+import { EyeOutlined, HeartOutlined, UserOutlined } from '@ant-design/icons';
+import { Avatar, Button, Card, Col, message, Row, Spin, Typography } from 'antd';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useEffect, useRef, useState } from 'react';
+import { Autoplay, Navigation, Pagination as SwiperPagination } from 'swiper/modules';
+import { Swiper, SwiperSlide } from 'swiper/react';
+
+// Import Swiper styles
+import { Eye, Heart } from 'lucide-react';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 const { Title, Text, Paragraph } = Typography;
 
+// Register GSAP plugins
+gsap.registerPlugin(ScrollTrigger);
+
 const CoffeeBlogInterface = () => {
-    const [posts, setPosts] = useState([]);
+    const [allPosts, setAllPosts] = useState([]);
     const [pinnedPosts, setPinnedPosts] = useState([]);
     const [popularPosts, setPopularPosts] = useState([]);
-    const [topics, setTopics] = useState([]);
+    const [recentPosts, setRecentPosts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [total, setTotal] = useState(0);
-    const [pageSize, setPageSize] = useState(10);
-    const [selectedTopic, setSelectedTopic] = useState(null);
-    const router = useRouter();
 
+    const heroRef = useRef(null);
+    const cardsRef = useRef([]);
+    const timelineRef = useRef(null);
+    const swiperRef = useRef(null);
+
+    // Animation effects with GSAP
     useEffect(() => {
-        fetchTopics();
+        // Hero section animation
+        if (heroRef.current) {
+            gsap.fromTo(
+                heroRef.current,
+                { opacity: 0, y: 50 },
+                { opacity: 1, y: 0, duration: 1.2, ease: 'power3.out' },
+            );
+        }
+
+        // Cards animation
+        cardsRef.current.forEach((card, index) => {
+            if (card) {
+                gsap.fromTo(
+                    card,
+                    { opacity: 0, y: 30, scale: 0.95 },
+                    {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        duration: 0.6,
+                        delay: index * 0.1,
+                        ease: 'power2.out',
+                        scrollTrigger: {
+                            trigger: card,
+                            start: 'top 80%',
+                            once: true,
+                        },
+                    },
+                );
+            }
+        });
+
+        // Timeline animation
+        if (timelineRef.current) {
+            gsap.fromTo(
+                timelineRef.current.children,
+                { opacity: 0, x: -30 },
+                {
+                    opacity: 1,
+                    x: 0,
+                    duration: 0.8,
+                    stagger: 0.2,
+                    scrollTrigger: {
+                        trigger: timelineRef.current,
+                        start: 'top 70%',
+                        once: true,
+                    },
+                },
+            );
+        }
+
+        return () => {
+            ScrollTrigger.getAll().forEach((trigger) => trigger.kill());
+        };
+    }, [pinnedPosts, recentPosts, popularPosts]);
+
+    // API calls
+    useEffect(() => {
+        fetchAllData();
     }, []);
 
-    useEffect(() => {
-        if (selectedTopic) {
-            fetchPostsByTopic(selectedTopic);
-        } else {
-            fetchPinnedPosts();
-            fetchPopularPosts();
-            fetchPosts(currentPage, pageSize);
-        }
-    }, [currentPage, pageSize, selectedTopic]);
-
     const getAuthHeaders = () => {
-        if (typeof window !== 'undefined') {
-            const token = localStorage?.getItem('token');
-            return token ? { Authorization: `Bearer ${token}` } : {};
-        }
-        return {};
+        const token = localStorage?.getItem('token');
+        return token ? { Authorization: `Bearer ${token}` } : {};
     };
 
     const fetchWithAuth = async (url) => {
@@ -50,13 +107,15 @@ const CoffeeBlogInterface = () => {
         });
     };
 
-    const fetchTopics = async () => {
+    const fetchAllData = async () => {
+        setLoading(true);
         try {
-            const res = await fetch('http://localhost:8000/api/topics');
-            const result = await res.json();
-            if (result.success) setTopics(result.data);
+            await Promise.all([fetchPinnedPosts(), fetchPopularPosts(), fetchAllPosts(), fetchRecentPosts()]);
         } catch (err) {
-            console.error('Lỗi tải danh sách chủ đề:', err);
+            console.error('Lỗi tải dữ liệu:', err);
+            message.error('Lỗi khi tải dữ liệu');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -64,7 +123,9 @@ const CoffeeBlogInterface = () => {
         try {
             const res = await fetchWithAuth('http://localhost:8000/api/posts/pinned');
             const result = await res.json();
-            if (result.success) setPinnedPosts(result.data);
+            if (result.success) {
+                setPinnedPosts(result.data);
+            }
         } catch (err) {
             console.error('Lỗi tải bài ghim:', err);
         }
@@ -74,54 +135,39 @@ const CoffeeBlogInterface = () => {
         try {
             const res = await fetchWithAuth('http://localhost:8000/api/posts/popular');
             const result = await res.json();
-            if (result.success) setPopularPosts(result.data);
+            if (result.success) {
+                setPopularPosts(result.data);
+            }
         } catch (err) {
             console.error('Lỗi tải bài phổ biến:', err);
         }
     };
 
-    const fetchPosts = async (page, size) => {
-        setLoading(true);
+    const fetchAllPosts = async () => {
         try {
-            const res = await fetchWithAuth(`http://localhost:8000/api/posts?page=${page}&per_page=${size}`);
+            const res = await fetchWithAuth('http://localhost:8000/api/posts?per_page=50');
             const result = await res.json();
             if (result.success) {
-                setPosts(result.data);
-                setTotal(result.meta?.total || result.data.length);
+                setAllPosts(result.data);
             }
         } catch (err) {
-            console.error('Lỗi tải bài viết:', err);
-            message.error('Lỗi khi tải danh sách bài viết');
-        } finally {
-            setLoading(false);
+            console.error('Lỗi tải tất cả bài viết:', err);
         }
     };
 
-    const fetchPostsByTopic = async (id) => {
-        setLoading(true);
+    const fetchRecentPosts = async () => {
         try {
-            const res = await fetchWithAuth(`http://localhost:8000/api/posts/related/${id}`);
+            const res = await fetchWithAuth('http://localhost:8000/api/posts?per_page=10&sort=created_at');
             const result = await res.json();
             if (result.success) {
-                setPosts(result.data);
-                setPinnedPosts([]);
-                setPopularPosts([]);
-                setTotal(result.data.length);
-            } else {
-                setPosts([]);
-                setTotal(0);
+                setRecentPosts(result.data);
             }
         } catch (err) {
-            console.error('Lỗi lọc bài viết theo chủ đề:', err);
-            message.error('Không thể lọc bài viết theo chủ đề');
-        } finally {
-            setLoading(false);
+            console.error('Lỗi tải bài viết mới:', err);
         }
     };
 
     const handleLike = async (postId) => {
-        if (typeof window === 'undefined') return;
-
         const token = localStorage?.getItem('token');
         if (!token) return message.warning('Vui lòng đăng nhập để thả tim');
 
@@ -135,290 +181,418 @@ const CoffeeBlogInterface = () => {
             });
 
             if (res.ok) {
-                if (selectedTopic) {
-                    fetchPostsByTopic(selectedTopic);
-                } else {
-                    fetchPinnedPosts();
-                    fetchPopularPosts();
-                    fetchPosts(currentPage, pageSize);
-                }
+                // Refresh data
+                fetchAllData();
             }
         } catch (err) {
             console.error('Lỗi khi like:', err);
         }
     };
 
-    const getTopicColor = (name) => {
-        const colorMap = {
-            'Công nghệ': 'blue',
-            'Thông báo': 'orange',
-            'Hướng dẫn': 'green',
-            'Sự kiện': 'purple',
-            'Cà phê': 'orange',
-            'Pha chế': 'green',
-            'Rang xay': 'blue',
-            'Tin tức': 'red',
-        };
-        return colorMap[name] || 'default';
-    };
-
     const handleClick = (slug, id) => {
         const viewedKey = `viewed_${slug}`;
-        if (typeof window !== 'undefined') {
-            if (!sessionStorage.getItem(viewedKey)) {
-                fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
-                sessionStorage.setItem(viewedKey, 'true');
-            }
-            localStorage.setItem('postid', id);
+        if (!sessionStorage.getItem(viewedKey)) {
+            fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
+            sessionStorage.setItem(viewedKey, 'true');
         }
-        router.push(`/blog/${slug}`);
-    };
-
-    const handleTopicClick = (id) => {
-        setSelectedTopic(id);
-        setCurrentPage(1);
-    };
-
-    const handleResetFilter = () => {
-        setSelectedTopic(null);
-        setCurrentPage(1);
+        localStorage.setItem('postid', id);
+        window.location.href = `/blog/${slug}`;
     };
 
     const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('vi-VN', {
+        // Chuyển "26/07/2025" => "2025-07-26"
+        const [day, month, year] = dateString.split('/');
+        const isoDate = `${year}-${month}-${day}`;
+        return new Date(isoDate).toLocaleDateString('vi-VN', {
             day: '2-digit',
             month: '2-digit',
             year: 'numeric',
         });
     };
 
-    // Hàm để clean HTML tags và cắt ngắn text
     const cleanAndTruncateText = (htmlText, maxLength = 100) => {
         if (!htmlText) return '';
-
-        // Remove HTML tags
         const textOnly = htmlText
             .replace(/<[^>]*>/g, '')
             .replace(/&nbsp;/g, ' ')
             .trim();
-
         if (textOnly.length <= maxLength) return textOnly;
-
         return textOnly.substring(0, maxLength) + '...';
     };
 
-    const renderPostCard = (post, isPinned = false) => (
-        <Col xs={24} sm={12} lg={8} key={post.id}>
-            <Card
-                className="post-card"
-                cover={
-                    post.thumbnail && (
-                        <div
-                            style={{
-                                height: '200px',
-                                overflow: 'hidden',
-                                position: 'relative',
-                                cursor: 'pointer',
-                            }}
-                            onClick={() => handleClick(post.slug, post.id)}
-                        >
-                            <img
-                                src={post.thumbnail}
-                                alt={post.title}
-                                style={{
-                                    width: '100%',
-                                    height: '100%',
-                                    objectFit: 'cover',
-                                }}
-                                onError={(e) => {
-                                    e.target.style.display = 'none';
-                                }}
-                            />
-                            {isPinned && (
-                                <div
-                                    style={{
-                                        position: 'absolute',
-                                        top: '8px',
-                                        left: '8px',
-                                        background: '#ff4d4f',
-                                        color: 'white',
-                                        padding: '4px 8px',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: 'bold',
-                                    }}
-                                >
-                                    Ghim
-                                </div>
-                            )}
-                        </div>
-                    )
-                }
-                hoverable
-                style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-                bodyStyle={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-            >
-                <div style={{ flex: 1 }}>
-                    <Space size={4} wrap style={{ marginBottom: '8px' }}>
-                        {post.topics?.map((topic) => (
-                            <Tag
-                                key={topic.id}
-                                color={getTopicColor(topic.name)}
-                                onClick={() => handleTopicClick(topic.id)}
-                                style={{ cursor: 'pointer', fontSize: '11px' }}
-                            >
-                                {topic.name}
-                            </Tag>
-                        ))}
-                    </Space>
+    // Featured Blog Card (Left side - large)
+    const FeaturedBlogCard = () => {
+        const [isHovered, setIsHovered] = useState(false);
 
-                    <Title
-                        level={5}
+        // Get featured post (first pinned post or first post)
+        const featuredPost = pinnedPosts[0] || allPosts[0];
+
+        if (!featuredPost) return null;
+
+        return (
+            <Card
+                hoverable
+                className="featured-card"
+                style={{
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    height: '500px',
+                    position: 'relative',
+                    border: 'none',
+                    boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                    transform: isHovered ? 'translateY(-5px)' : 'translateY(0)',
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer',
+                }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                onClick={() => handleClick(featuredPost.slug, featuredPost.id)}
+                bodyStyle={{ padding: 0, height: '100%' }}
+            >
+                {/* Background Image */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundImage: `url(${
+                            featuredPost.thumbnail ||
+                            'https://images.unsplash.com/photo-1447933601403-0c6688de566e?w=600&h=500'
+                        })`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        transform: isHovered ? 'scale(1.05)' : 'scale(1)',
+                        transition: 'transform 0.4s ease',
+                    }}
+                />
+
+                {/* Gradient Overlay */}
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background:
+                            'linear-gradient(45deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.7) 100%)',
+                        zIndex: 1,
+                    }}
+                />
+
+                {/* Content */}
+                <div
+                    style={{
+                        position: 'relative',
+                        zIndex: 2,
+                        padding: '40px',
+                        height: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'flex-end',
+                        color: 'white',
+                    }}
+                >
+                    {/* Badge */}
+                    <div
                         style={{
-                            cursor: 'pointer',
-                            marginBottom: '8px',
+                            position: 'absolute',
+                            top: '30px',
+                            left: '30px',
+                            background: featuredPost.is_pinned ? '#ff4d4f' : '#FFC107',
+                            color: featuredPost.is_pinned ? '#fff' : '#000',
+                            padding: '8px 16px',
+                            borderRadius: '25px',
                             fontSize: '14px',
-                            lineHeight: '1.4',
-                            height: '40px',
-                            overflow: 'hidden',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
+                            fontWeight: '700',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
                         }}
-                        onClick={() => handleClick(post.slug, post.id)}
                     >
-                        {post.title}
+                        {featuredPost.is_pinned ? '📌 Bài ghim' : 'Nổi bật'}
+                    </div>
+
+                    {/* Title */}
+                    <Title
+                        level={1}
+                        style={{
+                            color: 'white',
+                            margin: '0 0 20px 0',
+                            fontSize: '32px',
+                            lineHeight: '1.2',
+                            fontWeight: '800',
+                            textShadow: '0 4px 20px rgba(0,0,0,0.5)',
+                        }}
+                    >
+                        {featuredPost.title}
                     </Title>
 
-                    {/* Hiển thị excerpt */}
-                    {post.excerpt && (
-                        <div style={{ marginBottom: '12px' }}>
-                            <Paragraph
-                                style={{
-                                    fontSize: '13px',
-                                    lineHeight: '1.5',
-                                    color: '#666',
-                                    marginBottom: '8px',
-                                }}
-                            >
-                                {cleanAndTruncateText(post.excerpt, 120)}
-                            </Paragraph>
-                            <Button
-                                type="link"
-                                size="small"
-                                onClick={() => handleClick(post.slug, post.id)}
-                                style={{
-                                    padding: '0',
-                                    height: 'auto',
-                                    fontSize: '12px',
-                                    color: '#1890ff',
-                                }}
-                            >
-                                Xem thêm →
-                            </Button>
-                        </div>
-                    )}
-                </div>
+                    {/* Excerpt */}
+                    <Paragraph
+                        style={{
+                            color: 'rgba(255,255,255,0.9)',
+                            fontSize: '16px',
+                            margin: '0 0 24px 0',
+                            lineHeight: '1.6',
+                            textShadow: '0 2px 10px rgba(0,0,0,0.3)',
+                        }}
+                    >
+                        {cleanAndTruncateText(featuredPost.excerpt, 200)}
+                    </Paragraph>
 
-                <div style={{ marginTop: 'auto' }}>
+                    {/* Meta Info */}
                     <div
                         style={{
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
-                            paddingTop: '8px',
-                            borderTop: '1px solid #f0f0f0',
                         }}
                     >
-                        <Space size={4}>
-                            <Avatar
-                                size={24}
-                                src="https://api.dicebear.com/7.x/miniavs/svg?seed=admin"
-                                style={{ background: '#0096dbff' }}
-                            />
-                            <Text style={{ fontSize: '12px' }}>Admin</Text>
-                            <Text type="secondary" style={{ fontSize: '11px' }}>
-                                • {formatDate(post.created_at)}
-                            </Text>
-                        </Space>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: '#FFC107' }} />
+                            <div>
+                                <Text style={{ color: 'white', fontSize: '14px', fontWeight: '600', display: 'block' }}>
+                                    Admin
+                                </Text>
+                                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: '12px' }}>
+                                    {formatDate(featuredPost.created_at)}
+                                </Text>
+                            </div>
+                        </div>
 
-                        <Space size={12}>
+                        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
                             <Button
                                 type="text"
                                 icon={<HeartOutlined />}
                                 size="small"
-                                onClick={() => handleLike(post.id)}
-                                className={post.has_liked ? 'liked' : ''}
-                                style={{ fontSize: '12px' }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleLike(featuredPost.id);
+                                }}
+                                style={{
+                                    color: featuredPost.has_liked ? '#ff4d4f' : 'white',
+                                    border: 'none',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    backdropFilter: 'blur(10px)',
+                                    borderRadius: '20px',
+                                }}
                             >
-                                {post.like_count || 0}
+                                {featuredPost.like_count || 0}
                             </Button>
-                            <Button type="text" icon={<EyeOutlined />} size="small" style={{ fontSize: '12px' }}>
-                                {post.views || 0}
+
+                            <Button
+                                type="primary"
+                                style={{
+                                    background: '#FFC107',
+                                    color: '#000',
+                                    border: 'none',
+                                    borderRadius: '25px',
+                                    fontWeight: '600',
+                                    height: '40px',
+                                    paddingLeft: '24px',
+                                    paddingRight: '24px',
+                                }}
+                            >
+                                Xem chi tiết →
                             </Button>
-                        </Space>
+                        </div>
                     </div>
                 </div>
             </Card>
-        </Col>
+        );
+    };
+
+    // Timeline Item Component
+    const TimelineItem = ({ post, index }) => (
+        <div
+            ref={(el) => (cardsRef.current[index] = el)}
+            style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '16px',
+                padding: '20px 0',
+                borderBottom: index < recentPosts.length - 1 ? '1px solid #f0f0f0' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+            }}
+            className="timeline-item"
+            onClick={() => handleClick(post.slug, post.id)}
+        >
+            {/* Date Badge */}
+            <div
+                style={{
+                    minWidth: '70px',
+                    textAlign: 'center',
+                    padding: '8px 12px',
+                    background: '#000',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                }}
+            >
+                {formatDate(post.created_at).slice(0, 5)}
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1 }}>
+                <h5
+                    style={{
+                        margin: '0 0 8px 0',
+                        fontSize: '16px',
+                        lineHeight: '1.4',
+                        color: '#333',
+                        fontWeight: '600',
+                    }}
+                >
+                    {post.title}
+                </h5>
+                <div
+                    style={{
+                        color: '#666',
+                        fontSize: '13px',
+                        lineHeight: '1.5',
+                    }}
+                >
+                    {cleanAndTruncateText ? cleanAndTruncateText(post.excerpt, 80) : post.excerpt}
+                </div>
+
+                {/* Stats */}
+                <div style={{ display: 'flex', gap: '12px', marginTop: '8px', fontSize: '12px', color: '#888' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Eye size={12} />
+                        {post.views || 0}
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Heart size={12} />
+                        {post.like_count || 0}
+                    </span>
+                </div>
+            </div>
+        </div>
     );
 
-    // Sửa lại logic hiển thị bài viết
-    const getDisplayPosts = () => {
-        if (selectedTopic) {
-            return posts;
-        }
+    // Swiper Card Component
+    const SwiperCard = ({ post, index }) => {
+        const [isHovered, setIsHovered] = useState(false);
 
-        // Chỉ hiển thị bài ghim ở trang đầu tiên
-        const shouldShowPinned = currentPage === 1;
-        const shouldShowPopular = currentPage === 1;
+        return (
+            <Card
+                hoverable
+                style={{
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    height: '280px',
+                    position: 'relative',
+                    border: 'none',
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                    transform: isHovered ? 'translateY(-5px)' : 'translateY(0)',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                onClick={() => handleClick(post.slug, post.id)}
+                bodyStyle={{ padding: 0, height: '100%' }}
+            >
+                {/* Image */}
+                <div
+                    style={{
+                        height: '60%',
+                        backgroundImage: `url(${
+                            post.thumbnail || 'https://images.unsplash.com/photo-1521017432531-fbd92d768814?w=300&h=200'
+                        })`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        position: 'relative',
+                    }}
+                >
+                    {/* Label */}
+                    <div
+                        style={{
+                            position: 'absolute',
+                            bottom: '12px',
+                            left: '12px',
+                            background: post.is_pinned ? '#ff4d4f' : '#FFC107',
+                            color: post.is_pinned ? '#fff' : '#000',
+                            padding: '4px 12px',
+                            borderRadius: '15px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                        }}
+                    >
+                        {post.topics && post.topics[0] ? post.topics[0].name : 'Tin tức'}
+                    </div>
+                </div>
 
-        // Lọc bài thường: loại bỏ bài ghim khỏi danh sách posts
-        const regularPosts = posts.filter((post) => !post.is_pinned);
+                {/* Content */}
+                <div
+                    style={{
+                        padding: '16px',
+                        height: '40%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <Title
+                        level={5}
+                        style={{
+                            margin: '0 0 8px 0',
+                            fontSize: '14px',
+                            lineHeight: '1.3',
+                            color: '#333',
+                            fontWeight: '600',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                        }}
+                    >
+                        {post.title}
+                    </Title>
 
-        let displayList = [];
-
-        if (shouldShowPinned && pinnedPosts.length > 0) {
-            displayList = [...pinnedPosts];
-        }
-
-        if (shouldShowPopular && popularPosts.length > 0) {
-            // Tạo Set ID của bài ghim để tránh trùng lặp
-            const pinnedIds = new Set(pinnedPosts.map((p) => p.id));
-            const uniquePopularPosts = popularPosts.filter((p) => !pinnedIds.has(p.id));
-            displayList = [...displayList, ...uniquePopularPosts];
-        }
-
-        // Thêm bài thường (đã loại bỏ bài ghim)
-        if (regularPosts.length > 0) {
-            // Tạo Set ID của bài đã có để tránh trùng lặp
-            const existingIds = new Set(displayList.map((p) => p.id));
-            const uniqueRegularPosts = regularPosts.filter((p) => !existingIds.has(p.id));
-            displayList = [...displayList, ...uniqueRegularPosts];
-        }
-
-        return displayList;
+                    <div
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontSize: '12px',
+                            color: '#888',
+                        }}
+                    >
+                        <span>{formatDate(post.created_at)}</span>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                                <EyeOutlined />
+                                {post.views || 0}
+                            </span>
+                            <Button
+                                type="text"
+                                icon={<HeartOutlined />}
+                                size="small"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleLike(post.id);
+                                }}
+                                style={{
+                                    color: post.has_liked ? '#ff4d4f' : '#888',
+                                    border: 'none',
+                                    padding: '0 4px',
+                                    height: 'auto',
+                                    fontSize: '12px',
+                                }}
+                            >
+                                {post.like_count || 0}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </Card>
+        );
     };
-
-    // Tính toán total chính xác cho phân trang
-    const getTotalForPagination = () => {
-        if (selectedTopic) {
-            return posts.length;
-        }
-
-        // Tổng số bài viết thường (không bao gồm bài ghim)
-        const regularPostsCount = posts.filter((post) => !post.is_pinned).length;
-
-        // Nếu có bài ghim hoặc phổ biến, chỉ tính vào trang đầu
-        const pinnedCount = pinnedPosts.length;
-        const popularCount = popularPosts.filter((p) => !pinnedPosts.some((pin) => pin.id === p.id)).length;
-
-        return regularPostsCount;
-    };
-
-    const displayPosts = getDisplayPosts();
-    const totalForPagination = getTotalForPagination();
 
     if (loading) {
         return (
@@ -427,7 +601,8 @@ const CoffeeBlogInterface = () => {
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
-                    minHeight: '400px',
+                    minHeight: '100vh',
+                    background: '#ffffff',
                 }}
             >
                 <Spin size="large" />
@@ -439,242 +614,174 @@ const CoffeeBlogInterface = () => {
         <div
             style={{
                 minHeight: '100vh',
-                background: 'linear-gradient(135deg, #f5f3f0 0%, #e8e2d8 100%)',
+                background: '#ffffff',
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
             }}
         >
-            {/* Header Banner */}
+            {/* Main Content Container */}
             <div
                 style={{
-                    background: 'linear-gradient(135deg, rgba(161, 221, 255, 0.9) 0%, rgba(76, 83, 187, 0.9) 100%)',
-                    backgroundImage:
-                        'url("data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.1"%3E%3Ccircle cx="30" cy="30" r="2"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
-                    color: 'white',
-                    textAlign: 'center',
-                    padding: '80px 20px 60px',
-                    position: 'relative',
+                    maxWidth: '1200px',
+                    margin: '0 auto',
+                    padding: '40px 20px',
                 }}
             >
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundImage: 'url("https://i.imgur.com/4A46ADc.jpg")',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        opacity: 0.3,
-                        zIndex: 0,
-                    }}
-                />
-                <div style={{ position: 'relative', zIndex: 1 }}>
-                    <Title level={1} style={{ color: 'white', fontSize: '48px', marginBottom: '16px' }}>
-                        Tin tức
-                    </Title>
-                    <Text
-                        style={{
-                            color: 'white',
-                            fontSize: '18px',
-                            display: 'block',
-                            maxWidth: '600px',
-                            margin: '0 auto',
-                        }}
-                    >
-                        Khám phá thế giới cà phê qua các bài viết hấp dẫn và hữu ích
-                    </Text>
-                </div>
-            </div>
-
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-                {/* Filter notification */}
-                {selectedTopic && (
-                    <div
-                        style={{
-                            background: '#fff3cd',
-                            border: '1px solid #afd5ffff',
-                            borderRadius: '8px',
-                            padding: '12px 16px',
-                            marginBottom: '24px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                        }}
-                    >
-                        <Text strong>
-                            Đang hiển thị bài viết theo chủ đề: {topics.find((t) => t.id === selectedTopic)?.name}
-                        </Text>
-                        <Button size="small" type="link" onClick={handleResetFilter}>
-                            Hiển thị tất cả
-                        </Button>
-                    </div>
-                )}
-
-                <Row gutter={[24, 32]}>
-                    {/* Main content */}
-                    <Col xs={24} lg={18}>
-                        <Row gutter={[20, 24]}>
-                            {displayPosts.length > 0 ? (
-                                displayPosts.map((post) =>
-                                    renderPostCard(post, !selectedTopic && currentPage === 1 && post.is_pinned),
-                                )
-                            ) : (
-                                <Col span={24}>
-                                    <div
-                                        style={{
-                                            textAlign: 'center',
-                                            padding: '60px 20px',
-                                            background: 'white',
-                                            borderRadius: '12px',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                        }}
-                                    >
-                                        <Text type="secondary" style={{ fontSize: '16px' }}>
-                                            {selectedTopic
-                                                ? 'Không có bài viết nào thuộc chủ đề này.'
-                                                : 'Không có bài viết nào.'}
-                                        </Text>
-                                    </div>
-                                </Col>
-                            )}
-                        </Row>
-
-                        {/* Pagination - chỉ hiển thị khi không lọc theo topic và có đủ bài viết */}
-                        {!selectedTopic && totalForPagination > pageSize && (
-                            <div
-                                style={{
-                                    textAlign: 'center',
-                                    marginTop: '40px',
-                                    padding: '20px',
-                                    background: 'white',
-                                    borderRadius: '12px',
-                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                }}
-                            >
-                                <Pagination
-                                    current={currentPage}
-                                    total={totalForPagination}
-                                    pageSize={pageSize}
-                                    showSizeChanger
-                                    showQuickJumper
-                                    onChange={(page, size) => {
-                                        setCurrentPage(page);
-                                        setPageSize(size);
-                                    }}
-                                    showTotal={(total, range) => `${range[0]}-${range[1]} trong tổng ${total} bài viết`}
-                                    pageSizeOptions={['6', '12', '24', '48']}
-                                />
-                            </div>
-                        )}
+                {/* Top Section: Featured Post + Timeline */}
+                <Row gutter={[32, 32]} style={{ marginBottom: '60px' }}>
+                    {/* Featured Post - Left */}
+                    <Col xs={24} lg={14}>
+                        <div ref={heroRef}>
+                            <FeaturedBlogCard />
+                        </div>
                     </Col>
 
-                    {/* Sidebar */}
-                    <Col xs={24} lg={6}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                            {/* Topics filter */}
-                            <Card
-                                title="TỪ KHOÁ"
+                    {/* Timeline - Right */}
+                    <Col xs={24} lg={10}>
+                        <div
+                            ref={timelineRef}
+                            style={{
+                                background: '#ffffff',
+                                borderRadius: '20px',
+                                padding: '30px',
+                                boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                                height: '500px',
+                                overflowY: 'auto',
+                            }}
+                            className="timeline-container"
+                        >
+                            <Title
+                                level={3}
                                 style={{
-                                    borderRadius: '12px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                }}
-                                headStyle={{
-                                    background: '#0096dbff',
-                                    color: 'white',
-                                    borderRadius: '12px 12px 0 0',
+                                    margin: '0 0 30px 0',
+                                    fontSize: '24px',
+                                    fontWeight: '700',
+                                    color: '#333',
+                                    textAlign: 'center',
+                                    borderBottom: '2px solid #FFC107',
+                                    paddingBottom: '15px',
                                 }}
                             >
-                                <div
-                                    style={{
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: '8px',
-                                    }}
-                                >
-                                    {topics.map((topic) => (
-                                        <Tag
-                                            key={topic.id}
-                                            style={{
-                                                cursor: 'pointer',
-                                                borderRadius: '12px',
-                                                border:
-                                                    selectedTopic === topic.id
-                                                        ? '2px solid #0096dbff'
-                                                        : '1px solid #d9d9d9',
-                                            }}
-                                            onClick={() => handleTopicClick(topic.id)}
-                                        >
-                                            {topic.name}
-                                        </Tag>
-                                    ))}
-                                </div>
-                            </Card>
+                                Tin Tức Mới Nhất
+                            </Title>
 
-                            {/* Recent posts */}
-                            <Card
-                                title="TIN TỨC MỚI NHẤT"
-                                style={{
-                                    borderRadius: '12px',
-                                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                                }}
-                                headStyle={{
-                                    background: '#d4a574',
-                                    color: 'white',
-                                    borderRadius: '12px 12px 0 0',
-                                }}
-                            >
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                    {displayPosts.slice(0, 3).map((post) => (
-                                        <div
-                                            key={post.id}
-                                            style={{
-                                                display: 'flex',
-                                                gap: '12px',
-                                                cursor: 'pointer',
-                                                padding: '8px',
-                                                borderRadius: '8px',
-                                                transition: 'background 0.2s',
-                                            }}
-                                            onClick={() => handleClick(post.slug, post.id)}
-                                            onMouseEnter={(e) => (e.target.style.background = '#f5f5f5')}
-                                            onMouseLeave={(e) => (e.target.style.background = 'transparent')}
-                                        >
-                                            {post.thumbnail && (
-                                                <img
-                                                    src={post.thumbnail}
-                                                    alt={post.title}
-                                                    style={{
-                                                        width: '60px',
-                                                        height: '60px',
-                                                        objectFit: 'cover',
-                                                        borderRadius: '6px',
-                                                    }}
-                                                />
-                                            )}
-                                            <div style={{ flex: 1 }}>
-                                                <Text
-                                                    strong
-                                                    style={{
-                                                        fontSize: '13px',
-                                                        lineHeight: '1.4',
-                                                        display: 'block',
-                                                        marginBottom: '4px',
-                                                    }}
-                                                >
-                                                    {post.title}
-                                                </Text>
-                                                <Text type="secondary" style={{ fontSize: '11px' }}>
-                                                    {formatDate(post.created_at)}
-                                                </Text>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </Card>
+                            {recentPosts.slice(0, 5).map((item, index) => (
+                                <TimelineItem key={item.id} post={item} index={index} />
+                            ))}
                         </div>
                     </Col>
                 </Row>
+
+                {/* Bottom Section: Swiper */}
+                <div>
+                    <Title
+                        level={2}
+                        style={{
+                            textAlign: 'center',
+                            marginBottom: '40px',
+                            color: '#333',
+                            fontSize: '32px',
+                            fontWeight: '700',
+                            position: 'relative',
+                        }}
+                    >
+                        Bài Viết Nổi Bật
+                        <div
+                            style={{
+                                position: 'absolute',
+                                bottom: '-10px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                width: '80px',
+                                height: '4px',
+                                background: '#FFC107',
+                                borderRadius: '2px',
+                            }}
+                        />
+                    </Title>
+
+                    <Swiper
+                        ref={swiperRef}
+                        modules={[Navigation, SwiperPagination, Autoplay]}
+                        spaceBetween={24}
+                        slidesPerView={1}
+                        navigation
+                        pagination={{ clickable: true }}
+                        autoplay={{ delay: 4000, disableOnInteraction: false }}
+                        breakpoints={{
+                            640: { slidesPerView: 2 },
+                            768: { slidesPerView: 3 },
+                            1024: { slidesPerView: 4 },
+                        }}
+                        style={{
+                            paddingBottom: '50px',
+                        }}
+                    >
+                        {popularPosts.slice(0, 10).map((item, index) => (
+                            <SwiperSlide key={item.id}>
+                                <SwiperCard post={item} index={index} />
+                            </SwiperSlide>
+                        ))}
+                    </Swiper>
+                </div>
             </div>
+
+            {/* Custom Styles */}
+            <style jsx>{`
+                .timeline-item:hover {
+                    background: #f8f9fa;
+                    border-radius: 12px;
+                    transform: translateX(5px);
+                }
+
+                .swiper-button-next,
+                .swiper-button-prev {
+                    color: #ffc107 !important;
+                    background: white;
+                    border-radius: 50%;
+                    width: 44px !important;
+                    height: 44px !important;
+                    margin-top: -22px !important;
+                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+                    border: 2px solid #f0f0f0;
+                }
+
+                .swiper-button-next:after,
+                .swiper-button-prev:after {
+                    font-size: 16px !important;
+                    font-weight: bold;
+                }
+
+                .swiper-pagination-bullet {
+                    background: #ddd !important;
+                    opacity: 1 !important;
+                    width: 12px !important;
+                    height: 12px !important;
+                }
+
+                .swiper-pagination-bullet-active {
+                    background: #ffc107 !important;
+                    transform: scale(1.2);
+                }
+
+                /* Custom scrollbar for timeline */
+                .timeline-container::-webkit-scrollbar {
+                    width: 6px;
+                }
+
+                .timeline-container::-webkit-scrollbar-track {
+                    background: #f1f1f1;
+                    border-radius: 3px;
+                }
+
+                .timeline-container::-webkit-scrollbar-thumb {
+                    background: #ffc107;
+                    border-radius: 3px;
+                }
+
+                .timeline-container::-webkit-scrollbar-thumb:hover {
+                    background: #ffb300;
+                }
+            `}</style>
         </div>
     );
 };

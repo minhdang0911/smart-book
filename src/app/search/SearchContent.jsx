@@ -1,6 +1,7 @@
 'use client';
-import { ClearOutlined, FilterOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { ClearOutlined, FilterOutlined, RobotOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import {
+    Alert,
     Button,
     Card,
     Checkbox,
@@ -47,9 +48,36 @@ const SearchContent = () => {
     });
     const [currentPage, setCurrentPage] = useState(1);
 
+    // AI Search states - Enhanced for OCR.space compatibility
+    const [isAISearch, setIsAISearch] = useState(false);
+    const [aiSearchInfo, setAiSearchInfo] = useState(null);
+    const [aiSearchResults, setAiSearchResults] = useState({
+        bookTitleResults: [],
+        authorResults: [],
+        categoryResults: [],
+        currentSearchType: null,
+    });
+
     useEffect(() => {
         const newCategory = searchParams.get('category');
         const newKeyword = searchParams.get('keyword');
+        const aiSearch = searchParams.get('ai_search');
+        const aiBookTitle = searchParams.get('ai_book_title');
+        const aiAuthor = searchParams.get('ai_author');
+        const aiCategory = searchParams.get('ai_category');
+
+        setIsAISearch(!!aiSearch);
+
+        if (aiSearch) {
+            setAiSearchInfo({
+                bookTitle: aiBookTitle,
+                author: aiAuthor,
+                category: aiCategory,
+                isAI: true,
+                ocrEngine: 'OCR.space', // Track OCR engine used
+            });
+        }
+
         setFilters((prev) => ({
             ...prev,
             name: newKeyword || '',
@@ -64,8 +92,12 @@ const SearchContent = () => {
     }, []);
 
     useEffect(() => {
-        searchBooks();
-    }, [searchParams.get('keyword'), filters, currentPage, pageSize]);
+        if (isAISearch && aiSearchInfo) {
+            performAISearch();
+        } else {
+            searchBooks();
+        }
+    }, [searchParams.get('keyword'), filters, currentPage, pageSize, isAISearch, aiSearchInfo]);
 
     const loadAuthors = async () => {
         const response = await apiGetAuthors();
@@ -81,6 +113,409 @@ const SearchContent = () => {
         }
     };
 
+    // ===== ENHANCED AI SEARCH LOGIC WITH OCR.SPACE OPTIMIZATION =====
+    const performAISearch = async () => {
+        setLoading(true);
+        try {
+            const { bookTitle, author, category } = aiSearchInfo;
+            let foundBooks = [];
+            let searchType = null;
+
+            console.log('🤖 AI Search Info (OCR.space):', aiSearchInfo);
+
+            // 1. Tìm theo tên sách trước (ưu tiên cao nhất)
+            if (bookTitle && bookTitle.trim().length > 2) {
+                console.log('📖 Searching by book title:', bookTitle);
+                foundBooks = await searchBooksByTitle(bookTitle);
+                if (foundBooks && foundBooks.length > 0) {
+                    searchType = 'title';
+                    setAiSearchResults((prev) => ({
+                        ...prev,
+                        bookTitleResults: foundBooks,
+                        currentSearchType: 'title',
+                    }));
+                    setBooks(foundBooks);
+                    setPagination({ total: foundBooks.length });
+                    console.log('✅ Found books by title:', foundBooks.length);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // 2. Nếu không tìm thấy theo tên sách, tìm theo tác giả
+            if (author && author.trim().length > 2) {
+                console.log('👤 Searching by author:', author);
+                foundBooks = await searchBooksByAuthor(author);
+                if (foundBooks && foundBooks.length > 0) {
+                    searchType = 'author';
+                    setAiSearchResults((prev) => ({
+                        ...prev,
+                        authorResults: foundBooks,
+                        currentSearchType: 'author',
+                    }));
+                    setBooks(foundBooks);
+                    setPagination({ total: foundBooks.length });
+                    console.log('✅ Found books by author:', foundBooks.length);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // 3. Cuối cùng tìm theo category
+            if (category && category.trim().length > 2) {
+                console.log('📚 Searching by category:', category);
+                foundBooks = await searchBooksByCategory(category);
+                if (foundBooks && foundBooks.length > 0) {
+                    searchType = 'category';
+                    setAiSearchResults((prev) => ({
+                        ...prev,
+                        categoryResults: foundBooks,
+                        currentSearchType: 'category',
+                    }));
+                    setBooks(foundBooks);
+                    setPagination({ total: foundBooks.length });
+                    console.log('✅ Found books by category:', foundBooks.length);
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // Không tìm thấy gì
+            console.log('❌ No books found with OCR.space AI search');
+            setBooks([]);
+            setPagination({ total: 0 });
+            setAiSearchResults((prev) => ({
+                ...prev,
+                currentSearchType: 'none',
+            }));
+        } catch (error) {
+            console.error('OCR.space AI Search error:', error);
+            setBooks([]);
+            setPagination({ total: 0 });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ===== ENHANCED SEARCH FUNCTIONS WITH OCR.SPACE TEXT PROCESSING =====
+    const searchBooksByTitle = async (title) => {
+        try {
+            console.log('🔍 Searching books by title (OCR.space):', title);
+
+            // Enhanced normalization for OCR.space text
+            const normalizedTitle = normalizeOCRSpaceText(title);
+            const searchQueries = generateEnhancedSearchQueries(normalizedTitle);
+
+            console.log('📝 Generated search queries:', searchQueries);
+
+            // Thử các queries khác nhau
+            for (const query of searchQueries) {
+                console.log('🔎 Trying query:', query);
+
+                const response = await axios.get('http://localhost:8000/api/books/search', {
+                    params: {
+                        name: query,
+                        limit: 20,
+                    },
+                });
+
+                if (response.data.status === 'success' && response.data.data.length > 0) {
+                    console.log('✅ Found books with query:', query, response.data.data.length);
+                    return response.data.data;
+                }
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Search by title failed:', error);
+            return [];
+        }
+    };
+
+    const searchBooksByAuthor = async (authorName) => {
+        try {
+            console.log('👤 Searching books by author (OCR.space):', authorName);
+
+            // 1. Tìm author ID từ danh sách authors với enhanced matching
+            const matchedAuthor = await findMatchingAuthorEnhanced(authorName);
+
+            if (matchedAuthor) {
+                console.log('✅ Found matching author:', matchedAuthor);
+
+                // Tìm theo author ID
+                const response = await axios.get('http://localhost:8000/api/books/search', {
+                    params: {
+                        author: matchedAuthor.id,
+                        limit: 20,
+                    },
+                });
+
+                if (response.data.status === 'success' && response.data.data.length > 0) {
+                    return response.data.data;
+                }
+            }
+
+            // 2. Nếu không tìm thấy author trong DB, thử tìm trực tiếp với OCR text processing
+            const normalizedAuthor = normalizeOCRSpaceText(authorName);
+            const searchQueries = generateEnhancedSearchQueries(normalizedAuthor);
+
+            for (const query of searchQueries) {
+                const response = await axios.get('http://localhost:8000/api/books/search', {
+                    params: {
+                        author: query,
+                        limit: 20,
+                    },
+                });
+
+                if (response.data.status === 'success' && response.data.data.length > 0) {
+                    return response.data.data;
+                }
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Search by author failed:', error);
+            return [];
+        }
+    };
+
+    const searchBooksByCategory = async (categoryName) => {
+        try {
+            console.log('📚 Searching books by category (OCR.space):', categoryName);
+
+            // 1. Tìm category ID từ danh sách categories với enhanced matching
+            const matchedCategory = await findMatchingCategoryEnhanced(categoryName);
+
+            if (matchedCategory) {
+                console.log('✅ Found matching category:', matchedCategory);
+
+                // Tìm theo category ID
+                const response = await axios.get('http://localhost:8000/api/books/search', {
+                    params: {
+                        category: matchedCategory.id,
+                        limit: 20,
+                    },
+                });
+
+                if (response.data.status === 'success' && response.data.data.length > 0) {
+                    return response.data.data;
+                }
+            }
+
+            // 2. Nếu không tìm thấy category trong DB, thử tìm trực tiếp
+            const normalizedCategory = normalizeOCRSpaceText(categoryName);
+            const searchQueries = generateEnhancedSearchQueries(normalizedCategory);
+
+            for (const query of searchQueries) {
+                const response = await axios.get('http://localhost:8000/api/books/search', {
+                    params: {
+                        category: query,
+                        limit: 20,
+                    },
+                });
+
+                if (response.data.status === 'success' && response.data.data.length > 0) {
+                    return response.data.data;
+                }
+            }
+
+            return [];
+        } catch (error) {
+            console.error('Search by category failed:', error);
+            return [];
+        }
+    };
+
+    // ===== ENHANCED HELPER FUNCTIONS FOR OCR.SPACE TEXT PROCESSING =====
+    const normalizeOCRSpaceText = (text) => {
+        if (!text) return '';
+
+        return (
+            text
+                .toLowerCase()
+                // Handle common OCR.space misreads
+                .replace(/[|]/g, 'i')
+                .replace(/[0]/g, 'o')
+                .replace(/[5]/g, 's')
+                .replace(/[1]/g, 'i')
+                .replace(/[8]/g, 'b')
+                // Remove special characters but keep Vietnamese
+                .replace(/[^\w\s\u00C0-\u024F\u1E00-\u1EFF]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim()
+        );
+    };
+
+    const generateEnhancedSearchQueries = (text) => {
+        const queries = [];
+
+        // Query gốc
+        queries.push(text);
+
+        // Các từ khóa chính
+        const words = text.split(' ').filter((word) => word.length > 2);
+
+        // Từng từ riêng lẻ (chỉ từ dài)
+        words.forEach((word) => {
+            if (word.length > 3) {
+                queries.push(word);
+            }
+        });
+
+        // Kết hợp 2 từ liền kề
+        for (let i = 0; i < words.length - 1; i++) {
+            queries.push(`${words[i]} ${words[i + 1]}`);
+        }
+
+        // Kết hợp 3 từ đầu (nếu có)
+        if (words.length >= 3) {
+            queries.push(`${words[0]} ${words[1]} ${words[2]}`);
+        }
+
+        // Fuzzy matching variants for OCR errors
+        const fuzzyQueries = [];
+        words.forEach((word) => {
+            if (word.length > 4) {
+                // Remove last character (OCR might miss it)
+                fuzzyQueries.push(word.slice(0, -1));
+                // Remove first character (OCR might add extra)
+                fuzzyQueries.push(word.slice(1));
+            }
+        });
+        queries.push(...fuzzyQueries);
+
+        // Loại bỏ duplicate và sort theo độ dài
+        const uniqueQueries = [...new Set(queries)].filter((q) => q.length > 2).sort((a, b) => b.length - a.length);
+
+        console.log('🔍 Enhanced queries for OCR.space:', uniqueQueries);
+        return uniqueQueries;
+    };
+
+    const findMatchingAuthorEnhanced = async (authorName) => {
+        const normalizedAuthor = normalizeOCRSpaceText(authorName);
+
+        // Tìm exact match
+        let match = authors.find((author) => normalizeOCRSpaceText(author.name) === normalizedAuthor);
+        if (match) return match;
+
+        // Tìm partial match với threshold cao hơn
+        match = authors.find((author) => {
+            const normalizedDbAuthor = normalizeOCRSpaceText(author.name);
+            const similarity = calculateStringSimilarity(normalizedAuthor, normalizedDbAuthor);
+            return similarity > 0.7; // 70% similarity threshold
+        });
+        if (match) return match;
+
+        // Tìm theo từ khóa với weighted scoring
+        const authorWords = normalizedAuthor.split(' ');
+        match = authors.find((author) => {
+            const authorDbWords = normalizeOCRSpaceText(author.name).split(' ');
+            let matchScore = 0;
+            let totalWords = authorWords.length;
+
+            authorWords.forEach((word) => {
+                if (
+                    authorDbWords.some(
+                        (dbWord) =>
+                            dbWord.includes(word) ||
+                            word.includes(dbWord) ||
+                            calculateStringSimilarity(word, dbWord) > 0.8,
+                    )
+                ) {
+                    matchScore++;
+                }
+            });
+
+            return matchScore / totalWords > 0.5; // 50% word match threshold
+        });
+
+        return match;
+    };
+
+    const findMatchingCategoryEnhanced = async (categoryName) => {
+        const normalizedCategory = normalizeOCRSpaceText(categoryName);
+
+        // Enhanced mapping thể loại với OCR error handling
+        const categoryMapping = {
+            'tiểu thuyết': ['tiểu thuyết', 'tieu thuyet', 'novel', 'fiction', 'tiu thuyt'],
+            'truyện tranh': ['truyện tranh', 'truyen tranh', 'manga', 'comic', 'truyn tranh'],
+            'văn học': ['văn học', 'van hoc', 'literature', 'vn hc'],
+            'khoa học': ['khoa học', 'khoa hoc', 'science', 'khoa học tự nhiên', 'kh hc'],
+            'kinh doanh': ['kinh doanh', 'kinh doanh', 'business', 'knh doanh'],
+            'thiếu nhi': ['thiếu nhi', 'thieu nhi', 'trẻ em', 'children', 'thu nhi'],
+            'giáo khoa': ['giáo khoa', 'giao khoa', 'textbook', 'sách giáo khoa', 'gio khoa'],
+            'lịch sử': ['lịch sử', 'lich su', 'history', 'lch s'],
+        };
+
+        // Tìm exact match
+        let match = categories.find((category) => normalizeOCRSpaceText(category.name) === normalizedCategory);
+        if (match) return match;
+
+        // Tìm theo enhanced mapping với fuzzy matching
+        for (const [key, aliases] of Object.entries(categoryMapping)) {
+            const isMatch = aliases.some((alias) => {
+                const similarity = calculateStringSimilarity(normalizedCategory, alias);
+                return similarity > 0.6 || normalizedCategory.includes(alias) || alias.includes(normalizedCategory);
+            });
+
+            if (isMatch) {
+                match = categories.find((category) => {
+                    const catName = normalizeOCRSpaceText(category.name);
+                    return catName.includes(key) || key.includes(catName);
+                });
+                if (match) return match;
+            }
+        }
+
+        // Tìm partial match với similarity threshold
+        match = categories.find((category) => {
+            const normalizedDbCategory = normalizeOCRSpaceText(category.name);
+            const similarity = calculateStringSimilarity(normalizedCategory, normalizedDbCategory);
+            return similarity > 0.6;
+        });
+
+        return match;
+    };
+
+    // Helper function to calculate string similarity (Levenshtein distance based)
+    const calculateStringSimilarity = (str1, str2) => {
+        const len1 = str1.length;
+        const len2 = str2.length;
+        const matrix = Array(len2 + 1)
+            .fill(null)
+            .map(() => Array(len1 + 1).fill(null));
+
+        for (let i = 0; i <= len1; i++) matrix[0][i] = i;
+        for (let j = 0; j <= len2; j++) matrix[j][0] = j;
+
+        for (let j = 1; j <= len2; j++) {
+            for (let i = 1; i <= len1; i++) {
+                const cost = str1[i - 1] === str2[j - 1] ? 0 : 1;
+                matrix[j][i] = Math.min(matrix[j][i - 1] + 1, matrix[j - 1][i] + 1, matrix[j - 1][i - 1] + cost);
+            }
+        }
+
+        const maxLen = Math.max(len1, len2);
+        return maxLen === 0 ? 1 : (maxLen - matrix[len2][len1]) / maxLen;
+    };
+
+    // Legacy function compatibility
+    const normalizeSearchText = (text) => {
+        return normalizeOCRSpaceText(text);
+    };
+
+    const generateSearchQueries = (text) => {
+        return generateEnhancedSearchQueries(text);
+    };
+
+    const findMatchingAuthor = async (authorName) => {
+        return await findMatchingAuthorEnhanced(authorName);
+    };
+
+    const findMatchingCategory = async (categoryName) => {
+        return await findMatchingCategoryEnhanced(categoryName);
+    };
+
     const searchBooks = async () => {
         setLoading(true);
         try {
@@ -94,6 +529,7 @@ const SearchContent = () => {
             if (filters.selectedCategories.length > 0) {
                 params.category = filters.selectedCategories.join(',');
             }
+
             if (filters.priceRange[0] > 0) {
                 params.price_min = filters.priceRange[0];
             }
@@ -202,6 +638,17 @@ const SearchContent = () => {
             sort: 'popular',
         });
         setCurrentPage(1);
+        setIsAISearch(false);
+        setAiSearchInfo(null);
+        setAiSearchResults({
+            bookTitleResults: [],
+            authorResults: [],
+            categoryResults: [],
+            currentSearchType: null,
+        });
+
+        // Clear URL params
+        router.push('/search');
     };
 
     const handlePageChange = (page, size) => {
@@ -217,6 +664,76 @@ const SearchContent = () => {
 
     const handleBookClick = (bookId) => {
         router.push(`/book/${bookId}`);
+    };
+
+    const renderAISearchAlert = () => {
+        if (!isAISearch || !aiSearchInfo) return null;
+
+        let searchTypeText = '';
+        let searchValue = '';
+
+        if (aiSearchResults.currentSearchType === 'title') {
+            searchTypeText = '📖 Tìm theo tên sách';
+            searchValue = aiSearchInfo.bookTitle;
+        } else if (aiSearchResults.currentSearchType === 'author') {
+            searchTypeText = '👤 Tìm theo tác giả';
+            searchValue = aiSearchInfo.author;
+        } else if (aiSearchResults.currentSearchType === 'category') {
+            searchTypeText = '📚 Tìm theo thể loại';
+            searchValue = aiSearchInfo.category;
+        } else {
+            searchTypeText = '🤖 AI phân tích';
+            searchValue = aiSearchInfo.bookTitle || aiSearchInfo.author || aiSearchInfo.category;
+        }
+
+        return (
+            <Alert
+                message={
+                    <Space>
+                        <RobotOutlined style={{ color: '#1890ff' }} />
+                        <span>
+                            Kết quả tìm kiếm bằng AI OCR.space ({searchTypeText}):
+                            <strong style={{ marginLeft: 4 }}>{searchValue}</strong>
+                        </span>
+                    </Space>
+                }
+                type="info"
+                showIcon={false}
+                style={{ marginBottom: 16 }}
+                closable
+                onClose={() => {
+                    setIsAISearch(false);
+                    setAiSearchInfo(null);
+                    setAiSearchResults({
+                        bookTitleResults: [],
+                        authorResults: [],
+                        categoryResults: [],
+                        currentSearchType: null,
+                    });
+                    router.push('/search');
+                }}
+            />
+        );
+    };
+
+    const getSearchTitle = () => {
+        if (isAISearch && aiSearchInfo) {
+            if (aiSearchResults.currentSearchType === 'title') {
+                return `AI OCR.space tìm thấy sách: "${aiSearchInfo.bookTitle}"`;
+            } else if (aiSearchResults.currentSearchType === 'author') {
+                return `Sách của tác giả: "${aiSearchInfo.author}"`;
+            } else if (aiSearchResults.currentSearchType === 'category') {
+                return `Thể loại: "${aiSearchInfo.category}"`;
+            } else {
+                return 'AI OCR.space đang phân tích...';
+            }
+        }
+
+        if (filters.name) {
+            return `Kết quả tìm kiếm: "${filters.name}"`;
+        }
+
+        return 'Tất cả sách';
     };
 
     return (
@@ -306,8 +823,8 @@ const SearchContent = () => {
                                     style={{ width: '100%' }}
                                     allowClear
                                 >
-                                    <Option value="ebook">Sách điện tử</Option>
-                                    <Option value="physical">Sách bán</Option>
+                                    <Option value="ebook">Ebook</Option>
+                                    <Option value="physical">Sách giấy</Option>
                                 </Select>
                             </div>
 
@@ -322,14 +839,31 @@ const SearchContent = () => {
                     </Col>
 
                     <Col xs={24} md={18}>
+                        {/* AI Search Alert */}
+                        {renderAISearchAlert()}
+
                         <div className={styles.searchHeader}>
                             <div className={styles.searchInfo}>
                                 <div className={styles.sectionTitle}>
-                                    <Title level={2}>
-                                        {filters.name ? `Kết quả tìm kiếm: "${filters.name}"` : 'Tất cả sách'}
-                                    </Title>
+                                    <Title level={2}>{getSearchTitle()}</Title>
                                 </div>
-                                {pagination.total && <Text type="secondary">Tìm thấy {pagination.total} kết quả</Text>}
+                                {pagination.total && (
+                                    <Text type="secondary">
+                                        Tìm thấy {pagination.total} kết quả
+                                        {isAISearch && (
+                                            <Tag color="blue" style={{ marginLeft: 8 }}>
+                                                OCR.space{' '}
+                                                {aiSearchResults.currentSearchType === 'title'
+                                                    ? 'Tên sách'
+                                                    : aiSearchResults.currentSearchType === 'author'
+                                                    ? 'Tác giả'
+                                                    : aiSearchResults.currentSearchType === 'category'
+                                                    ? 'Thể loại'
+                                                    : 'Phân tích'}
+                                            </Tag>
+                                        )}
+                                    </Text>
+                                )}
                             </div>
 
                             <div className={styles.searchControls}>
@@ -345,7 +879,8 @@ const SearchContent = () => {
                         {(filters.selectedAuthors.length > 0 ||
                             filters.selectedCategories.length > 0 ||
                             filters.bookType ||
-                            filters.available) && (
+                            filters.available ||
+                            isAISearch) && (
                             <div className={styles.activeFilters}>
                                 <Text strong>Bộ lọc đang áp dụng: </Text>
                                 {filters.selectedAuthors.map((author) => (
@@ -372,6 +907,12 @@ const SearchContent = () => {
                                         Thể loại: {category}
                                     </Tag>
                                 ))}
+                                {isAISearch && (
+                                    <Tag color="blue" closable onClose={() => router.push('/search')}>
+                                        OCR.space AI:{' '}
+                                        {aiSearchInfo?.bookTitle || aiSearchInfo?.author || aiSearchInfo?.category}
+                                    </Tag>
+                                )}
                                 {filters.bookType && (
                                     <Tag closable onClose={() => handleTypeChange('')}>
                                         Loại: {filters.bookType === 'ebook' ? 'Ebook' : 'Sách giấy'}
@@ -464,6 +1005,11 @@ const SearchContent = () => {
                                                                 {book.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
                                                             </Tag>
                                                         )}
+                                                        {isAISearch && (
+                                                            <Tag color="purple" size="small">
+                                                                OCR.space AI
+                                                            </Tag>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </Card>
@@ -471,7 +1017,18 @@ const SearchContent = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <Empty description="Không tìm thấy sách nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                                <Empty
+                                    description={
+                                        isAISearch
+                                            ? `OCR.space AI không tìm thấy sách phù hợp với "${
+                                                  aiSearchInfo?.bookTitle ||
+                                                  aiSearchInfo?.author ||
+                                                  aiSearchInfo?.category
+                                              }". Thử điều chỉnh bộ lọc hoặc tìm kiếm bằng từ khóa khác.`
+                                            : 'Không tìm thấy sách nào'
+                                    }
+                                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                />
                             )}
                         </Spin>
 

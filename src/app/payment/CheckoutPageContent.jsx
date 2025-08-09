@@ -270,6 +270,7 @@ const CheckoutPageContent = () => {
                     selectedDistrict.DistrictName
                 }, ${selectedProvince.ProvinceName}`.replace(/^,\s*/, ''),
                 sonha: values.houseNumber || '',
+                phone: values.phone,
                 street: values.street || '',
                 district_id: selectedDistrict.DistrictID,
                 ward_id: selectedWard.WardCode,

@@ -19,8 +19,10 @@ import {
     ShoppingCartOutlined,
     UpOutlined,
     UserOutlined,
+    WarningOutlined,
 } from '@ant-design/icons';
 import {
+    Alert,
     Avatar,
     Breadcrumb,
     Button,
@@ -330,6 +332,25 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                             -{book.discount}%
                         </div>
                     )}
+
+                    {/* Out of stock badge */}
+                    {book.is_physical === 1 && book.stock === 0 && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                backgroundColor: '#ff4d4f',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                            }}
+                        >
+                            Hết hàng
+                        </div>
+                    )}
                 </div>
             }
             bodyStyle={{
@@ -392,6 +413,20 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                         />
                         <span style={{ fontSize: '10px', color: '#bfbfbf', marginLeft: '4px' }}>
                             ({book.rating_count || 0})
+                        </span>
+                    </div>
+                )}
+
+                {/* Stock info for physical books */}
+                {book.is_physical === 1 && (
+                    <div style={{ marginBottom: '8px' }}>
+                        <span
+                            style={{
+                                fontSize: '10px',
+                                color: book.stock > 10 ? '#52c41a' : book.stock > 0 ? '#faad14' : '#ff4d4f',
+                            }}
+                        >
+                            {book.stock === 0 ? 'Hết hàng' : `Còn ${book.stock} cuốn`}
                         </span>
                     </div>
                 )}
@@ -482,6 +517,16 @@ const BookDetailPage = () => {
     const { addToCart } = useCart();
     const { checkCanReview, submitReview } = useReviewActions();
 
+    // Check if book is out of stock
+    const isOutOfStock = book?.is_physical === 1 && book?.stock === 0;
+
+    // Validate quantity against stock
+    useEffect(() => {
+        if (book?.is_physical === 1 && book?.stock && quantity > book.stock) {
+            setQuantity(book.stock);
+        }
+    }, [book?.stock, quantity]);
+
     // Set main image when images load
     useEffect(() => {
         if (images.length > 0 && !mainImage) {
@@ -496,7 +541,8 @@ const BookDetailPage = () => {
     };
 
     const handleQuantityChange = (action) => {
-        if (action === 'increase' && quantity < 99) {
+        const maxQuantity = book?.stock || 99;
+        if (action === 'increase' && quantity < maxQuantity) {
             setQuantity((prev) => prev + 1);
         } else if (action === 'decrease' && quantity > 1) {
             setQuantity((prev) => prev - 1);
@@ -505,7 +551,8 @@ const BookDetailPage = () => {
 
     const handleQuantityInputChange = (value) => {
         const numValue = parseInt(value) || 1;
-        if (numValue >= 1 && numValue <= 99) {
+        const maxQuantity = book?.stock || 99;
+        if (numValue >= 1 && numValue <= maxQuantity) {
             setQuantity(numValue);
         }
     };
@@ -553,6 +600,11 @@ const BookDetailPage = () => {
             return;
         }
 
+        if (isOutOfStock) {
+            toast.error('🚫 Sách này hiện đã hết hàng!');
+            return;
+        }
+
         try {
             setIsAddingToCart(true);
             const result = await addToCart(book.id, quantity);
@@ -573,6 +625,11 @@ const BookDetailPage = () => {
         if (!user) {
             toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
             router.push('/login');
+            return;
+        }
+
+        if (isOutOfStock) {
+            toast.error('🚫 Sách này hiện đã hết hàng!');
             return;
         }
 
@@ -684,6 +741,14 @@ const BookDetailPage = () => {
                     </span>
                 ),
                 color: 'red',
+            });
+
+            // Thêm thông tin tồn kho
+            baseStats.push({
+                title: 'Tồn kho',
+                value: book?.stock || 0,
+                prefix: <NumberOutlined />,
+                color: book?.stock > 10 ? '#52c41a' : book?.stock > 0 ? '#faad14' : '#ff4d4f',
             });
         }
 
@@ -1329,9 +1394,6 @@ const BookDetailPage = () => {
                             <Descriptions.Item label="Thể loại">
                                 <Tag color="blue">{getCategoryName(book?.category)}</Tag>
                             </Descriptions.Item>
-                            {/* <Descriptions.Item label="Nhà xuất bản">
-                                <Text>{book?.publisher || 'Không rõ'}</Text>
-                            </Descriptions.Item> */}
                             <Descriptions.Item label="Năm xuất bản">
                                 <Text>{book?.publication_year || 'Không rõ'}</Text>
                             </Descriptions.Item>
@@ -1340,7 +1402,27 @@ const BookDetailPage = () => {
                                     {book?.is_physical === 0 ? 'Sách điện tử' : 'Sách giấy'}
                                 </Tag>
                             </Descriptions.Item>
+                            {/* Hiển thị tình trạng tồn kho cho sách giấy */}
+                            {book?.is_physical === 1 && (
+                                <Descriptions.Item label="Tình trạng">
+                                    <Tag color={book?.stock > 10 ? 'green' : book?.stock > 0 ? 'orange' : 'red'}>
+                                        {book?.stock === 0 ? 'Hết hàng' : `Còn ${book.stock} cuốn`}
+                                    </Tag>
+                                </Descriptions.Item>
+                            )}
                         </Descriptions>
+
+                        {/* Out of stock alert */}
+                        {isOutOfStock && (
+                            <Alert
+                                message="Sách hiện đã hết hàng"
+                                description="Sản phẩm tạm thời không có sẵn. Vui lòng liên hệ để được tư vấn."
+                                type="warning"
+                                icon={<WarningOutlined />}
+                                style={{ marginBottom: '24px' }}
+                                showIcon
+                            />
+                        )}
 
                         {/* Stats */}
                         <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
@@ -1385,8 +1467,8 @@ const BookDetailPage = () => {
                                 </div>
                             )}
 
-                            {/* Quantity - chỉ hiển thị nếu là sách giấy */}
-                            {book.is_physical === 1 && (
+                            {/* Quantity - chỉ hiển thị nếu là sách giấy và có tồn kho */}
+                            {book.is_physical === 1 && book.stock > 0 && (
                                 <div>
                                     <Text strong>Số lượng:</Text>
                                     <div style={{ display: 'flex', alignItems: 'center', marginTop: '8px' }}>
@@ -1401,14 +1483,21 @@ const BookDetailPage = () => {
                                             onChange={(e) => handleQuantityInputChange(e.target.value)}
                                             style={{ width: '60px', textAlign: 'center', margin: '0 8px' }}
                                             size="small"
+                                            max={book.stock}
                                         />
                                         <Button
                                             icon={<PlusOutlined />}
                                             size="small"
                                             onClick={() => handleQuantityChange('increase')}
-                                            disabled={quantity >= 99}
+                                            disabled={quantity >= book.stock}
                                         />
                                     </div>
+                                    <Text
+                                        type="secondary"
+                                        style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}
+                                    >
+                                        Tối đa {book.stock} cuốn
+                                    </Text>
                                 </div>
                             )}
 
@@ -1434,8 +1523,9 @@ const BookDetailPage = () => {
                                         icon={<ShoppingCartOutlined />}
                                         onClick={handleBuyNow}
                                         loading={isAddingToCart}
+                                        disabled={isOutOfStock}
                                     >
-                                        Mua ngay
+                                        {isOutOfStock ? 'Hết hàng' : 'Mua ngay'}
                                     </Button>
 
                                     <Button
@@ -1444,8 +1534,9 @@ const BookDetailPage = () => {
                                         icon={<ShoppingCartOutlined />}
                                         onClick={handleAddToCart}
                                         loading={isAddingToCart}
+                                        disabled={isOutOfStock}
                                     >
-                                        Thêm vào giỏ hàng
+                                        {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
                                     </Button>
                                 </>
                             )}

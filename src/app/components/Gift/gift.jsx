@@ -82,7 +82,7 @@ const styles = {
     container: {
         display: 'flex',
         width: '80%',
-        height: '500px',
+        height: '300px',
         borderRadius: '16px',
         overflow: 'hidden',
         backgroundColor: 'white',
