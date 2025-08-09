@@ -202,13 +202,13 @@ const SearchContent = () => {
         try {
             console.log('🔍 Searching books by title (OCR.space):', title);
 
-            // Enhanced normalization for OCR.space text
+            
             const normalizedTitle = normalizeOCRSpaceText(title);
             const searchQueries = generateEnhancedSearchQueries(normalizedTitle);
 
             console.log('📝 Generated search queries:', searchQueries);
 
-            // Thử các queries khác nhau
+            
             for (const query of searchQueries) {
                 console.log('🔎 Trying query:', query);
 
@@ -236,13 +236,13 @@ const SearchContent = () => {
         try {
             console.log('👤 Searching books by author (OCR.space):', authorName);
 
-            // 1. Tìm author ID từ danh sách authors với enhanced matching
+           
             const matchedAuthor = await findMatchingAuthorEnhanced(authorName);
 
             if (matchedAuthor) {
                 console.log('✅ Found matching author:', matchedAuthor);
 
-                // Tìm theo author ID
+               
                 const response = await axios.get('http://localhost:8000/api/books/search', {
                     params: {
                         author: matchedAuthor.id,
@@ -662,6 +662,35 @@ const SearchContent = () => {
         return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
     };
 
+    // Updated function to handle book pricing based on is_physical
+    const renderBookPrice = (book) => {
+        // If is_physical === 0, show "Miễn phí" in green
+        if (book.is_physical === 0) {
+            return (
+                <div className={styles.priceContainer}>
+                    <span className={styles.freePrice} style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                        Miễn phí
+                    </span>
+                </div>
+            );
+        }
+
+        // If is_physical === 1, show normal pricing
+        return (
+            <div className={styles.priceContainer}>
+                <span className={styles.currentPrice}>{formatPrice(book.price)}</span>
+                {book.original_price && book.original_price > book.price && (
+                    <>
+                        <span className={styles.originalPrice}>{formatPrice(book.original_price)}</span>
+                        <span className={styles.discountPrice}>
+                            -{Math.round(((book.original_price - book.price) / book.original_price) * 100)}%
+                        </span>
+                    </>
+                )}
+            </div>
+        );
+    };
+
     const handleBookClick = (bookId) => {
         router.push(`/book/${bookId}`);
     };
@@ -931,39 +960,193 @@ const SearchContent = () => {
                                 <div className={styles.booksGrid}>
                                     {books.map((book) => (
                                         <div key={book.id} className={styles.bookGridItem}>
-                                            <Card className={styles.bookCard} onClick={() => handleBookClick(book.id)}>
-                                                <div className={styles.bookImageContainer}>
-                                                    <img
-                                                        src={
-                                                            book.cover_image ||
-                                                            book.thumb ||
-                                                            'https://via.placeholder.com/300x400?text=No+Image'
-                                                        }
-                                                        alt={book.title}
-                                                        className={styles.bookImage}
-                                                        onError={(e) => {
-                                                            e.target.src =
-                                                                'https://via.placeholder.com/300x400?text=No+Image';
+                                            <Card
+                                                className={styles.bookCard}
+                                                onClick={() => handleBookClick(book.id)}
+                                                style={{
+                                                    height: '100%',
+                                                    borderRadius: '12px',
+                                                    overflow: 'hidden',
+                                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                                                    transition: 'all 0.3s ease',
+                                                    cursor: 'pointer',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(-4px)';
+                                                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
+                                                    const actions =
+                                                        e.currentTarget.querySelector('[data-book-actions]');
+                                                    if (actions) actions.style.opacity = '1';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                                                    const actions =
+                                                        e.currentTarget.querySelector('[data-book-actions]');
+                                                    if (actions) actions.style.opacity = '0';
+                                                }}
+                                            >
+                                                {/* Enhanced Image Container với khung hình ảnh bên trong */}
+                                                <div
+                                                    className={styles.bookImageContainer}
+                                                    style={{
+                                                        position: 'relative',
+                                                        width: '100%',
+                                                        height: '280px',
+                                                   
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        padding: '12px',
+                                                    }}
+                                                >
+                                                    {/* Khung hình ảnh bên trong - THÊM MỚI */}
+                                                    <div
+                                                        style={{
+                                                            width: '200px',
+                                                            height: '260px',
+                                                            border: '3px solid #ffffff',
+                                                            borderRadius: '6px',
+                                                            overflow: 'hidden',
+                                                            background: '#ffffff',
+                                                            boxShadow:
+                                                                '0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.5)',
+                                                            position: 'relative',
                                                         }}
-                                                    />
+                                                    >
+                                                        <img
+                                                            src={
+                                                                book.cover_image ||
+                                                                book.thumb ||
+                                                                'https://via.placeholder.com/300x400?text=No+Image'
+                                                            }
+                                                            alt={book.title}
+                                                            className={styles.bookImage}
+                                                            style={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                                objectPosition: 'center',
+                                                                transition: 'transform 0.3s ease',
+                                                            }}
+                                                            onError={(e) => {
+                                                                e.target.src =
+                                                                    'https://via.placeholder.com/300x400?text=No+Image';
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.target.style.transform = 'scale(1.05)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.target.style.transform = 'scale(1)';
+                                                            }}
+                                                        />
 
-                                                    {book.discount_percent && (
-                                                        <div className={styles.discountBadge}>
+                                                        {/* Overlay effects */}
+                                                        <div
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
+                                                                background:
+                                                                    'linear-gradient(135deg, rgba(0,0,0,0.05) 0%, transparent 50%)',
+                                                                pointerEvents: 'none',
+                                                            }}
+                                                        ></div>
+                                                    </div>
+
+                                                    {/* Badges và overlays - position absolute so với bookImageContainer */}
+                                                    {book.discount_percent && book.is_physical === 1 && (
+                                                        <div
+                                                            className={styles.discountBadge}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '10px',
+                                                                left: '10px',
+                                                                background: '#ff4d4f',
+                                                                color: 'white',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: 'bold',
+                                                                zIndex: 10,
+                                                            }}
+                                                        >
                                                             -{Math.round(book.discount_percent)}%
                                                         </div>
                                                     )}
 
-                                                    {book.stock === 0 && (
-                                                        <div className={styles.outOfStockOverlay}>
+                                                    {book.is_physical === 0 && (
+                                                        <div
+                                                            className={styles.freeBadge}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: '10px',
+                                                                right: '10px',
+                                                                backgroundColor: '#52c41a',
+                                                                color: 'white',
+                                                                padding: '4px 8px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: 'bold',
+                                                                zIndex: 10,
+                                                            }}
+                                                        >
+                                                            MIỄN PHÍ
+                                                        </div>
+                                                    )}
+
+                                                    {book.stock === 0 && book.is_physical === 1 && (
+                                                        <div
+                                                            className={styles.outOfStockOverlay}
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                right: 0,
+                                                                bottom: 0,
+                                                                background: 'rgba(0, 0, 0, 0.7)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: 'white',
+                                                                fontSize: '16px',
+                                                                fontWeight: 'bold',
+                                                                zIndex: 10,
+                                                            }}
+                                                        >
                                                             <span>Hết hàng</span>
                                                         </div>
                                                     )}
 
-                                                    <div className={styles.bookActions}>
+                                                    {/* Book Actions */}
+                                                    <div
+                                                        data-book-actions
+                                                        className={styles.bookActions}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            bottom: '10px',
+                                                            right: '10px',
+                                                            opacity: 0,
+                                                            transition: 'opacity 0.3s ease',
+                                                            zIndex: 10,
+                                                        }}
+                                                    >
                                                         <Button
                                                             type="text"
                                                             icon={<ShoppingCartOutlined />}
                                                             className={styles.cartBtn}
+                                                            style={{
+                                                                background: 'rgba(255, 255, 255, 0.9)',
+                                                                border: '1px solid #d9d9d9',
+                                                                borderRadius: '50%',
+                                                                width: '40px',
+                                                                height: '40px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                            }}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 // Handle add to cart
@@ -972,39 +1155,52 @@ const SearchContent = () => {
                                                     </div>
                                                 </div>
 
-                                                <div className={styles.bookInfo}>
-                                                    <h3 className={styles.bookTitle}>{book.title}</h3>
-                                                    <span className={styles.bookAuthor}>{book.author?.name}</span>
+                                                <div
+                                                    className={styles.bookInfo}
+                                                    style={{
+                                                        padding: '16px',
+                                                    }}
+                                                >
+                                                    <h3
+                                                        className={styles.bookTitle}
+                                                        style={{
+                                                            fontSize: '16px',
+                                                            fontWeight: 600,
+                                                            margin: '0 0 8px 0',
+                                                            lineHeight: '1.4',
+                                                            color: '#262626',
+                                                            display: '-webkit-box',
+                                                            WebkitLineClamp: 2,
+                                                            WebkitBoxOrient: 'vertical',
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                        }}
+                                                    >
+                                                        {book.title}
+                                                    </h3>
+                                                    <span
+                                                        className={styles.bookAuthor}
+                                                        style={{
+                                                            color: '#8c8c8c',
+                                                            fontSize: '14px',
+                                                            marginBottom: '12px',
+                                                            display: 'block',
+                                                        }}
+                                                    >
+                                                        {book.author?.name}
+                                                    </span>
 
-                                                    <div className={styles.priceContainer}>
-                                                        <span className={styles.currentPrice}>
-                                                            {formatPrice(book.price)}
-                                                        </span>
-                                                        {book.original_price && book.original_price > book.price && (
-                                                            <>
-                                                                <span className={styles.originalPrice}>
-                                                                    {formatPrice(book.original_price)}
-                                                                </span>
-                                                                <span className={styles.discountPrice}>
-                                                                    -
-                                                                    {Math.round(
-                                                                        ((book.original_price - book.price) /
-                                                                            book.original_price) *
-                                                                            100,
-                                                                    )}
-                                                                    %
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    </div>
+                                                    {/* Price rendering */}
+                                                    <div style={{ margin: '12px 0' }}>{renderBookPrice(book)}</div>
 
-                                                    <div className={styles.bookMeta}>
+                                                    <div className={styles.bookMeta} style={{ marginTop: '12px' }}>
                                                         <Tag color="blue">{book.category?.name}</Tag>
                                                         {book.type && (
                                                             <Tag color="green">
                                                                 {book.type === 'ebook' ? 'Ebook' : 'Sách giấy'}
                                                             </Tag>
                                                         )}
+                                                        {book.is_physical === 0 && <Tag color="lime">Miễn phí</Tag>}
                                                         {isAISearch && (
                                                             <Tag color="purple" size="small">
                                                                 OCR.space AI

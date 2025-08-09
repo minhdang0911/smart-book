@@ -33,7 +33,6 @@ import {
     Divider,
     Empty,
     Form,
-    Image,
     Input,
     List,
     message,
@@ -66,6 +65,12 @@ import { useUser } from '../../hooks/useUser';
 import { useWishlist } from '../../hooks/useWishlist';
 
 import './BookDetail.css';
+
+// ===== New constants for consistent sizing =====
+const COVER_RATIO = 150; // paddingTop percentage for 2:3 ratio (150%)
+const CARD_COVER_INSET = 8; // inner frame inset in px
+const THUMB_W = 60;
+const THUMB_H = 90; // keep 2:3 thumbnails
 
 // Custom hook để fetch chapters data từ API
 const useBookChapters = (bookId) => {
@@ -107,8 +112,6 @@ const BookList = ({ books }) => {
     const router = useRouter();
     const [showNavigation, setShowNavigation] = useState(false);
     const { user, isLoading, mutate: mutateUser } = useUser();
-
-    console.log('📚 BookList received books:', books);
 
     const getNames = (field) => {
         if (!field) return 'Không rõ';
@@ -291,30 +294,42 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                 <div
                     style={{
                         position: 'relative',
-                        paddingTop: '140%',
+                        paddingTop: `${COVER_RATIO}%`,
                         overflow: 'hidden',
                         backgroundColor: '#f8f9fa',
                         borderRadius: '8px 8px 0 0',
                     }}
                 >
-                    <img
-                        src={book.cover_image || '/placeholder-book.jpg'}
-                        alt={book.title}
+                    
+                    <div
                         style={{
                             position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            borderRadius: '8px 8px 0 0',
+                            inset: CARD_COVER_INSET,
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1,
                         }}
-                        onError={(e) => {
-                            e.target.src = '/placeholder-book.jpg';
-                        }}
-                    />
+                    >
+                        <img
+                            src={book.cover_image || '/placeholder-book.jpg'}
+                            alt={book.title}
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain',
+                                display: 'block',
+                            }}
+                            onError={(e) => {
+                                e.currentTarget.src = '/placeholder-book.jpg';
+                            }}
+                        />
+                    </div>
 
-                    {/* Discount badge */}
+                    {/* Discount badge (kept above frame) */}
                     {book.discount && (
                         <div
                             style={{
@@ -327,6 +342,7 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                                 borderRadius: '6px',
                                 fontSize: '12px',
                                 fontWeight: 'bold',
+                                zIndex: 2,
                             }}
                         >
                             -{book.discount}%
@@ -346,6 +362,7 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                                 borderRadius: '6px',
                                 fontSize: '12px',
                                 fontWeight: 'bold',
+                                zIndex: 2,
                             }}
                         >
                             Hết hàng
@@ -364,7 +381,7 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
             onClick={() => router.push(`/books/${book.id}`)}
         >
             <div style={{ flex: 1 }}>
-                {/* Book title */}
+                {/* Book title (fixed height) */}
                 <div
                     style={{
                         fontSize: isMobile ? '13px' : '14px',
@@ -384,7 +401,7 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                     {book.title || 'Tên sách'}
                 </div>
 
-                {/* Author */}
+                {/* Author (single line, fixed height) */}
                 <div
                     style={{
                         fontSize: isMobile ? '11px' : '12px',
@@ -964,13 +981,26 @@ const BookDetailPage = () => {
         if (!images || images.length === 0) {
             return (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
-                    <Image
-                        src={book?.cover_image || '/placeholder-book.jpg'}
-                        alt={book?.title}
-                        width={300}
-                        height={400}
-                        style={{ objectFit: 'cover' }}
-                    />
+                    {/* Fallback frame so cover is always fully shown */}
+                    <div
+                        style={{
+                            width: 300,
+                            height: 450,
+                            margin: '0 auto',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <img
+                            src={book?.cover_image || '/placeholder-book.jpg'}
+                            alt={book?.title}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                    </div>
                 </div>
             );
         }
@@ -978,22 +1008,35 @@ const BookDetailPage = () => {
         return (
             <div>
                 <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                    <ReactImageMagnify
-                        {...{
-                            smallImage: {
-                                alt: book?.title,
-                                isFluidWidth: true,
-                                src: mainImage || book?.cover_image,
-                            },
-                            largeImage: {
-                                src: mainImage || book?.cover_image,
-                                width: 1200,
-                                height: 1800,
-                            },
-                            enlargedImageContainerStyle: { zIndex: 1500 },
+                    {/* Wrap magnify image with a fixed 2:3 frame so it never bleeds */}
+                    <div
+                        style={{
+                            width: 300,
+                            height: 450,
+                            margin: '0 auto',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 8,
+                            padding: 6,
                         }}
-                        style={{ maxWidth: '300px', maxHeight: '400px' }}
-                    />
+                    >
+                        <ReactImageMagnify
+                            {...{
+                                smallImage: {
+                                    alt: book?.title,
+                                    isFluidWidth: true,
+                                    src: mainImage || book?.cover_image,
+                                },
+                                largeImage: {
+                                    src: mainImage || book?.cover_image,
+                                    width: 1200,
+                                    height: 1800,
+                                },
+                                enlargedImageContainerStyle: { zIndex: 1500 },
+                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                    </div>
                 </div>
 
                 {images.length > 1 && (
@@ -1002,22 +1045,24 @@ const BookDetailPage = () => {
                             <div
                                 key={index}
                                 style={{
-                                    width: '60px',
-                                    height: '80px',
+                                    width: THUMB_W,
+                                    height: THUMB_H,
                                     cursor: 'pointer',
                                     border: mainImage === img.image_url ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                                    borderRadius: '4px',
+                                    borderRadius: '6px',
                                     overflow: 'hidden',
+                                    background: '#fff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                 }}
                                 onClick={() => setMainImage(img.image_url)}
                             >
-                                <Image
+                                <img
                                     src={img.image_url}
                                     alt={`${book?.title} - ${index + 1}`}
-                                    width={60}
-                                    height={80}
-                                    style={{ objectFit: 'cover' }}
-                                    preview={false}
+                                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                    onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
                                 />
                             </div>
                         ))}
@@ -1205,6 +1250,7 @@ const BookDetailPage = () => {
                 }
                 style={{ marginBottom: '24px' }}
             >
+                {/* BookList -> BookCard now has an inner frame so all covers are fully visible */}
                 <BookList books={sameAuthorBooks} />
             </Card>
         );
@@ -1360,7 +1406,22 @@ const BookDetailPage = () => {
     }
 
     return (
-        <div className="book-detail-page" style={{ padding: '24px' }}>
+        <div className="book-detail-page scaled-80" style={{ padding: '24px' }}>
+            {/* Global 80% scale for the whole page */}
+            <style jsx global>{`
+                .scaled-80 {
+                    zoom: 0.8;
+                }
+                /* Fallback for browsers not supporting zoom */
+                @supports not (zoom: 0.8) {
+                    .scaled-80 {
+                        transform: scale(0.8);
+                        transform-origin: top left;
+                        width: 125%;
+                    }
+                }
+            `}</style>
+
             {/* Breadcrumb */}
             <Breadcrumb style={{ marginBottom: '24px' }}>
                 <Breadcrumb.Item>
