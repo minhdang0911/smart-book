@@ -393,14 +393,19 @@ const SearchContent = () => {
                                             <Card className={styles.bookCard} onClick={() => handleBookClick(book.id)}>
                                                 <div className={styles.bookImageContainer}>
                                                     <img
-                                                        src={book.cover_image || book.thumb || 'https://via.placeholder.com/300x400?text=No+Image'}
+                                                        src={
+                                                            book.cover_image ||
+                                                            book.thumb ||
+                                                            'https://via.placeholder.com/300x400?text=No+Image'
+                                                        }
                                                         alt={book.title}
                                                         className={styles.bookImage}
                                                         onError={(e) => {
-                                                            e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
+                                                            e.target.src =
+                                                                'https://via.placeholder.com/300x400?text=No+Image';
                                                         }}
                                                     />
-                                                    
+
                                                     {book.discount_percent && (
                                                         <div className={styles.discountBadge}>
                                                             -{Math.round(book.discount_percent)}%
@@ -414,9 +419,9 @@ const SearchContent = () => {
                                                     )}
 
                                                     <div className={styles.bookActions}>
-                                                        <Button 
-                                                            type="text" 
-                                                            icon={<ShoppingCartOutlined />} 
+                                                        <Button
+                                                            type="text"
+                                                            icon={<ShoppingCartOutlined />}
                                                             className={styles.cartBtn}
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
@@ -436,9 +441,17 @@ const SearchContent = () => {
                                                         </span>
                                                         {book.original_price && book.original_price > book.price && (
                                                             <>
-                                                                <span className={styles.originalPrice}>{formatPrice(book.original_price)}</span>
+                                                                <span className={styles.originalPrice}>
+                                                                    {formatPrice(book.original_price)}
+                                                                </span>
                                                                 <span className={styles.discountPrice}>
-                                                                    -{Math.round(((book.original_price - book.price) / book.original_price) * 100)}%
+                                                                    -
+                                                                    {Math.round(
+                                                                        ((book.original_price - book.price) /
+                                                                            book.original_price) *
+                                                                            100,
+                                                                    )}
+                                                                    %
                                                                 </span>
                                                             </>
                                                         )}
