@@ -377,7 +377,7 @@ const BookCard = ({ book, router, getNames, isMobile = false }) => {
                 justifyContent: 'space-between',
                 backgroundColor: '#ffffff',
             }}
-            onClick={() => router.push(`/books/${book.id}`)}
+            onClick={() => router.push(`/book/${book.id}`)}
         >
             <div style={{ flex: 1 }}>
                 {/* Book title (fixed height) */}
