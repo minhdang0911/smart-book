@@ -259,7 +259,11 @@ const OnlinePromotion = () => {
                 <div className="books-grid">
                     {displayedBooks.length > 0 ? (
                         displayedBooks.map((book) => (
-                            <div key={book.id} className="book-grid-item">
+                            <div
+                                key={book.id}
+                                className="book-grid-item"
+                                onClick={() => router.push(`/book/${book.id}`)}
+                            >
                                 <Card className="book-card">
                                     <div className="book-image-container">
                                         <img

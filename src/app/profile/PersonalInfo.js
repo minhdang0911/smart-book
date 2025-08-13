@@ -265,11 +265,11 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                             </Form.Item>
                         </Col>
 
-                        <Col xs={24} md={12}>
+                        {/* <Col xs={24} md={12}>
                             <Form.Item label="ID người dùng">
                                 <Input className="field" value={user?.id ?? ''} readOnly disabled />
                             </Form.Item>
-                        </Col>
+                        </Col> */}
 
                         <Col xs={24} md={12}>
                             <Form.Item

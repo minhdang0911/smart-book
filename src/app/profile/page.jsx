@@ -1,7 +1,7 @@
 // pages/ProfilePage.js - Full code với giao diện đơn giản
 'use client';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
-import { Button, Card, Col, Divider, Form, Input, message, Row, Typography } from 'antd';
+import { Button, Card, Col, Divider, Form, Input, Row, Typography } from 'antd';
 import { useState } from 'react';
 
 // Import Hooks
@@ -14,6 +14,7 @@ import OrderHistory from './OrderHistory/OrderHistory';
 import PersonalInfo from './PersonalInfo';
 
 // Import Styles
+import { toast } from 'react-toastify';
 import './style.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -57,12 +58,12 @@ const ChangePassword = ({ token }) => {
         setPasswordStrength(checkPasswordStrength(password));
     };
 
-    const onFinish = async (values) => {
+const onFinish = async (values) => {
         setLoading(true);
         const token = localStorage?.getItem('token');
 
         try {
-            const response = await fetch('http://localhost:8000/api/user/change-password', {
+            const response = await fetch('https://smartbook.io.vn/api/user/change-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -77,25 +78,19 @@ const ChangePassword = ({ token }) => {
             });
 
             const data = await response.json();
-            if (data?.success === true) {
-                window.message.success('Đổi mật khẩu thành công!');
+            console.log('data', data);
+
+     
+            if (data.success) {
+                toast.success('Đổi mật khẩu thành công!');
                 form.resetFields();
                 setPasswordStrength('');
-            }
-
-            if (!response.ok) {
-                if (response.status === 422) {
-                    const errors = data.errors || {};
-                    const errorMessages = Object.values(errors).flat();
-                    throw new Error(errorMessages.join(', ') || 'Dữ liệu không hợp lệ');
-                } else if (response.status === 401) {
-                    throw new Error('Mật khẩu hiện tại không đúng');
-                } else {
-                    throw new Error(data.message || 'Không thể đổi mật khẩu');
-                }
+            } else {
+                toast.error(data.message || 'Đổi mật khẩu thất bại');
             }
         } catch (error) {
-            message.error(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
+            console.error(error);
+            toast.error('Có lỗi xảy ra khi đổi mật khẩu');
         } finally {
             setLoading(false);
         }
