@@ -1,30 +1,31 @@
-// components/Profile/OrderHistory/OrderHistory.js
-import { Spin, Tabs } from 'antd';
-import { useState } from 'react';
+'use client';
+
+import { Divider, Spin, Tabs, Typography } from 'antd';
+import { useMemo, useState } from 'react';
 import { useOrderDetail, useOrders } from '../../hooks/useOrders';
 import OrderCard from './OrderCard';
 import OrderDetailModal from './OrderDetailModal';
 
+const { Title, Text } = Typography;
+
 const OrderHistory = ({ token, enabled }) => {
+    // Data
     const { orders, loading, cancelOrder } = useOrders(token, enabled);
     const [activeTab, setActiveTab] = useState('all');
     const [selectedOrderId, setSelectedOrderId] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
-
     const { orderDetail } = useOrderDetail(selectedOrderId, token);
 
-    const handleViewDetail = (orderId) => {
-        setSelectedOrderId(orderId);
-        setIsModalVisible(true);
+    // UI tokens
+    const ui = {
+        page: '#f6f7fb',
+        card: '#ffffff',
+        ink: '#0f172a',
+        muted: '#667085',
+        line: '#e5e7eb',
     };
 
-    const handleCloseModal = () => {
-        setIsModalVisible(false);
-        setSelectedOrderId(null);
-    };
-
-    const filteredOrders = activeTab === 'all' ? orders : orders.filter((order) => order.status === activeTab);
-
+    // Tabs + count
     const statusTabs = [
         { key: 'all', label: 'Tất cả' },
         { key: 'ready_to_pick', label: 'Chờ lấy hàng' },
@@ -35,152 +36,162 @@ const OrderHistory = ({ token, enabled }) => {
         { key: 'cancelled', label: 'Đã hủy' },
     ];
 
-    if (loading) {
+    const counts = useMemo(() => {
+        const c = { all: 0 };
+        (orders || []).forEach((o) => {
+            c.all += 1;
+            c[o.status] = (c[o.status] || 0) + 1;
+        });
+        return c;
+    }, [orders]);
+
+    const makeLabel = (text, count) => (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <span>{text}</span>
+            <span
+                style={{
+                    minWidth: 24,
+                    padding: '0 6px',
+                    height: 22,
+                    lineHeight: '22px',
+                    textAlign: 'center',
+                    borderRadius: 999,
+                    background: '#0b1220',
+                    color: '#fff',
+                    fontSize: 12,
+                    fontWeight: 700,
+                }}
+            >
+                {count ?? 0}
+            </span>
+        </span>
+    );
+
+    const filteredOrders = activeTab === 'all' ? orders : (orders || []).filter((o) => o.status === activeTab);
+
+    const handleViewDetail = (orderId) => {
+        setSelectedOrderId({ ...orderId } && orderId); // giữ nguyên logic, tránh re-render dư
+        setIsModalVisible(true);
+    };
+    const handleCloseModal = () => {
+        setIsModalVisible(false);
+        setSelectedOrderId(null);
+    };
+
+    // Loading
+    if (loading && !orders?.length) {
         return (
             <div
                 style={{
+                    background: ui.page,
+                    minHeight: '60vh',
                     display: 'flex',
-                    justifyContent: 'center',
                     alignItems: 'center',
-                    minHeight: '400px',
+                    justifyContent: 'center',
+                    gap: 12,
+                    color: ui.muted,
                 }}
             >
                 <Spin size="large" />
-                <div style={{ marginLeft: '16px', fontSize: '16px', color: '#666' }}>Đang tải lịch sử đơn hàng...</div>
+                <span>Đang tải lịch sử đơn hàng…</span>
             </div>
         );
     }
 
     return (
-        <div
-            style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                minHeight: '100vh',
-                padding: '40px 20px',
-            }}
-        >
+        <div style={{ background: ui.page, padding: 16 }}>
             <div
                 style={{
-                    maxWidth: '1200px',
+                    maxWidth: 1200,
                     margin: '0 auto',
-                    background: 'rgba(255, 255, 255, 0.98)',
-                    borderRadius: '24px',
-                    padding: '40px',
-                    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-                    backdropFilter: 'blur(10px)',
+                    background: ui.card,
+                    borderRadius: 14,
+                    border: `1px solid ${ui.line}`,
+                    boxShadow: '0 8px 24px rgba(15,23,42,0.04)',
                 }}
             >
                 {/* Header */}
-                <div
-                    style={{
-                        textAlign: 'center',
-                        marginBottom: '40px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        backgroundClip: 'text',
-                    }}
-                >
-                    <h1
-                        style={{
-                            fontSize: '2.5rem',
-                            fontWeight: '700',
-                            marginBottom: '8px',
-                            letterSpacing: '-0.5px',
-                            margin: '0 0 8px 0',
-                        }}
-                    >
-                        📦 Lịch sử đơn hàng
-                    </h1>
-                    <p
-                        style={{
-                            fontSize: '1.1rem',
-                            color: '#64748b',
-                            fontWeight: '400',
-                            margin: 0,
-                        }}
-                    >
-                        Quản lý và theo dõi đơn hàng của bạn
-                    </p>
+                <div style={{ padding: '16px 20px 0 20px' }}>
+                    <Title level={3} style={{ margin: 0, color: ui.ink }}>
+                        Lịch sử đơn hàng
+                    </Title>
+                    <Text style={{ color: ui.muted }}>Quản lý và theo dõi đơn của bạn</Text>
                 </div>
 
-                {/* Modern Tabs */}
-                <div style={{ marginBottom: '32px' }}>
+                <Divider style={{ margin: '12px 20px 0', borderColor: ui.line }} />
+
+                {/* Tabs */}
+                <div style={{ padding: '8px 20px 0 20px' }}>
                     <Tabs
                         activeKey={activeTab}
-                        onChange={(key) => setActiveTab(key)}
-                        items={statusTabs}
-                        centered
+                        onChange={setActiveTab}
+                        items={statusTabs.map((t) => ({ key: t.key, label: makeLabel(t.label, counts[t.key]) }))}
                         tabBarStyle={{
-                            background: 'rgba(102, 126, 234, 0.08)',
-                            padding: '8px',
-                            borderRadius: '16px',
-                            border: 'none',
-                            marginBottom: '0',
+                            background: '#fff',
+                            borderBottom: `1px solid ${ui.line}`,
+                            marginBottom: 0,
                         }}
                     />
                 </div>
 
-                {/* Loading State */}
-                {loading && (
-                    <div style={{ textAlign: 'center', padding: '60px 0' }}>
-                        <Spin size="large" />
-                        <div style={{ marginTop: '16px', color: '#666' }}>Đang tải đơn hàng...</div>
-                    </div>
-                )}
+                {/* Header row để căn cột */}
+                <div
+                    style={{
+                        display: 'grid',
+                        gridTemplateColumns: '64px 28px 56px 1fr 160px 260px 160px',
+                        gap: 12,
+                        padding: '12px 16px 8px',
+                        color: '#94a3b8',
+                        fontWeight: 700,
+                        opacity: 0.001, // ẩn gần như hoàn toàn nhưng vẫn giữ spacing
+                        userSelect: 'none',
+                    }}
+                >
+                    <div>ID</div>
+                    <div>—</div>
+                    <div>Ảnh</div>
+                    <div>Tiêu đề</div>
+                    <div style={{ textAlign: 'right' }}>Giá</div>
+                    <div>Trạng thái / Chi tiết</div>
+                    <div>Hủy</div>
+                </div>
 
-                {/* Orders Grid */}
-                {!loading && filteredOrders.length > 0 && (
-                    <div
-                        style={{
-                            display: 'grid',
-                            gap: '24px',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-                        }}
-                    >
-                        {filteredOrders.map((order) => (
+                {/* List rows */}
+                <div>
+                    {filteredOrders?.length > 0 ? (
+                        filteredOrders.map((order) => (
                             <OrderCard
                                 key={order.id}
                                 order={order}
                                 onViewDetail={handleViewDetail}
                                 onCancelOrder={cancelOrder}
                             />
-                        ))}
-                    </div>
-                )}
-
-                {/* Empty State */}
-                {!loading && filteredOrders.length === 0 && (
-                    <div
-                        style={{
-                            textAlign: 'center',
-                            padding: '60px 20px',
-                            background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
-                            borderRadius: '20px',
-                            border: '2px dashed #cbd5e1',
-                        }}
-                    >
-                        <div style={{ fontSize: '4rem', marginBottom: '16px' }}>📦</div>
-                        <h3
+                        ))
+                    ) : (
+                        <div
                             style={{
-                                fontSize: '1.5rem',
-                                color: '#64748b',
-                                fontWeight: '600',
-                                marginBottom: '8px',
-                                margin: '0 0 8px 0',
+                                textAlign: 'center',
+                                padding: '48px 20px',
+                                margin: 16,
+                                borderRadius: 12,
+                                border: `1px dashed ${ui.line}`,
+                                background: '#fafafa',
                             }}
                         >
-                            Không có đơn hàng nào
-                        </h3>
-                        <p style={{ color: '#94a3b8', fontSize: '1rem', margin: 0 }}>
-                            {activeTab === 'all'
-                                ? 'Bạn chưa có đơn hàng nào'
-                                : 'Chưa có đơn hàng nào trong danh mục này'}
-                        </p>
-                    </div>
-                )}
+                            <div style={{ fontSize: 56, lineHeight: 1, marginBottom: 8 }}>📦</div>
+                            <div style={{ fontWeight: 700, color: ui.ink, marginBottom: 4 }}>Không có đơn hàng</div>
+                            <div style={{ color: ui.muted }}>
+                                {activeTab === 'all'
+                                    ? 'Bạn chưa có đơn hàng nào.'
+                                    : 'Chưa có đơn nào trong trạng thái này.'}
+                            </div>
+                        </div>
+                    )}
+                </div>
 
-                {/* Order Detail Modal */}
+                <div style={{ height: 12 }} />
+
+                {/* Modal chi tiết */}
                 <OrderDetailModal
                     visible={isModalVisible}
                     onCancel={handleCloseModal}

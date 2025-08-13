@@ -32,8 +32,6 @@ export function BookStoreClient({ initialBooks }) {
                     if (userResponse?.status === true) {
                         setUser(userResponse.user);
                     }
-
-                    // Fetch wishlist
                     const followedRes = await fetch('http://localhost:8000/api/books/followed', {
                         headers: { Authorization: `Bearer ${token}` },
                     });

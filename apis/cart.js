@@ -1,3 +1,5 @@
+import { toast } from 'react-toastify';
+
 export const apiAddToCart = async (bookId, quantity) => {
     try {
         const token = localStorage.getItem('token');
@@ -13,17 +15,23 @@ export const apiAddToCart = async (bookId, quantity) => {
             }),
         });
 
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+
+        if (!response.ok || data.success === false) {
+            toast.error(data.message || `HTTP error! status: ${response.status}`);
+            return {
+                success: false,
+                error: data.message || `HTTP error! status: ${response.status}`,
+            };
         }
 
-        const data = await response.json();
         return {
             success: true,
             data,
         };
     } catch (error) {
         console.error('Lỗi khi thêm vào giỏ hàng:', error);
+        toast.error(error.message || 'Có lỗi xảy ra khi thêm vào giỏ hàng');
         return {
             success: false,
             error: error.message,

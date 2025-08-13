@@ -157,9 +157,7 @@ const ContactPage = () => {
 
   return (
     <div style={{ margin: 0, padding: 0, width: '100%' }}>
-      {/* Header Section */}
       <div style={headerStyle}>
-        {/* Navigation */}
         <div style={navStyle}>
           <div style={logoStyle}>
             <div style={{ fontWeight: 'bold' }}>THÁP THIÊN NIÊN KỶ</div>
@@ -172,8 +170,6 @@ const ContactPage = () => {
             <MenuOutlined style={{ color: 'white', fontSize: '20px' }} />
           </div>
         </div>
-
-        {/* Hero Content */}
         <div style={{ maxWidth: '600px', padding: '0 20px' }}>
           <Title level={1} style={{ color: 'white', fontSize: '64px', fontWeight: '300', margin: 0, letterSpacing: '4px' }}>
             LIÊN HỆ
@@ -184,16 +180,12 @@ const ContactPage = () => {
             ngoạn mục này cùng bạn.
           </Paragraph>
         </div>
-
-        {/* Scroll indicator */}
         <div style={{ position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)' }}>
           <div style={{ width: '2px', height: '40px', backgroundColor: 'white', opacity: 0.7 }}></div>
         </div>
       </div>
-
-      {/* Content Section */}
       <div style={contentStyle}>
-        <div style={{ maxWidth: '100%', margin: '0 auto' }}>
+        <div style={{ maxWidth: '80%', margin: '0 auto' }}>
           {/* Notice */}
           <div style={{ textAlign: 'center', marginBottom: '60px' }}>
             <Text style={{ fontSize: '16px', color: '#666', lineHeight: '1.6' }}>
@@ -201,9 +193,7 @@ const ContactPage = () => {
               để được hỗ trợ, vì hiện tại không còn đội ngũ bán hàng/cho thuê tại chỗ ở Tháp Thiên Niên Kỷ San Francisco.
             </Text>
           </div>
-
           <Row gutter={[60, 40]}>
-            {/* Contact Form */}
             <Col xs={24} lg={14}>
               <Card style={{ 
                 border: 'none', 

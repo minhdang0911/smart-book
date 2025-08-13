@@ -1,4 +1,4 @@
-// pages/ProfilePage.js - File chính hoàn chỉnh với ChangePassword
+// pages/ProfilePage.js - File chính được cập nhật
 'use client';
 import {
     BankFilled,
@@ -8,7 +8,7 @@ import {
     FilterFilled,
     KeyOutlined,
 } from '@ant-design/icons';
-import { Alert, Button, Card, Col, Divider, Form, Input, Layout, message, Row, Space, Typography } from 'antd';
+import { Alert, Button, Card, Col, Divider, Form, Input, message, Row, Space, Typography } from 'antd';
 import { useState } from 'react';
 
 // Import Hooks
@@ -16,16 +16,13 @@ import { useAuth } from '../hooks/useAuth';
 
 // Import Components
 import FavoriteBooks from './FavoriteBooks/FavoriteBooks';
-import MobileDrawer from './Layout/MobileDrawer';
-import MobileHeader from './Layout/MobileHeader';
-import ProfileSidebar from './Layout/ProfileSidebar';
+import ProfileSidebar from './Layout/ProfileSidebar'; // Chỉ import ProfileSidebar
 import OrderHistory from './OrderHistory/OrderHistory';
 import PersonalInfo from './PersonalInfo';
 
 // Import Styles
 import './style.css';
 
-const { Sider, Content, Header } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
 // Change Password Component inline
@@ -332,20 +329,10 @@ const ChangePassword = ({ token }) => {
 
 const ProfilePage = () => {
     const [selectedKey, setSelectedKey] = useState('personal');
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
     const { user, loading: userLoading, token } = useAuth();
 
     const handleMenuSelect = (key) => {
         setSelectedKey(key);
-    };
-
-    const handleMobileMenuToggle = () => {
-        setMobileMenuOpen(true);
-    };
-
-    const handleMobileMenuClose = () => {
-        setMobileMenuOpen(false);
     };
 
     const renderContent = () => {
@@ -354,16 +341,14 @@ const ProfilePage = () => {
                 return <PersonalInfo user={user} token={token} />;
             case 'favorites':
                 return <FavoriteBooks token={token} enabled={selectedKey === 'favorites'} />;
-            case 'history':
-                return <OrderHistory token={token} enabled={selectedKey === 'history'} />;
+            case 'history1':
+                return <OrderHistory token={token} enabled={selectedKey === 'history1'} />;
             case 'change-password':
                 return <ChangePassword token={token} />;
             default:
                 return <PersonalInfo user={user} token={token} />;
         }
     };
-
-    console.log(selectedKey);
 
     if (userLoading) {
         return (
@@ -403,75 +388,17 @@ const ProfilePage = () => {
         );
     }
 
+    // Tạo userData để truyền vào ProfileSidebar
+    const userData = {
+        name: user?.name || 'Người dùng',
+        avatar: user?.avatar,
+
+    };
+
     return (
-        <>
-            <div className="profile-page">
-                <Layout>
-                    {/* Mobile Header */}
-                    <Header className="mobile-header" style={{ display: 'block' }}>
-                        <MobileHeader onMenuToggle={handleMobileMenuToggle} />
-                    </Header>
-
-                    {/* Mobile Drawer */}
-                    <MobileDrawer
-                        open={mobileMenuOpen}
-                        onClose={handleMobileMenuClose}
-                        user={user}
-                        selectedKey={selectedKey}
-                        onMenuSelect={handleMenuSelect}
-                    />
-
-                    <Layout hasSider>
-                        {/* Desktop Sidebar */}
-                        <Sider
-                            width={300}
-                            className="custom-sider"
-                            style={{
-                                height: '100vh',
-                                position: 'fixed',
-                                left: 0,
-                                top: 0,
-                                zIndex: 100,
-                                display: 'none',
-                            }}
-                        >
-                            <ProfileSidebar user={user} selectedKey={selectedKey} onMenuSelect={handleMenuSelect} />
-                        </Sider>
-
-                        <Layout style={{ marginLeft: 0 }}>
-                            <Content style={{ background: 'transparent', minHeight: '100vh' }}>
-                                {renderContent()}
-                            </Content>
-                        </Layout>
-                    </Layout>
-                </Layout>
-            </div>
-
-            <style jsx>{`
-                @media (min-width: 992px) {
-                    .mobile-header {
-                        display: none !important;
-                    }
-                    .custom-sider {
-                        display: block !important;
-                    }
-                    .ant-layout {
-                        margin-left: 300px !important;
-                    }
-                }
-
-                .profile-page {
-                    min-height: 100vh;
-                    background: #f5f5f5;
-                }
-
-                @media (max-width: 991px) {
-                    .profile-page {
-                        padding-top: 64px;
-                    }
-                }
-            `}</style>
-        </>
+        <ProfileSidebar user={userData} selectedKey={selectedKey} onMenuSelect={handleMenuSelect}>
+            {renderContent()}
+        </ProfileSidebar>
     );
 };
 

@@ -2,8 +2,8 @@
 import { HeartFilled } from '@ant-design/icons';
 import { Card, Col, Empty, Row, Spin, Tabs, Typography } from 'antd';
 import gsap from 'gsap';
-import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 import { useFavoriteBooks } from '../../hooks/useFavoriteBooks';
 
 const { Title, Text } = Typography;
@@ -226,6 +226,18 @@ const FavoriteBooks = ({ token, enabled }) => {
 
     const tabItems = [
         {
+            key: 'all',
+            label: <span style={{ fontSize: '14px', fontWeight: 500 }}>💝 Tất cả ({favoriteBooks.length})</span>,
+            children: (
+                <BookGrid
+                    books={favoriteBooks}
+                    emptyMessage="Chưa có sách yêu thích nào"
+                    cardRefs={cardRefs}
+                    router={router}
+                />
+            ),
+        },
+        {
             key: 'physical',
             label: <span style={{ fontSize: '14px', fontWeight: 500 }}>📚 Sách bán ({physicalBooks.length})</span>,
             children: (
@@ -244,18 +256,6 @@ const FavoriteBooks = ({ token, enabled }) => {
                 <BookGrid
                     books={digitalBooks}
                     emptyMessage="Chưa có sách đọc yêu thích nào"
-                    cardRefs={cardRefs}
-                    router={router}
-                />
-            ),
-        },
-        {
-            key: 'all',
-            label: <span style={{ fontSize: '14px', fontWeight: 500 }}>💝 Tất cả ({favoriteBooks.length})</span>,
-            children: (
-                <BookGrid
-                    books={favoriteBooks}
-                    emptyMessage="Chưa có sách yêu thích nào"
                     cardRefs={cardRefs}
                     router={router}
                 />

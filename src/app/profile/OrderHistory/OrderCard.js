@@ -1,6 +1,43 @@
 import { Button, Popconfirm } from 'antd';
 import { toast } from 'react-toastify';
 
+const currency = (n) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n || 0);
+
+const statusLabel = (s) => {
+    if (!s) return '—';
+    const norm = String(s).toLowerCase();
+    if (['cancel', 'cancelled', 'canceled'].includes(norm)) return 'Đã hủy';
+    if (['paid', 'completed', 'success', 'delivered'].includes(norm)) return 'Hoàn tất';
+    if (['pending', 'unpaid', 'ready_to_pick', 'picking', 'picked', 'delivering'].includes(norm))
+        return 'Chờ thanh toán';
+    return s;
+};
+
+const statusTagStyle = (s) => {
+    const norm = String(s || '').toLowerCase();
+    if (['cancel', 'cancelled', 'canceled'].includes(norm)) {
+        return { color: '#ef4444', bg: 'rgba(239,68,68,.12)', border: 'rgba(239,68,68,.28)' };
+    }
+    if (['paid', 'completed', 'success', 'delivered'].includes(norm)) {
+        return { color: '#16a34a', bg: 'rgba(22,163,74,.12)', border: 'rgba(22,163,74,.28)' };
+    }
+    return { color: '#d97706', bg: 'rgba(217,119,6,.12)', border: 'rgba(217,119,6,.28)' };
+};
+
+// ====== PILL SIZE (đồng bộ) ======
+const PILL = {
+    height: 36,
+    padding: '0 14px',
+    borderRadius: 12,
+    fontWeight: 700,
+    fontSize: 13,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 112, // tất cả pill cùng bề ngang
+};
+
 const OrderCard = ({ order, onViewDetail, onCancelOrder }) => {
     const handleCancelOrder = async () => {
         try {
@@ -11,138 +48,122 @@ const OrderCard = ({ order, onViewDetail, onCancelOrder }) => {
         }
     };
 
+    const tag = statusTagStyle(order?.status);
+
     return (
         <div
             style={{
-                background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
-                borderRadius: '20px',
-                padding: '24px',
-                border: '1px solid rgba(102, 126, 234, 0.1)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.08)',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-                position: 'relative',
-                overflow: 'hidden',
-            }}
-            onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-4px)';
-                e.currentTarget.style.boxShadow = '0 16px 48px rgba(102, 126, 234, 0.15)';
-            }}
-            onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.08)';
+                display: 'grid',
+                gridTemplateColumns: '64px 28px 56px 1fr 160px 260px 160px',
+                alignItems: 'center',
+                gap: 12,
+                padding: '14px 16px',
+                borderBottom: '1px solid rgba(15,23,42,0.06)',
+                background: '#fff',
             }}
         >
-            {/* Decorative gradient overlay */}
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '4px',
-                    background: 'linear-gradient(90deg, #667eea, #764ba2, #f093fb)',
-                    borderRadius: '20px 20px 0 0',
-                }}
-            />
+            {/* ID mờ như ảnh */}
+            <div style={{ color: '#94a3b8', fontWeight: 700 }}>{order.id}</div>
 
-            {/* Order Header */}
+            {/* Dấu gạch nhạt */}
+            <div style={{ color: '#cbd5e1' }}>—</div>
+
+            {/* Ảnh vuông nhỏ */}
             <div
                 style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '20px',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    background: '#0b1220',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(2,6,23,0.2)',
                 }}
             >
-                <h3
+                {order?.thumbnail ? (
+                    <img
+                        src={order.thumbnail}
+                        alt={order?.title || order?.course_title || ''}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                    />
+                ) : null}
+            </div>
+
+            {/* Tên (không gắn cứng) */}
+            <div
+                title={order?.title || order?.course_title || ''}
+                style={{
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    fontWeight: 600,
+                    color: '#0f172a',
+                }}
+            >
+                {order?.title || order?.course_title || ''}
+            </div>
+
+            {/* Giá xám nhạt bên phải */}
+            <div style={{ textAlign: 'right', color: '#cbd5e1', fontWeight: 800 }}>{currency(order?.price)}</div>
+
+            {/* Trạng thái + Chi tiết */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <span
                     style={{
-                        fontSize: '1.25rem',
-                        fontWeight: '600',
-                        color: '#1e293b',
-                        margin: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
+                        ...PILL,
+                        color: tag.color,
+                        background: tag.bg,
+                        border: `1px solid ${tag.border}`,
                     }}
                 >
-                    🛍️ Đơn hàng #{order.id}
-                </h3>
+                    {statusLabel(order?.status)}
+                </span>
 
-                <div style={{ display: 'flex', gap: '12px' }}>
-                    <Button
-                        onClick={() => onViewDetail(order.id)}
-                        style={{
-                            padding: '6px 12px',
-                            borderRadius: '12px',
-                            height: '40px',
-                            fontSize: '0.875rem',
-                            fontWeight: '500',
-                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                            transition: 'all 0.3s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = 'translateY(-1px)';
-                            e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = 'translateY(0)';
-                            e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
-                        }}
-                    >
-                        👁️ Xem chi tiết
-                    </Button>
+                <Button
+                    onClick={() => onViewDetail(order.id)}
+                    style={{
+                        ...PILL,
+                        background: '#0b1220',
+                        border: '1px solid rgba(2,6,23,0.5)',
+                        color: '#fff',
+                    }}
+                >
+                    Chi tiết
+                </Button>
+            </div>
 
-                    {order.status !== 'cancelled' && order.status !== 'cancel' && (
-                        <Popconfirm
-                            title={
-                                <div style={{ padding: '8px 0' }}>
-                                    <div
-                                        style={{
-                                            fontSize: '1rem',
-                                            fontWeight: '600',
-                                            color: '#dc2626',
-                                            marginBottom: '4px',
-                                        }}
-                                    >
-                                        ⚠️ Xác nhận hủy đơn hàng
-                                    </div>
-                                    <div style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                                        Bạn có chắc muốn hủy đơn hàng #{order.id}?
-                                    </div>
+            {/* Nút Hủy (nếu chưa hủy) */}
+            <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                {!String(order?.status || '')
+                    .toLowerCase()
+                    .includes('cancel') && (
+                    <Popconfirm
+                        title={
+                            <div style={{ padding: '6px 0' }}>
+                                <div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>
+                                    ⚠️ Xác nhận hủy đơn hàng
                                 </div>
-                            }
-                            okText="Hủy đơn"
-                            cancelText="Không"
-                            okButtonProps={{
-                                style: {
-                                    background: '#dc2626',
-                                    borderColor: '#dc2626',
-                                    borderRadius: '8px',
-                                },
+                                <div style={{ color: '#475569' }}>Bạn có chắc muốn hủy đơn hàng #{order.id}?</div>
+                            </div>
+                        }
+                        okText="Hủy"
+                        cancelText="Không"
+                        okButtonProps={{ style: { background: '#ef4444', borderColor: '#ef4444', borderRadius: 10 } }}
+                        cancelButtonProps={{ style: { borderRadius: 10 } }}
+                        onConfirm={handleCancelOrder}
+                    >
+                        <Button
+                            danger
+                            style={{
+                                ...PILL,
+                                background: '#fff',
+                                color: '#ef4444',
+                                border: '1px solid rgba(239,68,68,.35)',
                             }}
-                            cancelButtonProps={{
-                                style: { borderRadius: '8px' },
-                            }}
-                            onConfirm={handleCancelOrder}
                         >
-                            <Button
-                                danger
-                                style={{
-                                    borderRadius: '12px',
-                                    height: '40px',
-                                    fontSize: '0.875rem',
-                                    fontWeight: '500',
-                                    background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
-                                    borderColor: '#fca5a5',
-                                    color: '#dc2626',
-                                }}
-                            >
-                                ❌ Hủy đơn
-                            </Button>
-                        </Popconfirm>
-                    )}
-                </div>
+                            Hủy
+                        </Button>
+                    </Popconfirm>
+                )}
             </div>
         </div>
     );

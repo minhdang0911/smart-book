@@ -32,7 +32,7 @@ export const handleAddToCartHelper = async ({
             }
             window.dispatchEvent(new CustomEvent('cartUpdated'));
         } else {
-            toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
+            // toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
         }
     } catch (error) {
         toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);

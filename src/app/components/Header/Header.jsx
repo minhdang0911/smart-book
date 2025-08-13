@@ -899,8 +899,8 @@ const Header = () => {
                                     <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
                                         <div className="user-profile">
                                             <Avatar
-                                                icon={<UserOutlined />}
-                                                src={user?.avatar}
+                                                icon={user?.avatar_url ? null : <UserOutlined />}
+                                                src={user?.avatar_url || null}
                                                 size="default"
                                                 className="user-avatar"
                                             />
@@ -1020,7 +1020,11 @@ const Header = () => {
                             {user ? (
                                 <div className="drawer-user-logged">
                                     <div className="drawer-user-profile">
-                                        <Avatar icon={<UserOutlined />} src={user?.avatar} size="large" />
+                                        <Avatar
+                                            icon={user?.avatar_url ? null : <UserOutlined />}
+                                            src={user?.avatar_url || null}
+                                            size="large"
+                                        />
                                         <div className="drawer-user-info">
                                             <div className="drawer-user-name">{user.name}</div>
                                             <div className="drawer-user-role">Thành viên</div>
