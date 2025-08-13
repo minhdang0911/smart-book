@@ -28,7 +28,6 @@ import {
     Button,
     Card,
     Col,
-    Collapse,
     Descriptions,
     Divider,
     Empty,
@@ -48,7 +47,7 @@ import {
 } from 'antd';
 import { marked } from 'marked';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import ReactImageMagnify from 'react-image-magnify';
 import { toast } from 'react-toastify';
 
@@ -1336,12 +1335,18 @@ const BookDetailPage = () => {
     // Render description với chức năng show more/less
     const renderDescription = () => {
         const description = book?.description || 'Chưa có mô tả';
-        const maxLength = 300; // Số ký tự tối đa hiển thị ban đầu
+        const maxLength = 200; // Giảm xuống để phù hợp với layout
 
         if (description.length <= maxLength) {
             // Nếu mô tả ngắn, hiển thị toàn bộ
             return (
                 <div
+                    style={{
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        color: '#555',
+                        marginTop: '16px',
+                    }}
                     dangerouslySetInnerHTML={{
                         __html: marked(description),
                     }}
@@ -1353,30 +1358,36 @@ const BookDetailPage = () => {
         const shortDescription = showFullDescription ? description : description.substring(0, maxLength) + '...';
 
         return (
-            <div>
+            <div style={{ marginTop: '16px' }}>
                 <div
+                    style={{
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        color: '#555',
+                    }}
                     dangerouslySetInnerHTML={{
                         __html: marked(shortDescription),
                     }}
                 />
-                <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                <div style={{ marginTop: '8px' }}>
                     <Button
                         type="link"
                         onClick={() => setShowFullDescription(!showFullDescription)}
                         style={{
                             padding: 0,
-                            fontSize: '14px',
+                            fontSize: '12px',
                             color: '#1890ff',
+                            height: 'auto',
                         }}
                     >
                         {showFullDescription ? (
                             <>
-                                <UpOutlined style={{ marginRight: '4px' }} />
+                                <UpOutlined style={{ marginRight: '4px', fontSize: '10px' }} />
                                 Thu gọn
                             </>
                         ) : (
                             <>
-                                <DownOutlined style={{ marginRight: '4px' }} />
+                                <DownOutlined style={{ marginRight: '4px', fontSize: '10px' }} />
                                 Xem thêm
                             </>
                         )}
@@ -1442,30 +1453,37 @@ const BookDetailPage = () => {
 
                 {/* Middle Column - Book Info */}
                 <Col xs={24} md={12} lg={12}>
-                    <Card bordered={false}>
-                        <Title level={2} style={{ marginBottom: '16px' }}>
+                    <Card bordered={false} style={{ height: '100%' }}>
+                        <Title level={2} style={{ marginBottom: '16px', fontSize: '20px' }}>
                             {book.title}
                         </Title>
 
-                        <Descriptions column={1} size="small" style={{ marginBottom: '24px' }}>
+                        <Descriptions column={1} size="small" style={{ marginBottom: '16px' }}>
                             <Descriptions.Item label="Tác giả">
-                                <Text strong>{getAuthorName(book?.author)}</Text>
+                                <Text strong style={{ fontSize: '14px' }}>
+                                    {getAuthorName(book?.author)}
+                                </Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="Thể loại">
-                                <Tag color="blue">{getCategoryName(book?.category)}</Tag>
+                                <Tag color="blue" style={{ fontSize: '12px' }}>
+                                    {getCategoryName(book?.category)}
+                                </Tag>
                             </Descriptions.Item>
                             <Descriptions.Item label="Năm xuất bản">
-                                <Text>{book?.publication_year || 'Không rõ'}</Text>
+                                <Text style={{ fontSize: '14px' }}>{book?.publication_year || 'Không rõ'}</Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="Định dạng">
-                                <Tag color={book?.is_physical === 0 ? 'green' : 'orange'}>
+                                <Tag color={book?.is_physical === 0 ? 'green' : 'orange'} style={{ fontSize: '12px' }}>
                                     {book?.is_physical === 0 ? 'Sách điện tử' : 'Sách giấy'}
                                 </Tag>
                             </Descriptions.Item>
                             {/* Hiển thị tình trạng tồn kho cho sách giấy */}
                             {book?.is_physical === 1 && (
                                 <Descriptions.Item label="Tình trạng">
-                                    <Tag color={book?.stock > 10 ? 'green' : book?.stock > 0 ? 'orange' : 'red'}>
+                                    <Tag
+                                        color={book?.stock > 10 ? 'green' : book?.stock > 0 ? 'orange' : 'red'}
+                                        style={{ fontSize: '12px' }}
+                                    >
                                         {book?.stock === 0 ? 'Hết hàng' : `Còn ${book.stock} cuốn`}
                                     </Tag>
                                 </Descriptions.Item>
@@ -1479,19 +1497,21 @@ const BookDetailPage = () => {
                                 description="Sản phẩm tạm thời không có sẵn. Vui lòng liên hệ để được tư vấn."
                                 type="warning"
                                 icon={<WarningOutlined />}
-                                style={{ marginBottom: '24px' }}
+                                style={{ marginBottom: '16px' }}
                                 showIcon
+                                size="small"
                             />
                         )}
 
                         {/* Stats */}
-                        <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                        <Row gutter={[8, 8]} style={{ marginBottom: '16px' }}>
                             {renderStats().map((stat, index) => (
                                 <Col span={8} key={index}>
-                                    <Card size="small" style={{ textAlign: 'center' }}>
-                                        <Space>
-                                            {stat.prefix}
-                                            <Text style={{ color: stat.color }}>
+                                    <Card size="small" style={{ textAlign: 'center', fontSize: '12px' }}>
+                                        <Space size="small">
+                                            {stat.prefix &&
+                                                React.cloneElement(stat.prefix, { style: { fontSize: '12px' } })}
+                                            <Text style={{ color: stat.color, fontSize: '12px' }}>
                                                 {stat.title && `${stat.title}: `}
                                                 {stat.value}
                                             </Text>
@@ -1501,16 +1521,13 @@ const BookDetailPage = () => {
                             ))}
                         </Row>
 
-                        {/* Description */}
-                        <Collapse ghost>
-                            <Collapse.Panel
-                                header={<Text strong>Mô tả sách</Text>}
-                                key="1"
-                                extra={<CaretRightOutlined />}
-                            >
-                                {renderDescription()}
-                            </Collapse.Panel>
-                        </Collapse>
+                        {/* Description - Hiển thị trực tiếp không dùng Collapse */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <Text strong style={{ fontSize: '16px', display: 'block', marginBottom: '8px' }}>
+                                Mô tả sách
+                            </Text>
+                            {renderDescription()}
+                        </div>
                     </Card>
                 </Col>
 

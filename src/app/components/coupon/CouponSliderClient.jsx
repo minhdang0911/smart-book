@@ -8,13 +8,26 @@ const CouponSliderClient = ({ coupons, error }) => {
     const [startX, setStartX] = useState(0);
     const [currentX, setCurrentX] = useState(0);
     const [translateX, setTranslateX] = useState(0);
+    const [isPaused, setIsPaused] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
 
     const trackRef = useRef(null);
     const containerRef = useRef(null);
+    const autoPlayRef = useRef(null);
 
-    const slidesToShow = 4;
-    const slideWidth = 288; // 280px + 8px padding
-    const maxSlides = Math.max(0, coupons.length - slidesToShow);
+    // Lọc ra những mã giảm giá hợp lệ (chưa hết hạn hoặc hết hạn chưa quá 1 ngày)
+    const validCoupons = coupons.filter((coupon) => {
+        const currentDate = new Date();
+        const expireDate = new Date(coupon.end_date);
+        const oneDayAfterExpire = new Date(expireDate.getTime() + 24 * 60 * 60 * 1000); // Thêm 1 ngày
+
+        return currentDate <= oneDayAfterExpire; // Chỉ hiển thị nếu chưa quá 1 ngày sau khi hết hạn
+    });
+
+    // Responsive: desktop hiển thị 4, mobile hiển thị 2
+    const slidesToShow = isMobile ? 2 : 4;
+    const slideWidth = isMobile ? 280 : 288; // Mobile: 272px + 8px padding, Desktop: 280px + 8px padding
+    const maxSlides = Math.max(0, validCoupons.length - slidesToShow);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', {
@@ -23,11 +36,64 @@ const CouponSliderClient = ({ coupons, error }) => {
         }).format(amount);
     };
 
-    // Kiểm tra coupon có hết hạn không
+    // Detect mobile device
+    useEffect(() => {
+        const checkIsMobile = () => {
+            setIsMobile(window.innerWidth <= 768);
+        };
+
+        checkIsMobile();
+        window.addEventListener('resize', checkIsMobile);
+
+        return () => {
+            window.removeEventListener('resize', checkIsMobile);
+        };
+    }, []);
+
+    // Auto-play functionality
+    const startAutoPlay = () => {
+        if (maxSlides > 0) {
+            autoPlayRef.current = setInterval(() => {
+                if (!isPaused && !isDragging) {
+                    setCurrentSlide((prev) => {
+                        const nextSlide = prev >= maxSlides ? 0 : prev + 1;
+                        return nextSlide;
+                    });
+                }
+            }, 3000);
+        }
+    };
+
+    const stopAutoPlay = () => {
+        if (autoPlayRef.current) {
+            clearInterval(autoPlayRef.current);
+            autoPlayRef.current = null;
+        }
+    };
+
+    // Start/Stop auto-play
+    useEffect(() => {
+        startAutoPlay();
+        return () => stopAutoPlay();
+    }, [maxSlides, isPaused, isDragging]);
+
+    // Update slider position when currentSlide changes
+    useEffect(() => {
+        updateSliderPosition(currentSlide, true);
+    }, [currentSlide]);
     const isCouponExpired = (endDate) => {
         const currentDate = new Date();
         const expireDate = new Date(endDate);
         return expireDate < currentDate;
+    };
+
+    // Kiểm tra coupon có hết hạn quá 1 ngày không
+    const isCouponExpiredOverOneDay = (endDate) => {
+        const currentDate = new Date();
+        const expireDate = new Date(endDate);
+        const oneDayAfterExpire = new Date(expireDate.getTime() + 24 * 60 * 60 * 1000);
+
+        return currentDate > oneDayAfterExpire;
     };
 
     const handleCopyCoupon = async (couponCode, e) => {
@@ -62,6 +128,7 @@ const CouponSliderClient = ({ coupons, error }) => {
             setIsDragging(true);
             setStartX(clientX);
             setCurrentX(clientX);
+            setIsPaused(true); // Pause auto-play when dragging
             trackRef.current.style.transition = 'none';
         }
     };
@@ -91,6 +158,7 @@ const CouponSliderClient = ({ coupons, error }) => {
         if (!isDragging) return;
 
         setIsDragging(false);
+        setIsPaused(false); // Resume auto-play after dragging
 
         const diff = currentX - startX;
         const threshold = slideWidth * 0.3; // 30% of slide width
@@ -164,10 +232,18 @@ const CouponSliderClient = ({ coupons, error }) => {
 
     // Initialize position
     useEffect(() => {
-        if (coupons.length > 0) {
+        if (validCoupons.length > 0) {
             updateSliderPosition(0, false);
         }
-    }, [coupons]);
+    }, [validCoupons, isMobile]);
+
+    // Reset slide khi số lượng coupon thay đổi hoặc responsive change
+    useEffect(() => {
+        if (currentSlide > maxSlides) {
+            setCurrentSlide(maxSlides);
+            updateSliderPosition(maxSlides, true);
+        }
+    }, [maxSlides, currentSlide]);
 
     // Inject CSS
     useEffect(() => {
@@ -414,12 +490,16 @@ const CouponSliderClient = ({ coupons, error }) => {
             }
             
             .coupon-slide {
-              width: 260px;
+              width: 272px;
             }
             
             .coupon-card {
               padding: 20px;
               height: 140px;
+            }
+
+            .slider-hint {
+              display: none;
             }
           }
         `;
@@ -442,7 +522,7 @@ const CouponSliderClient = ({ coupons, error }) => {
         );
     }
 
-    if (coupons.length === 0) {
+    if (validCoupons.length === 0) {
         return (
             <div className="coupon-slider">
                 <div className="slider-header">
@@ -457,22 +537,27 @@ const CouponSliderClient = ({ coupons, error }) => {
         <div className="coupon-slider">
             <div className="slider-header">
                 <h2 className="slider-title">Mã giảm giá</h2>
-                <div className="slider-hint">Kéo để xem thêm →</div>
+                <div className="slider-hint">{isMobile ? 'Vuốt để xem thêm →' : 'Kéo để xem thêm →'}</div>
             </div>
 
-            <div ref={containerRef} className="slider-container">
+            <div
+                ref={containerRef}
+                className="slider-container"
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+            >
                 <div
                     ref={trackRef}
                     className={`slider-track ${isDragging ? 'dragging' : ''}`}
                     style={{
-                        width: `${coupons.length * slideWidth}px`,
+                        width: `${validCoupons.length * slideWidth}px`,
                     }}
                     onMouseDown={handleMouseDown}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                 >
-                    {coupons.map((coupon) => {
+                    {validCoupons.map((coupon) => {
                         const isExpired = isCouponExpired(coupon.end_date);
                         return (
                             <div key={coupon.id} className="coupon-slide">

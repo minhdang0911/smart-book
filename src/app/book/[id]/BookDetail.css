@@ -12,6 +12,13 @@
     margin: 0 auto;
 }
 
+/* Fix cho ant-card-body */
+.ant-card-body {
+    padding: 16px !important; /* Giảm padding để fit layout */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
 /* Loading spinner */
 .loading-spinner {
     display: flex;
@@ -39,7 +46,7 @@
 }
 
 .book-hero-card .ant-card-body {
-    padding: 32px;
+    padding: 20px !important; /* Giảm padding */
 }
 
 /* Book Cover - Fixed Layout */
@@ -51,7 +58,7 @@
 
 .book-image-container {
     width: 100%;
-    max-width: 300px;
+    max-width: 280px; /* Giảm kích thước */
 }
 
 .main-image-wrapper {
@@ -72,10 +79,10 @@
 /* Thumbnail Container - Horizontal Layout */
 .thumbnail-container {
     display: flex;
-    gap: 8px;
+    gap: 6px; /* Giảm gap */
     overflow-x: auto;
     padding: 4px 0;
-    margin-top: 12px;
+    margin-top: 8px; /* Giảm margin */
 }
 
 .thumbnail-container::-webkit-scrollbar {
@@ -97,9 +104,9 @@
 }
 
 .thumbnail-image {
-    flex: 0 0 60px;
-    width: 60px;
-    height: 75px;
+    flex: 0 0 50px; /* Giảm kích thước */
+    width: 50px;
+    height: 65px;
     object-fit: cover;
     border-radius: 6px;
     cursor: pointer;
@@ -123,19 +130,22 @@
 
 /* Book Info Section */
 .book-info-section {
-    padding: 20px;
+    padding: 16px; /* Giảm padding */
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
 }
 
 .book-meta {
-    margin-bottom: 20px;
+    margin-bottom: 16px; /* Giảm margin */
     flex-wrap: wrap;
 }
 
 .meta-text {
-    font-size: 15px;
+    font-size: 14px; /* Giảm font size */
     color: #595959;
 }
 
@@ -144,12 +154,12 @@
 }
 
 .book-category-section {
-    margin-bottom: 20px;
+    margin-bottom: 16px; /* Giảm margin */
 }
 
 .category-tag {
-    font-size: 14px;
-    padding: 4px 12px;
+    font-size: 12px; /* Giảm font size */
+    padding: 2px 8px;
     height: auto;
     line-height: 1.5;
     border-radius: 16px;
@@ -161,9 +171,9 @@
 .book-stats {
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
-    margin-bottom: 24px;
-    padding: 16px;
+    gap: 12px; /* Giảm gap */
+    margin-bottom: 16px; /* Giảm margin */
+    padding: 12px; /* Giảm padding */
     background: #fafafa;
     border-radius: 8px;
     border: 1px solid #f0f0f0;
@@ -173,23 +183,52 @@
     color: #262626;
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 15px;
+    gap: 4px; /* Giảm gap */
+    font-size: 13px; /* Giảm font size */
     min-width: fit-content;
 }
 
 .stat-prefix {
     color: #8c8c8c;
+    font-size: 12px;
 }
 
 .stat-title {
     color: #262626;
     font-weight: 600;
+    font-size: 12px;
 }
 
 .stat-value {
     color: #595959;
     font-weight: 500;
+    font-size: 12px;
+}
+
+/* Description styles */
+.book-description {
+    font-size: 14px !important;
+    line-height: 1.6 !important;
+    color: #555 !important;
+    text-align: justify;
+    margin: 0 !important;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+}
+
+.book-description p {
+    margin-bottom: 8px;
+    font-size: 14px;
+    line-height: 1.6;
+}
+
+.book-description h1,
+.book-description h2,
+.book-description h3 {
+    font-size: 16px;
+    margin: 8px 0 4px 0;
+    color: #333;
 }
 
 /* Price Section */
@@ -197,44 +236,44 @@
     background: #fff2e8;
     border: 1px solid #ffbb96;
     border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 24px;
+    padding: 12px; /* Giảm padding */
+    margin-bottom: 16px; /* Giảm margin */
 }
 
 .price-wrapper {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px; /* Giảm gap */
 }
 
 .current-price {
-    font-size: 24px !important;
+    font-size: 20px !important; /* Giảm font size */
     font-weight: bold;
     color: #fa541c;
 }
 
 .original-price {
-    font-size: 16px !important;
+    font-size: 14px !important; /* Giảm font size */
     color: #8c8c8c;
 }
 
 .discount-tag {
-    font-size: 12px;
+    font-size: 10px; /* Giảm font size */
     font-weight: bold;
     margin: 0;
 }
 
 /* Quantity Selector */
 .quantity-selector-section {
-    margin: 24px 0;
-    padding: 20px;
+    margin: 16px 0; /* Giảm margin */
+    padding: 16px; /* Giảm padding */
     background: #fafafa;
     border-radius: 8px;
     border: 1px solid #f0f0f0;
 }
 
 .quantity-label {
-    font-size: 16px;
+    font-size: 14px; /* Giảm font size */
     color: #262626;
 }
 
@@ -248,8 +287,8 @@
 
 .quantity-btn {
     border: none;
-    height: 42px;
-    width: 42px;
+    height: 36px; /* Giảm height */
+    width: 36px; /* Giảm width */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -271,27 +310,27 @@
 }
 
 .quantity-input {
-    width: 70px;
+    width: 60px; /* Giảm width */
     text-align: center;
     border: none;
     border-left: 1px solid #d9d9d9;
     border-right: 1px solid #d9d9d9;
     border-radius: 0;
-    height: 42px;
-    font-size: 16px;
+    height: 36px; /* Giảm height */
+    font-size: 14px; /* Giảm font size */
     font-weight: 500;
 }
 
 .stock-info {
-    font-size: 14px;
+    font-size: 12px; /* Giảm font size */
     color: #8c8c8c;
     font-weight: normal;
 }
 
 /* Action Buttons */
 .action-buttons-section {
-    margin-top: 24px;
-    padding: 20px 0;
+    margin-top: 16px; /* Giảm margin */
+    padding: 16px 0; /* Giảm padding */
     border-top: 1px solid #f0f0f0;
 }
 
@@ -303,6 +342,8 @@
     border-radius: 8px;
     font-weight: 500;
     transition: all 0.3s ease;
+    font-size: 14px; /* Giảm font size */
+    height: 36px; /* Giảm height */
 }
 
 .action-buttons .ant-btn-primary {
@@ -342,26 +383,18 @@
 }
 
 .description-card .ant-card-head-title {
-    font-size: 18px;
+    font-size: 16px; /* Giảm font size */
     font-weight: 600;
     color: #333;
 }
 
-.book-description {
-    font-size: 16px;
-    line-height: 1.8;
-    color: #555;
-    text-align: justify;
-    margin: 0;
-}
-
 /* Related Books Section */
 .related-books-section {
-    margin-top: 32px;
+    margin-top: 24px; /* Giảm margin */
 }
 
 .related-card {
-    margin-bottom: 24px;
+    margin-bottom: 16px; /* Giảm margin */
     border-radius: 16px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     background: rgba(255, 255, 255, 0.9);
@@ -380,7 +413,7 @@
 }
 
 .related-card .ant-card-head-title {
-    font-size: 18px;
+    font-size: 16px; /* Giảm font size */
     font-weight: 600;
     color: #333;
 }
@@ -423,29 +456,30 @@
 /* Responsive Design */
 @media (max-width: 768px) {
     .book-detail-container {
-        padding: 16px;
+        padding: 12px;
     }
 
     .book-hero-card .ant-card-body {
-        padding: 20px;
+        padding: 16px !important;
     }
 
     .book-info-section {
-        margin-top: 24px;
+        margin-top: 16px;
+        padding: 12px !important;
     }
 
     .book-title {
-        font-size: 24px !important;
+        font-size: 18px !important;
     }
 
     .book-image-container {
-        max-width: 200px;
+        max-width: 180px;
     }
 
     .thumbnail-image {
-        flex: 0 0 50px;
-        width: 50px;
-        height: 65px;
+        flex: 0 0 40px;
+        width: 40px;
+        height: 55px;
     }
 
     .action-buttons-section {
@@ -453,36 +487,50 @@
     }
 
     .meta-text {
-        font-size: 14px;
+        font-size: 12px;
+    }
+
+    .ant-card-body {
+        padding: 12px !important;
     }
 }
 
 @media (max-width: 576px) {
     .book-detail-container {
-        padding: 12px;
+        padding: 8px;
     }
 
     .book-hero-card .ant-card-body {
-        padding: 16px;
+        padding: 12px !important;
     }
 
     .book-title {
-        font-size: 20px !important;
+        font-size: 16px !important;
     }
 
     .book-image-container {
-        max-width: 160px;
+        max-width: 150px;
     }
 
     .thumbnail-image {
-        flex: 0 0 45px;
-        width: 45px;
-        height: 60px;
+        flex: 0 0 35px;
+        width: 35px;
+        height: 50px;
     }
 
     .action-buttons .ant-btn {
         width: 100%;
         margin-bottom: 8px;
+        font-size: 12px;
+        height: 32px;
+    }
+
+    .ant-card-body {
+        padding: 8px !important;
+    }
+
+    .book-description {
+        font-size: 12px !important;
     }
 }
 
