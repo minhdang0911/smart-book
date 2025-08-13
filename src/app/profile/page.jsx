@@ -1,14 +1,7 @@
-// pages/ProfilePage.js - File chính hoàn chỉnh với ChangePassword
+// pages/ProfilePage.js - Full code với giao diện đơn giản
 'use client';
-import {
-    BankFilled,
-    CheckCircleOutlined,
-    EyeInvisibleOutlined,
-    EyeTwoTone,
-    FilterFilled,
-    KeyOutlined,
-} from '@ant-design/icons';
-import { Alert, Button, Card, Col, Divider, Form, Input, Layout, message, Row, Space, Typography } from 'antd';
+import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
+import { Button, Card, Col, Divider, Form, Input, Row, Typography } from 'antd';
 import { useState } from 'react';
 
 // Import Hooks
@@ -16,19 +9,17 @@ import { useAuth } from '../hooks/useAuth';
 
 // Import Components
 import FavoriteBooks from './FavoriteBooks/FavoriteBooks';
-import MobileDrawer from './Layout/MobileDrawer';
-import MobileHeader from './Layout/MobileHeader';
 import ProfileSidebar from './Layout/ProfileSidebar';
 import OrderHistory from './OrderHistory/OrderHistory';
 import PersonalInfo from './PersonalInfo';
 
 // Import Styles
+import { toast } from 'react-toastify';
 import './style.css';
 
-const { Sider, Content, Header } = Layout;
 const { Title, Text, Paragraph } = Typography;
 
-// Change Password Component inline
+// Change Password Component - Giao diện đơn giản tone trắng đen
 const ChangePassword = ({ token }) => {
     const [form] = Form.useForm();
     const [loading, setLoading] = useState(false);
@@ -56,10 +47,10 @@ const ChangePassword = ({ token }) => {
         if (/[^A-Za-z0-9]/.test(password)) score++;
         else feedback.push('Có ký tự đặc biệt');
 
-        if (score <= 2) return { level: 'weak', text: 'Yếu', color: '#ff4d4f', feedback };
-        if (score <= 3) return { level: 'medium', text: 'Trung bình', color: '#faad14', feedback };
-        if (score <= 4) return { level: 'good', text: 'Tốt', color: '#52c41a', feedback };
-        return { level: 'strong', text: 'Rất mạnh', color: '#389e0d', feedback: [] };
+        if (score <= 2) return { level: 'weak', text: 'Yếu', color: '#999', feedback };
+        if (score <= 3) return { level: 'medium', text: 'Trung bình', color: '#666', feedback };
+        if (score <= 4) return { level: 'good', text: 'Tốt', color: '#333', feedback };
+        return { level: 'strong', text: 'Rất mạnh', color: '#000', feedback: [] };
     };
 
     const handlePasswordChange = (e) => {
@@ -72,7 +63,7 @@ const ChangePassword = ({ token }) => {
         const token = localStorage?.getItem('token');
 
         try {
-            const response = await fetch('http://localhost:8000/api/user/change-password', {
+            const response = await fetch('https://smartbook.io.vn/api/user/change-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -87,25 +78,18 @@ const ChangePassword = ({ token }) => {
             });
 
             const data = await response.json();
-            if (data?.success === true) {
-                window.message.success('Đổi mật khẩu thành công!');
+            console.log('data', data);
+
+            if (data.success) {
+                toast.success('Đổi mật khẩu thành công!');
                 form.resetFields();
                 setPasswordStrength('');
-            }
-
-            if (!response.ok) {
-                if (response.status === 422) {
-                    const errors = data.errors || {};
-                    const errorMessages = Object.values(errors).flat();
-                    throw new Error(errorMessages.join(', ') || 'Dữ liệu không hợp lệ');
-                } else if (response.status === 401) {
-                    throw new Error('Mật khẩu hiện tại không đúng');
-                } else {
-                    throw new Error(data.message || 'Không thể đổi mật khẩu');
-                }
+            } else {
+                toast.error(data.message || 'Đổi mật khẩu thất bại');
             }
         } catch (error) {
-            message.error(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
+            console.error(error);
+            toast.error('Có lỗi xảy ra khi đổi mật khẩu');
         } finally {
             setLoading(false);
         }
@@ -121,97 +105,156 @@ const ChangePassword = ({ token }) => {
     });
 
     return (
-        <div style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
-            <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-                {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-                    <div
-                        style={{
-                            background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                            WebkitBackgroundClip: 'text',
-                            WebkitTextFillColor: 'transparent',
-                            backgroundClip: 'text',
-                        }}
-                    >
-                        <Title level={2} style={{ marginBottom: '8px' }}>
-                            🔐 Đổi mật khẩu
-                        </Title>
-                    </div>
-                    <Paragraph style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
-                        Bảo vệ tài khoản của bạn bằng mật khẩu mạnh
-                    </Paragraph>
-                </div>
+        <div
+            style={{
+                padding: '0',
+                background: '#fff',
+                minHeight: 'calc(100vh - 64px)',
+            }}
+        >
+            {/* Header đơn giản */}
+            <div
+                style={{
+                    borderBottom: '1px solid #e5e5e5',
+                    padding: '24px 32px',
+                    background: '#fff',
+                }}
+            >
+                <Title
+                    level={3}
+                    style={{
+                        margin: 0,
+                        color: '#000',
+                        fontWeight: '600',
+                    }}
+                >
+                    Đổi mật khẩu
+                </Title>
+                <Text
+                    style={{
+                        fontSize: '14px',
+                        color: '#666',
+                        marginTop: '4px',
+                        display: 'block',
+                    }}
+                >
+                    Thay đổi mật khẩu để bảo vệ tài khoản của bạn
+                </Text>
+            </div>
 
-                <Row gutter={[24, 24]}>
+            {/* Content */}
+            <div style={{ padding: '32px' }}>
+                <Row gutter={[32, 32]}>
                     {/* Form đổi mật khẩu */}
-                    <Col xs={24} lg={14}>
+                    <Col xs={24} lg={16}>
                         <Card
                             style={{
-                                borderRadius: '16px',
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                border: '1px solid rgba(102, 126, 234, 0.1)',
+                                border: '1px solid #e5e5e5',
+                                borderRadius: '8px',
+                                boxShadow: 'none',
                             }}
+                            bodyStyle={{ padding: '32px' }}
                         >
-                            <div style={{ marginBottom: '24px' }}>
-                                <Space align="center" style={{ marginBottom: '8px' }}>
-                                    <KeyOutlined style={{ color: '#667eea', fontSize: '20px' }} />
-                                    <Title level={4} style={{ margin: 0, color: '#1a1a1a' }}>
-                                        Thay đổi mật khẩu
-                                    </Title>
-                                </Space>
-                                <Text type="secondary">Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi</Text>
+                            <div style={{ marginBottom: '32px' }}>
+                                <Title
+                                    level={4}
+                                    style={{
+                                        margin: 0,
+                                        color: '#000',
+                                        fontWeight: '500',
+                                    }}
+                                >
+                                    Thông tin mật khẩu
+                                </Title>
+                                <Text
+                                    style={{
+                                        color: '#666',
+                                        fontSize: '14px',
+                                        marginTop: '8px',
+                                        display: 'block',
+                                    }}
+                                >
+                                    Nhập mật khẩu hiện tại và mật khẩu mới
+                                </Text>
                             </div>
 
                             <Form form={form} layout="vertical" onFinish={onFinish} autoComplete="off" size="large">
                                 {/* Mật khẩu hiện tại */}
                                 <Form.Item
                                     name="currentPassword"
-                                    label="Mật khẩu hiện tại"
+                                    label={<span style={{ color: '#000', fontWeight: '500' }}>Mật khẩu hiện tại</span>}
                                     rules={[{ required: true, message: 'Vui lòng nhập mật khẩu hiện tại!' }]}
+                                    style={{ marginBottom: '24px' }}
                                 >
                                     <Input.Password
-                                        prefix={<FilterFilled style={{ color: '#667eea' }} />}
                                         placeholder="Nhập mật khẩu hiện tại"
                                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                                        style={{ borderRadius: '8px' }}
+                                        style={{
+                                            borderRadius: '6px',
+                                            border: '1px solid #d9d9d9',
+                                        }}
                                     />
                                 </Form.Item>
 
-                                <Divider />
+                                <Divider style={{ margin: '32px 0', borderColor: '#f0f0f0' }} />
 
                                 {/* Mật khẩu mới */}
                                 <Form.Item
                                     name="newPassword"
-                                    label="Mật khẩu mới"
+                                    label={<span style={{ color: '#000', fontWeight: '500' }}>Mật khẩu mới</span>}
                                     rules={[
                                         { required: true, message: 'Vui lòng nhập mật khẩu mới!' },
                                         { min: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự!' },
                                     ]}
+                                    style={{ marginBottom: '16px' }}
                                 >
                                     <Input.Password
-                                        prefix={<BankFilled style={{ color: '#667eea' }} />}
                                         placeholder="Nhập mật khẩu mới"
                                         onChange={handlePasswordChange}
                                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                                        style={{ borderRadius: '8px' }}
+                                        style={{
+                                            borderRadius: '6px',
+                                            border: '1px solid #d9d9d9',
+                                        }}
                                     />
                                 </Form.Item>
 
                                 {/* Độ mạnh mật khẩu */}
                                 {passwordStrength && (
-                                    <div style={{ marginBottom: '16px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                                            <Text style={{ marginRight: '8px' }}>Độ mạnh:</Text>
-                                            <Text strong style={{ color: passwordStrength.color }}>
+                                    <div style={{ marginBottom: '24px' }}>
+                                        <div
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                marginBottom: '8px',
+                                            }}
+                                        >
+                                            <Text
+                                                style={{
+                                                    marginRight: '8px',
+                                                    fontSize: '14px',
+                                                    color: '#666',
+                                                }}
+                                            >
+                                                Độ mạnh:
+                                            </Text>
+                                            <Text
+                                                style={{
+                                                    color: passwordStrength.color,
+                                                    fontWeight: '500',
+                                                }}
+                                            >
                                                 {passwordStrength.text}
                                             </Text>
                                         </div>
+
                                         <div
                                             style={{
-                                                height: '4px',
-                                                background: '#f0f0f0',
-                                                borderRadius: '2px',
+                                                height: '6px',
+                                                background: '#f5f5f5',
+                                                borderRadius: '3px',
                                                 overflow: 'hidden',
+                                                border: '1px solid #e8e8e8',
                                             }}
                                         >
                                             <div
@@ -230,8 +273,16 @@ const ChangePassword = ({ token }) => {
                                                 }}
                                             />
                                         </div>
+
                                         {passwordStrength.feedback.length > 0 && (
-                                            <Text style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                            <Text
+                                                style={{
+                                                    fontSize: '12px',
+                                                    color: '#999',
+                                                    marginTop: '6px',
+                                                    display: 'block',
+                                                }}
+                                            >
                                                 Cần: {passwordStrength.feedback.join(', ')}
                                             </Text>
                                         )}
@@ -241,87 +292,127 @@ const ChangePassword = ({ token }) => {
                                 {/* Xác nhận mật khẩu */}
                                 <Form.Item
                                     name="confirmPassword"
-                                    label="Xác nhận mật khẩu mới"
+                                    label={
+                                        <span style={{ color: '#000', fontWeight: '500' }}>Xác nhận mật khẩu mới</span>
+                                    }
                                     dependencies={['newPassword']}
                                     rules={[
                                         { required: true, message: 'Vui lòng xác nhận mật khẩu mới!' },
                                         validateConfirmPassword,
                                     ]}
+                                    style={{ marginBottom: '32px' }}
                                 >
                                     <Input.Password
-                                        prefix={<CheckCircleOutlined style={{ color: '#667eea' }} />}
                                         placeholder="Nhập lại mật khẩu mới"
                                         iconRender={(visible) => (visible ? <EyeTwoTone /> : <EyeInvisibleOutlined />)}
-                                        style={{ borderRadius: '8px' }}
+                                        style={{
+                                            borderRadius: '6px',
+                                            border: '1px solid #d9d9d9',
+                                        }}
                                     />
                                 </Form.Item>
 
                                 {/* Submit Button */}
-                                <Form.Item style={{ marginBottom: 0, marginTop: '24px' }}>
+                                <Form.Item style={{ marginBottom: 0 }}>
                                     <Button
                                         type="primary"
                                         htmlType="submit"
                                         loading={loading}
-                                        block
                                         size="large"
                                         style={{
-                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            height: '48px',
-                                            fontSize: '16px',
+                                            background: '#000',
+                                            borderColor: '#000',
+                                            borderRadius: '6px',
+                                            height: '44px',
+                                            fontSize: '14px',
                                             fontWeight: '500',
+                                            minWidth: '140px',
                                         }}
                                     >
-                                        {loading ? 'Đang xử lý...' : '🔐 Đổi mật khẩu'}
+                                        {loading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
                                     </Button>
                                 </Form.Item>
                             </Form>
                         </Card>
                     </Col>
 
-                    {/* Security Tips */}
-                    <Col xs={24} lg={10}>
+                    {/* Security Tips - đơn giản hóa */}
+                    <Col xs={24} lg={8}>
                         <Card
                             style={{
-                                borderRadius: '16px',
-                                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                                background: 'linear-gradient(135deg, #f8fafc, #e2e8f0)',
+                                border: '1px solid #e5e5e5',
+                                borderRadius: '8px',
+                                boxShadow: 'none',
+                                background: '#fafafa',
                             }}
+                            bodyStyle={{ padding: '24px' }}
                         >
-                            <Title level={5} style={{ color: '#1a1a1a', marginBottom: '16px' }}>
-                                💡 Lời khuyên bảo mật
+                            <Title
+                                level={5}
+                                style={{
+                                    color: '#000',
+                                    marginBottom: '16px',
+                                    fontWeight: '500',
+                                }}
+                            >
+                                Lời khuyên bảo mật
                             </Title>
 
-                            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-                                <Alert
-                                    message="Mật khẩu mạnh nên có:"
-                                    description={
-                                        <ul style={{ margin: '8px 0 0 0', paddingLeft: '16px' }}>
-                                            <li>Ít nhất 8 ký tự</li>
-                                            <li>Chữ hoa và chữ thường</li>
-                                            <li>Số và ký tự đặc biệt</li>
-                                            <li>Không sử dụng thông tin cá nhân</li>
-                                        </ul>
-                                    }
-                                    type="info"
-                                    showIcon
-                                />
+                            <div style={{ marginBottom: '20px' }}>
+                                <Text
+                                    style={{
+                                        color: '#000',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        display: 'block',
+                                        marginBottom: '8px',
+                                    }}
+                                >
+                                    Mật khẩu mạnh cần có:
+                                </Text>
+                                <ul
+                                    style={{
+                                        margin: '0',
+                                        paddingLeft: '16px',
+                                        color: '#666',
+                                        fontSize: '14px',
+                                        lineHeight: '1.6',
+                                    }}
+                                >
+                                    <li>Ít nhất 8 ký tự</li>
+                                    <li>Chữ hoa và chữ thường</li>
+                                    <li>Số và ký tự đặc biệt</li>
+                                    <li>Không sử dụng thông tin cá nhân</li>
+                                </ul>
+                            </div>
 
-                                <Alert
-                                    message="Để bảo mật tối đa:"
-                                    description={
-                                        <ul style={{ margin: '8px 0 0 0', paddingLeft: '16px' }}>
-                                            <li>Thay đổi mật khẩu định kỳ</li>
-                                            <li>Không chia sẻ mật khẩu</li>
-                                            <li>Sử dụng mật khẩu khác nhau cho các tài khoản</li>
-                                            <li>Kích hoạt xác thực 2 bước nếu có</li>
-                                        </ul>
-                                    }
-                                    type="warning"
-                                    showIcon
-                                />
-                            </Space>
+                            <div>
+                                <Text
+                                    style={{
+                                        color: '#000',
+                                        fontWeight: '500',
+                                        fontSize: '14px',
+                                        display: 'block',
+                                        marginBottom: '8px',
+                                    }}
+                                >
+                                    Để bảo mật tối đa:
+                                </Text>
+                                <ul
+                                    style={{
+                                        margin: '0',
+                                        paddingLeft: '16px',
+                                        color: '#666',
+                                        fontSize: '14px',
+                                        lineHeight: '1.6',
+                                    }}
+                                >
+                                    <li>Thay đổi mật khẩu định kỳ</li>
+                                    <li>Không chia sẻ mật khẩu</li>
+                                    <li>Sử dụng mật khẩu khác nhau</li>
+                                    <li>Kích hoạt xác thực 2 bước</li>
+                                </ul>
+                            </div>
                         </Card>
                     </Col>
                 </Row>
@@ -332,20 +423,10 @@ const ChangePassword = ({ token }) => {
 
 const ProfilePage = () => {
     const [selectedKey, setSelectedKey] = useState('personal');
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
     const { user, loading: userLoading, token } = useAuth();
 
     const handleMenuSelect = (key) => {
         setSelectedKey(key);
-    };
-
-    const handleMobileMenuToggle = () => {
-        setMobileMenuOpen(true);
-    };
-
-    const handleMobileMenuClose = () => {
-        setMobileMenuOpen(false);
     };
 
     const renderContent = () => {
@@ -354,16 +435,14 @@ const ProfilePage = () => {
                 return <PersonalInfo user={user} token={token} />;
             case 'favorites':
                 return <FavoriteBooks token={token} enabled={selectedKey === 'favorites'} />;
-            case 'history':
-                return <OrderHistory token={token} enabled={selectedKey === 'history'} />;
+            case 'history1':
+                return <OrderHistory token={token} enabled={selectedKey === 'history1'} />;
             case 'change-password':
                 return <ChangePassword token={token} />;
             default:
                 return <PersonalInfo user={user} token={token} />;
         }
     };
-
-    console.log(selectedKey);
 
     if (userLoading) {
         return (
@@ -375,19 +454,20 @@ const ProfilePage = () => {
                     height: '100vh',
                     flexDirection: 'column',
                     gap: '16px',
+                    background: '#fff',
                 }}
             >
                 <div
                     style={{
-                        width: '40px',
-                        height: '40px',
-                        border: '4px solid #f3f3f3',
-                        borderTop: '4px solid #667eea',
+                        width: '32px',
+                        height: '32px',
+                        border: '3px solid #f3f3f3',
+                        borderTop: '3px solid #000',
                         borderRadius: '50%',
                         animation: 'spin 1s linear infinite',
                     }}
                 />
-                <div style={{ fontSize: '16px', color: '#666' }}>Đang tải thông tin người dùng...</div>
+                <div style={{ fontSize: '14px', color: '#666' }}>Đang tải...</div>
 
                 <style jsx>{`
                     @keyframes spin {
@@ -403,75 +483,16 @@ const ProfilePage = () => {
         );
     }
 
+    // Tạo userData để truyền vào ProfileSidebar
+    const userData = {
+        name: user?.name || 'Người dùng',
+        avatar: user?.avatar,
+    };
+
     return (
-        <>
-            <div className="profile-page">
-                <Layout>
-                    {/* Mobile Header */}
-                    <Header className="mobile-header" style={{ display: 'block' }}>
-                        <MobileHeader onMenuToggle={handleMobileMenuToggle} />
-                    </Header>
-
-                    {/* Mobile Drawer */}
-                    <MobileDrawer
-                        open={mobileMenuOpen}
-                        onClose={handleMobileMenuClose}
-                        user={user}
-                        selectedKey={selectedKey}
-                        onMenuSelect={handleMenuSelect}
-                    />
-
-                    <Layout hasSider>
-                        {/* Desktop Sidebar */}
-                        <Sider
-                            width={300}
-                            className="custom-sider"
-                            style={{
-                                height: '100vh',
-                                position: 'fixed',
-                                left: 0,
-                                top: 0,
-                                zIndex: 100,
-                                display: 'none',
-                            }}
-                        >
-                            <ProfileSidebar user={user} selectedKey={selectedKey} onMenuSelect={handleMenuSelect} />
-                        </Sider>
-
-                        <Layout style={{ marginLeft: 0 }}>
-                            <Content style={{ background: 'transparent', minHeight: '100vh' }}>
-                                {renderContent()}
-                            </Content>
-                        </Layout>
-                    </Layout>
-                </Layout>
-            </div>
-
-            <style jsx>{`
-                @media (min-width: 992px) {
-                    .mobile-header {
-                        display: none !important;
-                    }
-                    .custom-sider {
-                        display: block !important;
-                    }
-                    .ant-layout {
-                        margin-left: 300px !important;
-                    }
-                }
-
-                .profile-page {
-                    min-height: 100vh;
-                    background: #f5f5f5;
-                }
-
-                @media (max-width: 991px) {
-                    .profile-page {
-                        padding-top: 64px;
-                    }
-                }
-            `}</style>
-        </>
+        <ProfileSidebar user={userData} selectedKey={selectedKey} onMenuSelect={handleMenuSelect}>
+            {renderContent()}
+        </ProfileSidebar>
     );
 };
 
