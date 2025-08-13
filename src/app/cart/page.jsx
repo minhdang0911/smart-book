@@ -746,7 +746,7 @@ const Cart = () => {
                             )}
                         </div>
 
-                        <div className="cart-header-row desktop-only">
+                        {/* <div className="cart-header-row desktop-only">
                             <div className="cart-header-labels">
                                 <span className="col-product">Sản phẩm</span>
                                 <span className="col-category">Phân loại</span>
@@ -755,7 +755,7 @@ const Cart = () => {
                                 <span className="col-total">Thành tiền</span>
                                 <span className="col-actions">Thao tác</span>
                             </div>
-                        </div>
+                        </div> */}
 
                         <Divider />
 

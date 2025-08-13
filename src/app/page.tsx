@@ -6,6 +6,7 @@ import CouponSlider from './components/coupon/coupon';
 import Event from './components/event/page';
 import Gift from './components/Gift/gift';
 import Product from './components/product/page';
+import BookRunningBanner from './components/RunningBookBanner';
 export default function Home() {
     return (
         <div>
@@ -19,6 +20,9 @@ export default function Home() {
             <Blog />
 
             <BookAIChatbot />
+            <div style={{ width: '100%' }}>
+                <BookRunningBanner />
+            </div>
         </div>
     );
 }

@@ -1,15 +1,24 @@
 'use client';
 
+import { gsap } from 'gsap';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { Autoplay, EffectFade, Navigation, Pagination, Parallax } from 'swiper/modules';
+import { Swiper, SwiperSlide } from 'swiper/react';
+
+// Import Swiper styles
+import 'swiper/css';
+import 'swiper/css/effect-fade';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
+import 'swiper/css/parallax';
 
 const VoyageSlider = () => {
     const [banners, setBanners] = useState([]);
-    const [currentIndex, setCurrentIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
-    const sliderRef = useRef(null);
-    const slidesRef = useRef([]);
-    const intervalRef = useRef(null);
+    const swiperRef = useRef(null);
+    const contentRefs = useRef([]);
+    const imageRefs = useRef([]);
 
     // Fallback content nếu API không có dữ liệu
     const fallbackContent = [
@@ -18,32 +27,40 @@ const VoyageSlider = () => {
             title: 'Khám Phá Thế Giới Sách',
             description: 'Hành trình tri thức bắt đầu từ đây. Khám phá hàng nghìn cuốn sách hay.',
             image: 'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80',
-            link: '#',
+            book_id: 1,
+            status: 1,
+            priority: 1,
         },
         {
             id: 2,
             title: 'Ưu Đãi Đặc Biệt',
             description: 'Giảm giá lên đến 50% cho tất cả sách bestseller. Cơ hội không thể bỏ lỡ!',
             image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80',
-            link: '#',
+            book_id: 2,
+            status: 1,
+            priority: 2,
         },
         {
             id: 3,
             title: 'Sách Mới Nhất 2025',
             description: 'Cập nhật những cuốn sách mới nhất và được yêu thích nhất năm 2025.',
             image: 'https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80',
-            link: '#',
+            book_id: 3,
+            status: 1,
+            priority: 3,
         },
         {
             id: 4,
             title: 'Đọc Sách Online',
             description: 'Trải nghiệm đọc sách trực tuyến với công nghệ hiện đại và tiện lợi.',
             image: 'https://images.unsplash.com/photo-1519682337058-a94d519337bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80',
-            link: '#',
+            book_id: 4,
+            status: 1,
+            priority: 4,
         },
     ];
 
-    // Fetch banners from API
+    // Fetch banners from API với filtering và sorting
     useEffect(() => {
         const fetchBanners = async () => {
             try {
@@ -51,7 +68,12 @@ const VoyageSlider = () => {
                 const data = await response.json();
 
                 if (data.success && data.data.length > 0) {
-                    setBanners(data.data);
+                    // Filter chỉ lấy banner có status = 1 và sort theo priority
+                    const filteredBanners = data.data
+                        .filter((banner) => banner.status === 1)
+                        .sort((a, b) => (a.priority || 999) - (b.priority || 999));
+
+                    setBanners(filteredBanners.length > 0 ? filteredBanners : fallbackContent);
                 } else {
                     setBanners(fallbackContent);
                 }
@@ -66,117 +88,130 @@ const VoyageSlider = () => {
         fetchBanners();
     }, []);
 
-    // Animation Setup
-    useEffect(() => {
-        if (!banners.length || isLoading) return;
+    // GSAP Animation cho slide transition
+    const animateSlideIn = (slideIndex) => {
+        const content = contentRefs.current[slideIndex];
+        const image = imageRefs.current[slideIndex];
 
-        const initializeSlider = () => {
-            slidesRef.current.forEach((slide, index) => {
-                if (!slide) return;
+        if (content && image) {
+            // Reset animation
+            gsap.set(content.children, { opacity: 0, y: 50, scale: 0.9 });
+            gsap.set(image, { scale: 1.1, opacity: 0.8 });
 
-                if (index === 0) {
-                    slide.style.transform = 'translateX(0%) scale(1)';
-                    slide.style.opacity = '1';
-                    slide.style.zIndex = '10';
-                } else {
-                    slide.style.transform = `translateX(${index * 100}%) scale(0.8)`;
-                    slide.style.opacity = '0.7';
-                    slide.style.zIndex = '1';
-                }
+            // Animate image
+            gsap.to(image, {
+                scale: 1,
+                opacity: 1,
+                duration: 1.2,
+                ease: 'power3.out',
             });
-        };
 
-        initializeSlider();
-
-        // Auto-slide
-        intervalRef.current = setInterval(() => {
-            setCurrentIndex((prev) => (prev + 1) % banners.length);
-        }, 4000);
-
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-    }, [banners, isLoading]);
-
-    // Animate slide transitions
-    useEffect(() => {
-        if (!banners.length || isLoading) return;
-
-        slidesRef.current.forEach((slide, index) => {
-            if (!slide) return;
-
-            const isActive = index === currentIndex;
-            const isPrev = index === (currentIndex - 1 + banners.length) % banners.length;
-            const isNext = index === (currentIndex + 1) % banners.length;
-
-            if (isActive) {
-                slide.style.transition = 'all 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
-                slide.style.transform = 'translateX(0%) scale(1)';
-                slide.style.opacity = '1';
-                slide.style.zIndex = '10';
-            } else if (isPrev) {
-                slide.style.transition = 'all 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
-                slide.style.transform = 'translateX(-100%) scale(0.8)';
-                slide.style.opacity = '0.5';
-                slide.style.zIndex = '5';
-            } else if (isNext) {
-                slide.style.transition = 'all 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
-                slide.style.transform = 'translateX(100%) scale(0.8)';
-                slide.style.opacity = '0.5';
-                slide.style.zIndex = '5';
-            } else {
-                slide.style.transition = 'all 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
-                slide.style.transform = `translateX(${index > currentIndex ? '200%' : '-200%'}) scale(0.6)`;
-                slide.style.opacity = '0';
-                slide.style.zIndex = '1';
-            }
-        });
-    }, [currentIndex, banners]);
-
-    const goToSlide = (index) => {
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
+            // Animate content elements
+            gsap.to(content.children, {
+                opacity: 1,
+                y: 0,
+                scale: 1,
+                duration: 0.8,
+                stagger: 0.15,
+                ease: 'power3.out',
+                delay: 0.2,
+            });
         }
-        setCurrentIndex(index);
-
-        setTimeout(() => {
-            intervalRef.current = setInterval(() => {
-                setCurrentIndex((prev) => (prev + 1) % banners.length);
-            }, 4000);
-        }, 1000);
     };
 
-    const goToPrev = () => {
-        goToSlide((currentIndex - 1 + banners.length) % banners.length);
+    const animateSlideOut = (slideIndex) => {
+        const content = contentRefs.current[slideIndex];
+        const image = imageRefs.current[slideIndex];
+
+        if (content && image) {
+            gsap.to(content.children, {
+                opacity: 0,
+                y: -30,
+                duration: 0.5,
+                ease: 'power2.in',
+            });
+
+            gsap.to(image, {
+                scale: 1.05,
+                opacity: 0.7,
+                duration: 0.5,
+                ease: 'power2.in',
+            });
+        }
     };
 
-    const goToNext = () => {
-        goToSlide((currentIndex + 1) % banners.length);
+    // Swiper configuration
+    const swiperConfig = {
+        modules: [Navigation, Pagination, Autoplay, EffectFade, Parallax],
+        effect: 'fade',
+        fadeEffect: {
+            crossFade: true,
+        },
+        parallax: true,
+        speed: 1000,
+        autoplay: {
+            delay: 3000,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+        },
+        loop: true,
+        navigation: {
+            nextEl: '.swiper-button-next-custom',
+            prevEl: '.swiper-button-prev-custom',
+        },
+        pagination: {
+            el: '.swiper-pagination-custom',
+            clickable: true,
+            dynamicBullets: true,
+            renderBullet: function (index, className) {
+                return `<span class="${className} custom-bullet"></span>`;
+            },
+        },
+        on: {
+            slideChangeTransitionStart: function () {
+                // Animate out previous slide
+                const prevIndex = this.previousIndex;
+                if (prevIndex !== undefined) {
+                    animateSlideOut(prevIndex);
+                }
+            },
+            slideChangeTransitionEnd: function () {
+                // Animate in current slide
+                const currentIndex = this.realIndex;
+                animateSlideIn(currentIndex);
+            },
+            init: function () {
+                // Animate first slide
+                setTimeout(() => animateSlideIn(0), 100);
+            },
+        },
     };
 
     if (isLoading) {
         return (
             <div style={styles.loading}>
                 <div style={styles.spinner}></div>
+                <p style={styles.loadingText}>Đang tải banner...</p>
+            </div>
+        );
+    }
+
+    if (banners.length === 0) {
+        return (
+            <div style={styles.emptyState}>
+                <p>Không có banner nào được hiển thị</p>
             </div>
         );
     }
 
     return (
         <div style={styles.voyageSlider}>
-            {/* Slides Container */}
-            <div ref={sliderRef} style={styles.sliderContainer}>
+            <Swiper ref={swiperRef} {...swiperConfig} className="voyage-swiper">
                 {banners.map((banner, index) => (
-                    <div
-                        key={banner.id || index}
-                        ref={(el) => (slidesRef.current[index] = el)}
-                        style={styles.slide}
-                        onClick={() => goToSlide(index)}
-                    >
-                        {/* Background Image */}
+                    <SwiperSlide key={banner.id || index} className="voyage-slide">
+                        {/* Background Image với Parallax */}
                         <div
+                            ref={(el) => (imageRefs.current[index] = el)}
                             style={{
                                 ...styles.backgroundImage,
                                 backgroundImage: `url(${
@@ -185,30 +220,40 @@ const VoyageSlider = () => {
                                     'https://images.unsplash.com/photo-1481627834876-b7833e8f5570?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80'
                                 })`,
                             }}
+                            data-swiper-parallax="-100"
                         >
                             <div style={styles.overlay}></div>
                         </div>
 
-                        {/* Content Overlay */}
-                        <div style={styles.contentWrapper}>
+                        {/* Content với Parallax */}
+                        <div style={styles.contentWrapper} data-swiper-parallax="-200">
                             <div style={styles.contentContainer}>
-                                <div style={styles.textContent}>
+                                <div ref={(el) => (contentRefs.current[index] = el)} style={styles.textContent}>
+                                    <div style={styles.priorityBadge}>#{banner.priority || index + 1}</div>
                                     <h1 style={styles.title}>{banner.title || `Slide ${index + 1}`}</h1>
-                                    <p style={styles.description}>{banner.description || 'Mô tả slide'}</p>
+                                    <p style={styles.description}>{banner.description || ''}</p>
                                     <div style={styles.buttonGroup}>
                                         <Link href={`/book/${banner.book_id}`} legacyBehavior>
                                             <a
                                                 style={styles.primaryButton}
                                                 onMouseOver={(e) => {
-                                                    e.target.style.backgroundColor = '#1d4ed8';
-                                                    e.target.style.transform = 'scale(1.05)';
+                                                    gsap.to(e.target, {
+                                                        scale: 1.05,
+                                                        backgroundColor: '#1d4ed8',
+                                                        duration: 0.3,
+                                                        ease: 'power2.out',
+                                                    });
                                                 }}
                                                 onMouseOut={(e) => {
-                                                    e.target.style.backgroundColor = '#2563eb';
-                                                    e.target.style.transform = 'scale(1)';
+                                                    gsap.to(e.target, {
+                                                        scale: 1,
+                                                        backgroundColor: '#2563eb',
+                                                        duration: 0.3,
+                                                        ease: 'power2.out',
+                                                    });
                                                 }}
                                             >
-                                                {`Xem Chi Tiết ${banner.book_id}`}
+                                                Xem Chi Tiết
                                                 <svg
                                                     style={styles.icon}
                                                     fill="none"
@@ -227,10 +272,18 @@ const VoyageSlider = () => {
                                         <button
                                             style={styles.secondaryButton}
                                             onMouseOver={(e) => {
-                                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
+                                                gsap.to(e.target, {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                                    scale: 1.02,
+                                                    duration: 0.3,
+                                                });
                                             }}
                                             onMouseOut={(e) => {
-                                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
+                                                gsap.to(e.target, {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                                    scale: 1,
+                                                    duration: 0.3,
+                                                });
                                             }}
                                         >
                                             Tìm Hiểu Thêm
@@ -239,78 +292,30 @@ const VoyageSlider = () => {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </SwiperSlide>
                 ))}
-            </div>
+            </Swiper>
 
-            {/* Navigation Arrows */}
-            <button
-                onClick={goToPrev}
-                style={{ ...styles.navButton, left: '16px' }}
-                onMouseOver={(e) => {
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                    e.target.style.transform = 'translateY(-50%) scale(1.1)';
-                }}
-                onMouseOut={(e) => {
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.transform = 'translateY(-50%) scale(1)';
-                }}
-            >
+            {/* Custom Navigation */}
+            <div className="swiper-button-prev-custom" style={styles.navButton}>
                 <svg style={styles.navIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-            </button>
-
-            <button
-                onClick={goToNext}
-                style={{ ...styles.navButton, right: '16px' }}
-                onMouseOver={(e) => {
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-                    e.target.style.transform = 'translateY(-50%) scale(1.1)';
-                }}
-                onMouseOut={(e) => {
-                    e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-                    e.target.style.transform = 'translateY(-50%) scale(1)';
-                }}
-            >
+            </div>
+            <div className="swiper-button-next-custom" style={{ ...styles.navButton, right: '20px' }}>
                 <svg style={styles.navIcon} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-            </button>
-
-            {/* Dots Indicator */}
-            <div style={styles.dotsContainer}>
-                {banners.map((_, index) => (
-                    <button
-                        key={index}
-                        onClick={() => goToSlide(index)}
-                        style={{
-                            ...styles.dot,
-                            backgroundColor: index === currentIndex ? 'white' : 'rgba(255, 255, 255, 0.5)',
-                            transform: index === currentIndex ? 'scale(1.25)' : 'scale(1)',
-                        }}
-                        onMouseOver={(e) => {
-                            if (index !== currentIndex) {
-                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.75)';
-                            }
-                        }}
-                        onMouseOut={(e) => {
-                            if (index !== currentIndex) {
-                                e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.5)';
-                            }
-                        }}
-                    />
-                ))}
             </div>
 
-            {/* Progress Bar */}
-            <div style={styles.progressBar}>
-                <div
-                    style={{
-                        ...styles.progressFill,
-                        width: `${((currentIndex + 1) / banners.length) * 100}%`,
-                    }}
-                />
+            {/* Custom Pagination */}
+            <div className="swiper-pagination-custom" style={styles.pagination}></div>
+
+            {/* Progress Indicator */}
+            <div style={styles.progressContainer}>
+                <div style={styles.progressLabel}>
+                    {banners.length} Banner{banners.length > 1 ? 's' : ''} Active
+                </div>
             </div>
         </div>
     );
@@ -319,42 +324,45 @@ const VoyageSlider = () => {
 const styles = {
     loading: {
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '400px',
-        backgroundColor: '#f3f4f6',
-        borderRadius: '16px',
+        height: '500px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '20px',
+        gap: '16px',
     },
     spinner: {
-        width: '64px',
-        height: '64px',
-        border: '4px solid #e5e7eb',
+        width: '48px',
+        height: '48px',
+        border: '4px solid #e2e8f0',
         borderTop: '4px solid #3b82f6',
         borderRadius: '50%',
         animation: 'spin 1s linear infinite',
     },
+    loadingText: {
+        color: '#64748b',
+        fontSize: '16px',
+        margin: 0,
+    },
+    emptyState: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '500px',
+        backgroundColor: '#f8fafc',
+        borderRadius: '20px',
+        color: '#64748b',
+        fontSize: '18px',
+    },
     voyageSlider: {
         position: 'relative',
         width: '100%',
-        height: '500px',
+        height: '600px',
+        borderRadius: '24px',
         overflow: 'hidden',
-        borderRadius: '20px',
-        backgroundColor: '#1f2937',
-        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-        margin: '0 auto',
-    },
-    sliderContainer: {
-        position: 'relative',
-        width: '100%',
-        height: '100%',
-    },
-    slide: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        cursor: 'pointer',
+        backgroundColor: '#1e293b',
+        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1)',
     },
     backgroundImage: {
         position: 'absolute',
@@ -372,7 +380,8 @@ const styles = {
         left: 0,
         width: '100%',
         height: '100%',
-        background: 'linear-gradient(to right, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.4), transparent)',
+        background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%)',
+        backdropFilter: 'blur(1px)',
     },
     contentWrapper: {
         position: 'relative',
@@ -382,144 +391,133 @@ const styles = {
         alignItems: 'center',
     },
     contentContainer: {
-        maxWidth: '1024px',
+        maxWidth: '1200px',
         margin: '0 auto',
-        padding: '0 48px',
+        padding: '0 60px',
         width: '100%',
     },
     textContent: {
         color: 'white',
-        maxWidth: '672px',
+        maxWidth: '700px',
+    },
+    priorityBadge: {
+        display: 'inline-block',
+        padding: '8px 16px',
+        backgroundColor: 'rgba(59, 130, 246, 0.9)',
+        borderRadius: '50px',
+        fontSize: '14px',
+        fontWeight: '600',
+        marginBottom: '20px',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
     },
     title: {
-        fontSize: '48px',
-        fontWeight: 'bold',
+        fontSize: '56px',
+        fontWeight: '800',
         marginBottom: '24px',
-        lineHeight: '1.2',
+        lineHeight: '1.1',
         margin: '0 0 24px 0',
+        background: 'linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%)',
+        backgroundClip: 'text',
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)',
     },
     description: {
         fontSize: '24px',
-        marginBottom: '32px',
-        opacity: 0.9,
-        lineHeight: '1.5',
-        margin: '0 0 32px 0',
+        marginBottom: '40px',
+        opacity: 0.95,
+        lineHeight: '1.6',
+        margin: '0 0 40px 0',
+        fontWeight: '400',
     },
     buttonGroup: {
         display: 'flex',
-        gap: '16px',
+        gap: '20px',
         flexWrap: 'wrap',
+        alignItems: 'center',
     },
     primaryButton: {
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '16px 32px',
+        padding: '18px 36px',
         backgroundColor: '#2563eb',
         color: 'white',
         fontWeight: '600',
-        borderRadius: '9999px',
+        fontSize: '16px',
+        borderRadius: '50px',
         textDecoration: 'none',
-        transition: 'all 0.3s ease',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         border: 'none',
         cursor: 'pointer',
-        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+        boxShadow: '0 10px 25px rgba(37, 99, 235, 0.4)',
+        backdropFilter: 'blur(10px)',
     },
     secondaryButton: {
         display: 'inline-flex',
         alignItems: 'center',
-        padding: '16px 32px',
+        padding: '18px 36px',
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        backdropFilter: 'blur(4px)',
+        backdropFilter: 'blur(20px)',
         color: 'white',
         fontWeight: '600',
-        borderRadius: '9999px',
-        transition: 'all 0.3s ease',
-        border: 'none',
+        fontSize: '16px',
+        borderRadius: '50px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        border: '1px solid rgba(255, 255, 255, 0.3)',
         cursor: 'pointer',
     },
     icon: {
-        marginLeft: '8px',
+        marginLeft: '12px',
         width: '20px',
         height: '20px',
     },
     navButton: {
         position: 'absolute',
         top: '50%',
+        left: '20px',
         transform: 'translateY(-50%)',
         zIndex: 20,
-        width: '48px',
-        height: '48px',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-        backdropFilter: 'blur(4px)',
+        width: '56px',
+        height: '56px',
+        backgroundColor: 'rgba(255, 255, 255, 0.15)',
+        backdropFilter: 'blur(20px)',
         borderRadius: '50%',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         color: 'white',
-        transition: 'all 0.3s ease',
-        border: 'none',
         cursor: 'pointer',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
+        transition: 'all 0.3s ease',
     },
     navIcon: {
         width: '24px',
         height: '24px',
     },
-    dotsContainer: {
+    pagination: {
         position: 'absolute',
-        bottom: '24px',
+        bottom: '30px',
         left: '50%',
         transform: 'translateX(-50%)',
         zIndex: 20,
-        display: 'flex',
-        gap: '12px',
     },
-    dot: {
-        width: '12px',
-        height: '12px',
-        borderRadius: '50%',
-        transition: 'all 0.3s ease',
-        border: 'none',
-        cursor: 'pointer',
-    },
-    progressBar: {
+    progressContainer: {
         position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        height: '4px',
-        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        top: '20px',
+        right: '20px',
+        zIndex: 20,
     },
-    progressFill: {
-        height: '100%',
-        background: 'linear-gradient(to right, #3b82f6, #8b5cf6)',
-        transition: 'all 0.3s ease-linear',
+    progressLabel: {
+        padding: '8px 16px',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(20px)',
+        borderRadius: '50px',
+        color: 'white',
+        fontSize: '14px',
+        fontWeight: '500',
+        border: '1px solid rgba(255, 255, 255, 0.2)',
     },
 };
-
-// CSS Animation keyframes (cần thêm vào file CSS global)
-const globalStyles = `
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@media (max-width: 768px) {
-  .voyage-slider-title {
-    font-size: 32px !important;
-  }
-  
-  .voyage-slider-description {
-    font-size: 18px !important;
-  }
-  
-  .voyage-slider-content {
-    padding: 0 24px !important;
-  }
-  
-  .voyage-slider-button-group {
-    flex-direction: column !important;
-  }
-}
-`;
 
 export default VoyageSlider;

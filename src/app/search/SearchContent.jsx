@@ -33,20 +33,32 @@ const SearchContent = () => {
     const [books, setBooks] = useState([]);
     const [pagination, setPagination] = useState({});
     const [authors, setAuthors] = useState([]);
-    const keyword = searchParams.get('keyword');
-    const [pageSize, setPageSize] = useState(12);
-    const [priceDebounce, setPriceDebounce] = useState(null);
     const [categories, setCategories] = useState([]);
+
+    // Get URL parameters
+    const keyword = searchParams.get('keyword') || searchParams.get('name') || '';
+    const urlType = searchParams.get('type') || '';
+    const urlSort = searchParams.get('sort') || 'popular';
+    const urlPage = parseInt(searchParams.get('page')) || 1;
+    const urlLimit = parseInt(searchParams.get('limit')) || 12;
+    const urlCategory = searchParams.get('category') || '';
+    const urlAuthor = searchParams.get('author') || '';
+    const urlPriceMin = parseInt(searchParams.get('price_min')) || 0;
+    const urlPriceMax = parseInt(searchParams.get('price_max')) || 1000000;
+    const urlAvailable = searchParams.get('available') === '1';
+
+    const [pageSize, setPageSize] = useState(urlLimit);
+    const [priceDebounce, setPriceDebounce] = useState(null);
     const [filters, setFilters] = useState({
-        name: searchParams.get('keyword') || '',
-        selectedAuthors: [],
-        selectedCategories: searchParams.get('category') ? [searchParams.get('category')] : [],
-        priceRange: [0, 1000000],
-        bookType: '',
-        available: false,
-        sort: 'popular',
+        name: keyword,
+        selectedAuthors: urlAuthor ? urlAuthor.split(',') : [],
+        selectedCategories: urlCategory ? urlCategory.split(',') : [],
+        priceRange: [urlPriceMin, urlPriceMax],
+        bookType: urlType,
+        available: urlAvailable,
+        sort: urlSort,
     });
-    const [currentPage, setCurrentPage] = useState(1);
+    const [currentPage, setCurrentPage] = useState(urlPage);
 
     // AI Search states - Enhanced for OCR.space compatibility
     const [isAISearch, setIsAISearch] = useState(false);
@@ -58,9 +70,19 @@ const SearchContent = () => {
         currentSearchType: null,
     });
 
+    // Update filters when URL parameters change
     useEffect(() => {
-        const newCategory = searchParams.get('category');
-        const newKeyword = searchParams.get('keyword');
+        const newCategory = searchParams.get('category') || '';
+        const newKeyword = searchParams.get('keyword') || searchParams.get('name') || '';
+        const newType = searchParams.get('type') || '';
+        const newSort = searchParams.get('sort') || 'popular';
+        const newPage = parseInt(searchParams.get('page')) || 1;
+        const newLimit = parseInt(searchParams.get('limit')) || 12;
+        const newAuthor = searchParams.get('author') || '';
+        const newPriceMin = parseInt(searchParams.get('price_min')) || 0;
+        const newPriceMax = parseInt(searchParams.get('price_max')) || 1000000;
+        const newAvailable = searchParams.get('available') === '1';
+
         const aiSearch = searchParams.get('ai_search');
         const aiBookTitle = searchParams.get('ai_book_title');
         const aiAuthor = searchParams.get('ai_author');
@@ -74,16 +96,22 @@ const SearchContent = () => {
                 author: aiAuthor,
                 category: aiCategory,
                 isAI: true,
-                ocrEngine: 'OCR.space', // Track OCR engine used
+                ocrEngine: 'OCR.space',
             });
         }
 
-        setFilters((prev) => ({
-            ...prev,
-            name: newKeyword || '',
-            selectedCategories: newCategory ? [newCategory] : [],
-        }));
-        setCurrentPage(1);
+        setFilters({
+            name: newKeyword,
+            selectedAuthors: newAuthor ? newAuthor.split(',') : [],
+            selectedCategories: newCategory ? newCategory.split(',') : [],
+            priceRange: [newPriceMin, newPriceMax],
+            bookType: newType,
+            available: newAvailable,
+            sort: newSort,
+        });
+
+        setCurrentPage(newPage);
+        setPageSize(newLimit);
     }, [searchParams]);
 
     useEffect(() => {
@@ -97,7 +125,7 @@ const SearchContent = () => {
         } else {
             searchBooks();
         }
-    }, [searchParams.get('keyword'), filters, currentPage, pageSize, isAISearch, aiSearchInfo]);
+    }, [searchParams, currentPage, pageSize]);
 
     const loadAuthors = async () => {
         const response = await apiGetAuthors();
@@ -202,13 +230,11 @@ const SearchContent = () => {
         try {
             console.log('🔍 Searching books by title (OCR.space):', title);
 
-            
             const normalizedTitle = normalizeOCRSpaceText(title);
             const searchQueries = generateEnhancedSearchQueries(normalizedTitle);
 
             console.log('📝 Generated search queries:', searchQueries);
 
-            
             for (const query of searchQueries) {
                 console.log('🔎 Trying query:', query);
 
@@ -236,13 +262,11 @@ const SearchContent = () => {
         try {
             console.log('👤 Searching books by author (OCR.space):', authorName);
 
-           
             const matchedAuthor = await findMatchingAuthorEnhanced(authorName);
 
             if (matchedAuthor) {
                 console.log('✅ Found matching author:', matchedAuthor);
 
-               
                 const response = await axios.get('http://localhost:8000/api/books/search', {
                     params: {
                         author: matchedAuthor.id,
@@ -499,59 +523,65 @@ const SearchContent = () => {
         return maxLen === 0 ? 1 : (maxLen - matrix[len2][len1]) / maxLen;
     };
 
-    // Legacy function compatibility
-    const normalizeSearchText = (text) => {
-        return normalizeOCRSpaceText(text);
-    };
-
-    const generateSearchQueries = (text) => {
-        return generateEnhancedSearchQueries(text);
-    };
-
-    const findMatchingAuthor = async (authorName) => {
-        return await findMatchingAuthorEnhanced(authorName);
-    };
-
-    const findMatchingCategory = async (categoryName) => {
-        return await findMatchingCategoryEnhanced(categoryName);
-    };
-
+    // Updated searchBooks function to properly handle all URL parameters
     const searchBooks = async () => {
         setLoading(true);
         try {
             const params = {};
-            if (searchParams.get('keyword')) {
-                params.name = searchParams.get('keyword');
-            }
-            if (filters.selectedAuthors.length > 0) {
-                params.author = filters.selectedAuthors.join(',');
-            }
-            if (filters.selectedCategories.length > 0) {
-                params.category = filters.selectedCategories.join(',');
-            }
 
-            if (filters.priceRange[0] > 0) {
-                params.price_min = filters.priceRange[0];
+            // Get parameters from URL or current filters
+            const currentKeyword = searchParams.get('keyword') || searchParams.get('name') || filters.name;
+            const currentType = searchParams.get('type') || filters.bookType;
+            const currentSort = searchParams.get('sort') || filters.sort;
+            const currentPage = parseInt(searchParams.get('page')) || 1;
+            const currentLimit = parseInt(searchParams.get('limit')) || pageSize;
+            const currentCategory =
+                searchParams.get('category') ||
+                (filters.selectedCategories.length > 0 ? filters.selectedCategories.join(',') : '');
+            const currentAuthor =
+                searchParams.get('author') ||
+                (filters.selectedAuthors.length > 0 ? filters.selectedAuthors.join(',') : '');
+            const currentPriceMin =
+                parseInt(searchParams.get('price_min')) || (filters.priceRange[0] > 0 ? filters.priceRange[0] : null);
+            const currentPriceMax =
+                parseInt(searchParams.get('price_max')) ||
+                (filters.priceRange[1] < 1000000 ? filters.priceRange[1] : null);
+            const currentAvailable = searchParams.get('available') === '1' || filters.available;
+
+            // Build API parameters
+            if (currentKeyword) {
+                params.name = currentKeyword;
             }
-            if (filters.priceRange[1] < 1000000) {
-                params.price_max = filters.priceRange[1];
+            if (currentAuthor) {
+                params.author = currentAuthor;
             }
-            if (filters.bookType) {
-                if (filters.bookType === 'physical') {
+            if (currentCategory) {
+                params.category = currentCategory;
+            }
+            if (currentPriceMin) {
+                params.price_min = currentPriceMin;
+            }
+            if (currentPriceMax) {
+                params.price_max = currentPriceMax;
+            }
+            if (currentType) {
+                if (currentType === 'physical') {
                     params.type = 'paper';
-                } else if (filters.bookType === 'ebook') {
+                } else if (currentType === 'ebook') {
                     params.type = 'ebook';
                 }
             }
-            if (filters.available) {
+            if (currentAvailable) {
                 params.available = 1;
             }
-            if (filters.sort) {
-                params.sort = filters.sort;
+            if (currentSort) {
+                params.sort = currentSort;
             }
 
             params.page = currentPage;
-            params.limit = pageSize;
+            params.limit = currentLimit;
+
+            console.log('🔍 Search API params:', params);
 
             const response = await axios.get('http://localhost:8000/api/books/search', {
                 params: params,
@@ -570,20 +600,38 @@ const SearchContent = () => {
         }
     };
 
+    // Update URL when filters change
+    const updateURL = (newFilters = {}, newPage = currentPage, newPageSize = pageSize) => {
+        const params = new URLSearchParams();
+
+        const finalFilters = { ...filters, ...newFilters };
+
+        if (finalFilters.name) params.set('name', finalFilters.name);
+        if (finalFilters.bookType) params.set('type', finalFilters.bookType);
+        if (finalFilters.sort) params.set('sort', finalFilters.sort);
+        if (newPage > 1) params.set('page', newPage.toString());
+        if (newPageSize !== 12) params.set('limit', newPageSize.toString());
+        if (finalFilters.selectedCategories.length > 0)
+            params.set('category', finalFilters.selectedCategories.join(','));
+        if (finalFilters.selectedAuthors.length > 0) params.set('author', finalFilters.selectedAuthors.join(','));
+        if (finalFilters.priceRange[0] > 0) params.set('price_min', finalFilters.priceRange[0].toString());
+        if (finalFilters.priceRange[1] < 1000000) params.set('price_max', finalFilters.priceRange[1].toString());
+        if (finalFilters.available) params.set('available', '1');
+
+        const newURL = `/search${params.toString() ? '?' + params.toString() : ''}`;
+        router.push(newURL);
+    };
+
     const handleAuthorChange = (checkedValues) => {
-        setFilters((prev) => ({
-            ...prev,
-            selectedAuthors: checkedValues,
-        }));
-        setCurrentPage(1);
+        const newFilters = { selectedAuthors: checkedValues };
+        setFilters((prev) => ({ ...prev, ...newFilters }));
+        updateURL(newFilters, 1);
     };
 
     const handleCategoryChange = (checkedValues) => {
-        setFilters((prev) => ({
-            ...prev,
-            selectedCategories: checkedValues,
-        }));
-        setCurrentPage(1);
+        const newFilters = { selectedCategories: checkedValues };
+        setFilters((prev) => ({ ...prev, ...newFilters }));
+        updateURL(newFilters, 1);
     };
 
     const handlePriceChange = (value) => {
@@ -591,44 +639,36 @@ const SearchContent = () => {
             clearTimeout(priceDebounce);
         }
 
-        setFilters((prev) => ({
-            ...prev,
-            priceRange: value,
-        }));
+        const newFilters = { priceRange: value };
+        setFilters((prev) => ({ ...prev, ...newFilters }));
 
         const timeout = setTimeout(() => {
-            setCurrentPage(1);
+            updateURL(newFilters, 1);
         }, 500);
 
         setPriceDebounce(timeout);
     };
 
     const handleTypeChange = (value) => {
-        setFilters((prev) => ({
-            ...prev,
-            bookType: value,
-        }));
-        setCurrentPage(1);
+        const newFilters = { bookType: value };
+        setFilters((prev) => ({ ...prev, ...newFilters }));
+        updateURL(newFilters, 1);
     };
 
     const handleAvailableChange = (e) => {
-        setFilters((prev) => ({
-            ...prev,
-            available: e.target.checked,
-        }));
-        setCurrentPage(1);
+        const newFilters = { available: e.target.checked };
+        setFilters((prev) => ({ ...prev, ...newFilters }));
+        updateURL(newFilters, 1);
     };
 
     const handleSortChange = (value) => {
-        setFilters((prev) => ({
-            ...prev,
-            sort: value,
-        }));
-        setCurrentPage(1);
+        const newFilters = { sort: value };
+        setFilters((prev) => ({ ...prev, ...newFilters }));
+        updateURL(newFilters, 1);
     };
 
     const clearFilters = () => {
-        setFilters({
+        const defaultFilters = {
             name: '',
             selectedAuthors: [],
             selectedCategories: [],
@@ -636,7 +676,9 @@ const SearchContent = () => {
             bookType: '',
             available: false,
             sort: 'popular',
-        });
+        };
+
+        setFilters(defaultFilters);
         setCurrentPage(1);
         setIsAISearch(false);
         setAiSearchInfo(null);
@@ -656,6 +698,7 @@ const SearchContent = () => {
         if (size !== pageSize) {
             setPageSize(size);
         }
+        updateURL({}, page, size);
     };
 
     const formatPrice = (price) => {
@@ -758,8 +801,9 @@ const SearchContent = () => {
             }
         }
 
-        if (filters.name) {
-            return `Kết quả tìm kiếm: "${filters.name}"`;
+        if (filters.name || searchParams.get('name') || searchParams.get('keyword')) {
+            const searchTerm = filters.name || searchParams.get('name') || searchParams.get('keyword');
+            return `Kết quả tìm kiếm: "${searchTerm}"`;
         }
 
         return 'Tất cả sách';
@@ -993,14 +1037,13 @@ const SearchContent = () => {
                                                         position: 'relative',
                                                         width: '100%',
                                                         height: '280px',
-                                                   
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         padding: '12px',
                                                     }}
                                                 >
-                                                    {/* Khung hình ảnh bên trong - THÊM MỚI */}
+                                                    {/* Khung hình ảnh bên trong */}
                                                     <div
                                                         style={{
                                                             width: '200px',
@@ -1056,7 +1099,7 @@ const SearchContent = () => {
                                                         ></div>
                                                     </div>
 
-                                                    {/* Badges và overlays - position absolute so với bookImageContainer */}
+                                                    {/* Badges và overlays */}
                                                     {book.discount_percent && book.is_physical === 1 && (
                                                         <div
                                                             className={styles.discountBadge}
@@ -1240,6 +1283,7 @@ const SearchContent = () => {
                                     onShowSizeChange={(current, size) => {
                                         setPageSize(size);
                                         setCurrentPage(1);
+                                        updateURL({}, 1, size);
                                     }}
                                     showQuickJumper
                                     showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} sách`}
