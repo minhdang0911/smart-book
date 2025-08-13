@@ -202,17 +202,15 @@ const SearchContent = () => {
         try {
             console.log('🔍 Searching books by title (OCR.space):', title);
 
-            
             const normalizedTitle = normalizeOCRSpaceText(title);
             const searchQueries = generateEnhancedSearchQueries(normalizedTitle);
 
             console.log('📝 Generated search queries:', searchQueries);
 
-            
             for (const query of searchQueries) {
                 console.log('🔎 Trying query:', query);
 
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         name: query,
                         limit: 20,
@@ -236,14 +234,12 @@ const SearchContent = () => {
         try {
             console.log('👤 Searching books by author (OCR.space):', authorName);
 
-           
             const matchedAuthor = await findMatchingAuthorEnhanced(authorName);
 
             if (matchedAuthor) {
                 console.log('✅ Found matching author:', matchedAuthor);
 
-               
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         author: matchedAuthor.id,
                         limit: 20,
@@ -260,7 +256,7 @@ const SearchContent = () => {
             const searchQueries = generateEnhancedSearchQueries(normalizedAuthor);
 
             for (const query of searchQueries) {
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         author: query,
                         limit: 20,
@@ -290,7 +286,7 @@ const SearchContent = () => {
                 console.log('✅ Found matching category:', matchedCategory);
 
                 // Tìm theo category ID
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         category: matchedCategory.id,
                         limit: 20,
@@ -307,7 +303,7 @@ const SearchContent = () => {
             const searchQueries = generateEnhancedSearchQueries(normalizedCategory);
 
             for (const query of searchQueries) {
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         category: query,
                         limit: 20,
@@ -553,7 +549,7 @@ const SearchContent = () => {
             params.page = currentPage;
             params.limit = pageSize;
 
-            const response = await axios.get('http://localhost:8000/api/books/search', {
+            const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                 params: params,
             });
 
@@ -993,7 +989,7 @@ const SearchContent = () => {
                                                         position: 'relative',
                                                         width: '100%',
                                                         height: '280px',
-                                                   
+
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',

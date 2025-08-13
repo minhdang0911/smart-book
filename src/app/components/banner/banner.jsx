@@ -47,7 +47,7 @@ const VoyageSlider = () => {
     useEffect(() => {
         const fetchBanners = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/banners/get');
+                const response = await fetch('https://smartbook.io.vn/api/banners/get');
                 const data = await response.json();
 
                 if (data.success && data.data.length > 0) {

@@ -53,7 +53,7 @@ const PDFFlipbook = () => {
         try {
             setLoading(true);
             const response = await fetch(
-                `http://localhost:8000/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
+                `https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
             );
             const data = await response.json();
             setChapterData(data);
@@ -212,7 +212,7 @@ const PDFFlipbook = () => {
             setLoading(true);
             try {
                 const response = await fetch(
-                    `http://localhost:8000/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
+                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
                 );
                 const data = await response.json();
                 setChapterData(data);
@@ -239,7 +239,7 @@ const PDFFlipbook = () => {
             setLoading(true);
             try {
                 const response = await fetch(
-                    `http://localhost:8000/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
+                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
                 );
                 const data = await response.json();
                 setChapterData(data);

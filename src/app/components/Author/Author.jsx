@@ -12,7 +12,7 @@ const AdvancedPartnersMarquee = () => {
     useEffect(() => {
         const fetchPublishers = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/publisher');
+                const response = await fetch('https://smartbook.io.vn/api/publisher');
                 const data = await response.json();
                 if (data.status) {
                     setPartners(data.data);

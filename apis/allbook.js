@@ -1,15 +1,12 @@
-
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://smartbook.io.vn/api';
 export const apiGetAllBook = async () => {
     try {
-        
         const url = `${BASE_URL}/books`;
 
         const response = await fetch(url, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-     
             },
         });
 

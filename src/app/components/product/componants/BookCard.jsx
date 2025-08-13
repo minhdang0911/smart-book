@@ -164,7 +164,7 @@ export function BookCard({
             </div>
           </div>
         }
-        onClick={() => router.push(`/book/${book.id}`)}
+        onClick={() => router.push(`/`)}
       >
         <div className="book-info">
           <Title level={5} className="book-title" ellipsis={{ rows: 2 }}>

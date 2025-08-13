@@ -18,7 +18,7 @@ const OnlinePromotion = () => {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/events');
+                const response = await fetch('https://smartbook.io.vn/api/events');
                 const data = await response.json();
                 setEvents(data);
                 categorizeEvents(data);

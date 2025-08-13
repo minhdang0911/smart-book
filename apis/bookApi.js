@@ -1,4 +1,4 @@
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://smartbook.io.vn/api';
 
 export const fetchBooks = async () => {
     const response = await fetch(`${BASE_URL}/books`, {

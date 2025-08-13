@@ -16,7 +16,7 @@ export const useReviewActions = () => {
         }
 
         try {
-            const response = await fetch('http://localhost:8000/api/orders', {
+            const response = await fetch('https://smartbook.io.vn/api/orders', {
                 method: 'GET',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -51,7 +51,7 @@ export const useReviewActions = () => {
 
     const submitReview = async (bookId, rating, comment) => {
         try {
-            const response = await fetch('http://localhost:8000/api/ratings', {
+            const response = await fetch('https://smartbook.io.vn/api/ratings', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
