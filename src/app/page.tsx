@@ -7,14 +7,18 @@ import Event from './components/event/page';
 import Gift from './components/Gift/gift';
 import Product from './components/product/page';
 import BookRunningBanner from './components/RunningBookBanner';
-
 export default function Home() {
     return (
         <div>
             <VoyageSlider />
+
             <CouponSlider />
+
             <Event />
+            {/* <VietnameseBookstore /> */}
+            {/* <div style={{ marginTop: '120px' }}> */}
             <Author />
+            {/* </div> */}
             <Product />
             <Gift />
             <Blog />

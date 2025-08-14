@@ -1,4 +1,4 @@
-// pages/ProfilePage.js - Full code với giao diện đơn giản
+// pages/ProfilePage.js - Updated với mutate từ useAuth
 'use client';
 import { EyeInvisibleOutlined, EyeTwoTone } from '@ant-design/icons';
 import { Button, Card, Col, Divider, Form, Input, Row, Typography } from 'antd';
@@ -58,7 +58,7 @@ const ChangePassword = ({ token }) => {
         setPasswordStrength(checkPasswordStrength(password));
     };
 
-const onFinish = async (values) => {
+    const onFinish = async (values) => {
         setLoading(true);
         const token = localStorage?.getItem('token');
 
@@ -80,7 +80,6 @@ const onFinish = async (values) => {
             const data = await response.json();
             console.log('data', data);
 
-     
             if (data.success) {
                 toast.success('Đổi mật khẩu thành công!');
                 form.resetFields();
@@ -422,9 +421,10 @@ const onFinish = async (values) => {
     );
 };
 
+// Profile Page Component
 const ProfilePage = () => {
     const [selectedKey, setSelectedKey] = useState('personal');
-    const { user, loading: userLoading, token } = useAuth();
+    const { user, loading: userLoading, token, mutate } = useAuth();
 
     const handleMenuSelect = (key) => {
         setSelectedKey(key);
@@ -433,7 +433,7 @@ const ProfilePage = () => {
     const renderContent = () => {
         switch (selectedKey) {
             case 'personal':
-                return <PersonalInfo user={user} token={token} />;
+                return <PersonalInfo user={user} token={token} mutateUser={mutate} />;
             case 'favorites':
                 return <FavoriteBooks token={token} enabled={selectedKey === 'favorites'} />;
             case 'history1':
@@ -441,7 +441,7 @@ const ProfilePage = () => {
             case 'change-password':
                 return <ChangePassword token={token} />;
             default:
-                return <PersonalInfo user={user} token={token} />;
+                return <PersonalInfo user={user} token={token} mutateUser={mutate} />;
         }
     };
 
@@ -469,7 +469,6 @@ const ProfilePage = () => {
                     }}
                 />
                 <div style={{ fontSize: '14px', color: '#666' }}>Đang tải...</div>
-
                 <style jsx>{`
                     @keyframes spin {
                         0% {
@@ -484,10 +483,9 @@ const ProfilePage = () => {
         );
     }
 
-    // Tạo userData để truyền vào ProfileSidebar
     const userData = {
         name: user?.name || 'Người dùng',
-        avatar: user?.avatar,
+        avatar: user?.avatar_url || user?.avatar,
     };
 
     return (
