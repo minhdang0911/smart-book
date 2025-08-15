@@ -11,6 +11,7 @@ import {
     ShopOutlined,
     ShoppingCartOutlined,
     UserOutlined,
+    VideoCameraOutlined,
 } from '@ant-design/icons';
 import { Avatar, Badge, Button, Divider, Drawer, Dropdown, Input, Space, Tooltip, Upload, message } from 'antd';
 import { useRouter } from 'next/navigation';
@@ -61,6 +62,12 @@ const Header = () => {
             path: '/blog',
             icon: <ShopOutlined />,
             color: '#eb2f96',
+        },
+        {
+            label: 'Giới thiệu',
+            path: '/About',
+            icon: <VideoCameraOutlined />,
+            color: '#13c2c2',
         },
     ];
 
