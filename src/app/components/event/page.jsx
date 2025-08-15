@@ -65,11 +65,24 @@ const OnlinePromotion = () => {
                 return;
             }
 
+            // Tính giá cuối cùng (ưu tiên giá khuyến mãi nếu có)
+            const finalPrice = getFinalPriceForCart(book.price, book.discount_price);
+
+            console.log('Adding to cart with price:', {
+                bookId: book.id,
+                bookTitle: book.title,
+                originalPrice: book.price,
+                discountPrice: book.discount_price,
+                finalPrice: finalPrice,
+                quantity: qty,
+            });
+
             await handleAddToCartHelper({
                 user,
                 bookId: book.id,
                 quantity: qty,
-                addToCart: apiAddToCart,
+                price: finalPrice,
+                addToCart: apiAddToCart, // Đảm bảo signature đúng: (token, bookId, quantity, price)
                 setIsAddingToCart,
                 router,
             });
@@ -175,8 +188,9 @@ const OnlinePromotion = () => {
         }
     };
 
-    // ---------- Helpers xử lý giá/giảm ----------
+    // ---------- Helpers xử lý giá/giảm (FIXED) ----------
     const toNum = (v) => {
+        if (v === null || v === undefined || v === '') return 0;
         const n = Number(v);
         return Number.isFinite(n) ? n : 0;
     };
@@ -184,7 +198,8 @@ const OnlinePromotion = () => {
     const hasDiscount = (price, discountPrice) => {
         const p = toNum(price);
         const dp = toNum(discountPrice);
-        // coi "0.00", null, undefined, "", hoặc dp >= p là KHÔNG giảm
+
+        // Có giảm giá khi: giá gốc > 0, giá giảm > 0 và giá giảm < giá gốc
         return p > 0 && dp > 0 && dp < p;
     };
 
@@ -195,8 +210,30 @@ const OnlinePromotion = () => {
         return Math.round(((p - dp) / p) * 100);
     };
 
+    // Giá hiển thị cho UI
     const getDisplayPrice = (price, discountPrice) => {
         return hasDiscount(price, discountPrice) ? toNum(discountPrice) : toNum(price);
+    };
+
+    // FIX: Giá chính xác để thêm vào giỏ hàng
+    const getFinalPriceForCart = (price, discountPrice) => {
+        const originalPrice = parseFloat(price) || 0;
+        const discountedPrice = parseFloat(discountPrice) || 0;
+
+        console.log('getFinalPriceForCart debug:', {
+            price,
+            discountPrice,
+            originalPrice,
+            discountedPrice,
+            hasValidDiscount: discountedPrice > 0 && discountedPrice < originalPrice,
+        });
+
+        // Nếu có discount_price và nó nhỏ hơn price thì dùng discount_price
+        // Ngược lại dùng price
+        if (discountedPrice > 0 && discountedPrice < originalPrice) {
+            return discountedPrice;
+        }
+        return originalPrice;
     };
 
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(toNum(price)) + 'đ';
@@ -307,7 +344,7 @@ const OnlinePromotion = () => {
                                             <h3 className="book-title">{book.title}</h3>
 
                                             <div className="price-container">
-                                                {/* Nếu không có discount_price (0.00, null, >= price) thì current-price = price */}
+                                                {/* Giá hiển thị chính */}
                                                 <span className="current-price">{formatPrice(displayPrice)}</span>
 
                                                 {/* Chỉ hiện giá gạch & % khi thực sự có giảm */}

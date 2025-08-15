@@ -36,6 +36,8 @@ const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove,
         [item.id, item.quantity, onUpdateQuantity],
     );
 
+    console.log('item', item);
+
     const handleSelect = useCallback(
         (e) => {
             console.log('Item selected:', item.id, e.target.checked);
@@ -53,11 +55,6 @@ const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove,
     // Tính giá sau khi áp dụng mã giảm giá
     const calculateDiscountedPrice = useCallback(
         (originalPrice) => {
-            console.log('=== CALCULATING DISCOUNTED PRICE ===');
-            console.log('Original Price:', originalPrice);
-            console.log('Applied Coupon:', appliedCoupon);
-            console.log('Item Book ID:', item.book.id);
-
             if (!appliedCoupon) {
                 console.log('No coupon applied');
                 return originalPrice;
@@ -126,7 +123,7 @@ const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove,
         [appliedCoupon, item.book.id],
     );
 
-    const originalPrice = parseFloat(item.book.price);
+    const originalPrice = parseFloat(item?.price);
     const discountedPrice = calculateDiscountedPrice(originalPrice);
     const hasDiscount = discountedPrice < originalPrice;
 
@@ -599,7 +596,7 @@ const Cart = () => {
             return cartData.items
                 .filter((item) => safeSelectedItems.includes(item.id))
                 .reduce((total, item) => {
-                    const originalPrice = parseFloat(item.book.price) || 0;
+                    const originalPrice = parseFloat(item.price) || 0;
                     let finalPrice = originalPrice;
 
                     // ✅ Áp dụng giảm giá nếu có coupon
@@ -637,7 +634,7 @@ const Cart = () => {
         return cartData.items
             .filter((item) => safeSelectedItems.includes(item.id))
             .reduce((total, item) => {
-                const price = parseFloat(item.book.price) || 0;
+                const price = parseFloat(item.price) || 0;
                 return total + price * item.quantity;
             }, 0);
     }, [cartData, safeSelectedItems]);

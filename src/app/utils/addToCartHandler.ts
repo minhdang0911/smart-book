@@ -5,7 +5,8 @@ interface AddToCartHelperParams {
     user: any;
     bookId: number;
     quantity: number;
-    addToCart: (token: string, bookId: number, quantity: number) => Promise<any>;
+    price?: number; // Thêm price parameter
+    addToCart: (token: string, bookId: number, quantity: number, price?: number) => Promise<any>;
     setIsAddingToCart: (loading: boolean) => void;
     router: any;
 }
@@ -14,6 +15,7 @@ export const handleAddToCartHelper = async ({
     user,
     bookId,
     quantity,
+    price, // Nhận price parameter
     addToCart,
     setIsAddingToCart,
     router,
@@ -30,10 +32,18 @@ export const handleAddToCartHelper = async ({
 
     try {
         setIsAddingToCart(true);
-        const response = await addToCart(token, bookId, quantity);
+
+        // Truyền price cho API
+        const response = await addToCart(token, bookId, quantity, price);
 
         if (response?.status === true) {
             message.success('Đã thêm sản phẩm vào giỏ hàng');
+
+            // Log để debug
+            console.log('Cart response:', response);
+            if (response.data?.price_used) {
+                console.log('Price used in cart:', response.data.price_used);
+            }
         } else {
             message.error(response?.message || 'Không thể thêm sản phẩm vào giỏ hàng');
         }
