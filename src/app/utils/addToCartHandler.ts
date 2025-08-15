@@ -1,12 +1,10 @@
-// app/bookstore/utils/addToCartHandler.ts
-import { message } from 'antd';
+import { toast } from 'react-toastify';
 
 interface AddToCartHelperParams {
     user: any;
     bookId: number;
     quantity: number;
-    price?: number; // Thêm price parameter
-    addToCart: (token: string, bookId: number, quantity: number, price?: number) => Promise<any>;
+    addToCart: (token: string, bookId: number, quantity: number) => Promise<any>;
     setIsAddingToCart: (loading: boolean) => void;
     router: any;
 }
@@ -15,7 +13,6 @@ export const handleAddToCartHelper = async ({
     user,
     bookId,
     quantity,
-    price, // Nhận price parameter
     addToCart,
     setIsAddingToCart,
     router,
@@ -23,7 +20,7 @@ export const handleAddToCartHelper = async ({
     const token = localStorage.getItem('token');
 
     if (!token) {
-        message.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
+        toast.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
         if (router) {
             router.push('/login');
         }
@@ -32,20 +29,13 @@ export const handleAddToCartHelper = async ({
 
     try {
         setIsAddingToCart(true);
-
-        // Truyền price cho API
-        const response = await addToCart(token, bookId, quantity, price);
+        const response = await addToCart(token, bookId, quantity);
+        console.log('thêm vào giỏ', response);
 
         if (response?.status === true) {
-            message.success('Đã thêm sản phẩm vào giỏ hàng');
-
-            // Log để debug
-            console.log('Cart response:', response);
-            if (response.data?.price_used) {
-                console.log('Price used in cart:', response.data.price_used);
-            }
+            toast.success('Đã thêm sản phẩm vào giỏ hàng');
         } else {
-            message.error(response?.message || 'Không thể thêm sản phẩm vào giỏ hàng');
+            toast.error(response?.message || 'Không thể thêm sản phẩm vào giỏ hàng');
         }
     } catch (error) {
         console.error('Error adding to cart:', error);
@@ -83,16 +73,16 @@ export const toggleWishlist = async ({ bookId, token, wishlist, setWishlist }: T
         if (data?.status === true) {
             if (isCurrentlyFavorited) {
                 setWishlist(wishlist.filter((id) => id !== bookId));
-                message.success('Đã xóa khỏi danh sách yêu thích');
+                toast.success('Đã xóa khỏi danh sách yêu thích');
             } else {
                 setWishlist([...wishlist, bookId]);
-                message.success('Đã thêm vào danh sách yêu thích');
+                toast.success('Đã thêm vào danh sách yêu thích');
             }
         } else {
-            message.error(data?.message || 'Không thể thực hiện thao tác');
+            toast.error(data?.message || 'Không thể thực hiện thao tác');
         }
     } catch (error) {
         console.error('Error toggling wishlist:', error);
-        message.error('Lỗi khi thực hiện thao tác');
+        toast.error('Lỗi khi thực hiện thao tác');
     }
 };

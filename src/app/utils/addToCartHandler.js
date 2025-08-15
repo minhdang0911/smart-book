@@ -1,6 +1,13 @@
 import { toast } from 'react-toastify';
 
-export const handleAddToCartHelper = async ({ user, bookId, quantity, addToCart, price, setIsAddingToCart = null }) => {
+export const handleAddToCartHelper = async ({
+    user,
+    bookId,
+    quantity,
+    addToCart,
+    setIsAddingToCart = null, // Cho phép null
+    router = null,
+}) => {
     try {
         if (!user || user.length === 0) {
             toast.error('🔒 Vui lòng đăng nhập để mua sách!');
@@ -15,7 +22,7 @@ export const handleAddToCartHelper = async ({ user, bookId, quantity, addToCart,
             setIsAddingToCart(true);
         }
 
-        const result = await addToCart(bookId, quantity, price);
+        const result = await addToCart(bookId, quantity);
 
         if (result.success) {
             toast.success('🎉 Đã thêm sách vào giỏ hàng!');

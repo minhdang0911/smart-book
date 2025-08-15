@@ -1,3 +1,5 @@
+import { toast } from 'react-toastify';
+
 export const apiAddToCart = async (bookId, quantity, price = null) => {
     const token = localStorage?.getItem('token');
     try {
@@ -21,6 +23,11 @@ export const apiAddToCart = async (bookId, quantity, price = null) => {
         });
 
         const data = await response.json();
+        if (data.success === true) {
+            toast.success('Thêm vào giỏ hàng thành công');
+        } else {
+            toast.error(data?.message);
+        }
 
         return {
             status: data.success,
