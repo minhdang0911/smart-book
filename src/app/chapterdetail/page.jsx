@@ -1,5 +1,20 @@
 'use client';
-import { Book, ChevronLeft, ChevronRight, Home, Loader, Menu, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import {
+    Book,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    FileText,
+    FileType,
+    Home,
+    List,
+    Loader,
+    Menu,
+    RotateCcw,
+    X,
+    ZoomIn,
+    ZoomOut,
+} from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 
@@ -10,10 +25,15 @@ const PDFFlipbook = () => {
     const [loading, setLoading] = useState(true);
     const [zoom, setZoom] = useState(1);
     const [pdfPages, setPdfPages] = useState([]);
+    const [htmlContent, setHtmlContent] = useState('');
+    const [contentType, setContentType] = useState('text'); // 'pdf' or 'text'
     const [pdfDoc, setPdfDoc] = useState(null);
     const [bookId, setBookId] = useState(null);
     const [chapterId, setChapterId] = useState(null);
     const [pdfCache, setPdfCache] = useState({}); // Cache cho PDF pages
+    const [showChapterModal, setShowChapterModal] = useState(false);
+    const [allChapters, setAllChapters] = useState([]);
+    const [loadingChapters, setLoadingChapters] = useState(false);
     const flipBookRef = useRef();
 
     // Load PDF.js and get data from localStorage
@@ -32,6 +52,7 @@ const PDFFlipbook = () => {
             setBookId(storedBookId);
             setChapterId(storedChapterId);
 
+            // Load PDF.js only if we need it
             if (typeof window !== 'undefined' && !window.pdfjsLib) {
                 const script = document.createElement('script');
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -41,7 +62,7 @@ const PDFFlipbook = () => {
                     fetchChapterData(storedBookId, storedChapterId);
                 };
                 document.head.appendChild(script);
-            } else if (window.pdfjsLib) {
+            } else {
                 fetchChapterData(storedBookId, storedChapterId);
             }
         };
@@ -53,7 +74,7 @@ const PDFFlipbook = () => {
         try {
             setLoading(true);
             const response = await fetch(
-                `http://localhost:8000/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
+                `https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
             );
             const data = await response.json();
             setChapterData(data);
@@ -65,14 +86,35 @@ const PDFFlipbook = () => {
             setBookId(data.chapter.book_id);
             setChapterId(data.chapter.id);
 
-            // Load PDF with caching
-            if (data.chapter.pdf_url) {
+            // Determine content type and load accordingly
+            if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                setContentType('pdf');
                 await loadPDF(data.chapter.pdf_url, data.chapter.id);
+            } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+                setContentType('text');
+                loadHTMLContent(data.chapter.content);
+            } else {
+                console.error('No valid content found');
+                setLoading(false);
             }
         } catch (error) {
             console.error('Error fetching chapter data:', error);
             setLoading(false);
         }
+    };
+
+    // Load HTML content for text-based chapters
+    const loadHTMLContent = (content) => {
+        setHtmlContent(content);
+        setNumPages(1); // HTML content is treated as a single page
+        setLoading(false);
+
+        // Reset flipbook to first page
+        setTimeout(() => {
+            if (flipBookRef.current && flipBookRef.current.pageFlip) {
+                flipBookRef.current.pageFlip().flip(0);
+            }
+        }, 100);
     };
 
     // Load PDF with PDF.js and caching
@@ -165,7 +207,67 @@ const PDFFlipbook = () => {
         }
     };
 
-    // Navigation functions for react-pageflip (sử dụng API đúng)
+    // Fetch all chapters for the book
+    const fetchAllChapters = async (currentBookId) => {
+        if (allChapters.length > 0) return; // Already loaded
+
+        try {
+            setLoadingChapters(true);
+            const response = await fetch(`https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters`);
+            const data = await response.json();
+
+            if (data.success) {
+                // Calculate word count for each chapter
+                const chaptersWithStats = data.chapters.map((chapter) => ({
+                    ...chapter,
+                    wordCount: chapter.display_content
+                        ? chapter.display_content.replace(/<[^>]*>/g, '').trim().length
+                        : 0,
+                }));
+                setAllChapters(chaptersWithStats);
+            }
+        } catch (error) {
+            console.error('Error fetching chapters:', error);
+        } finally {
+            setLoadingChapters(false);
+        }
+    };
+
+    // Navigate to specific chapter
+    const navigateToChapter = async (chapterId) => {
+        setShowChapterModal(false);
+        setLoading(true);
+
+        try {
+            const response = await fetch(
+                `https://smartbook.io.vn/api/admin/books/${bookId}/chapters/${chapterId}/detail`,
+            );
+            const data = await response.json();
+            setChapterData(data);
+            setCurrentPage(0);
+
+            // Update localStorage
+            localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+            localStorage.setItem('currentChapterId', data.chapter.id.toString());
+
+            // Load content based on type
+            if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                setContentType('pdf');
+                await loadPDF(data.chapter.pdf_url, data.chapter.id);
+            } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+                setContentType('text');
+                loadHTMLContent(data.chapter.content);
+            }
+
+            // Reset flipbook
+            if (flipBookRef.current) {
+                flipBookRef.current.flip(0);
+            }
+        } catch (error) {
+            console.error('Error navigating to chapter:', error);
+            setLoading(false);
+        }
+    };
     const nextPage = () => {
         if (flipBookRef.current && flipBookRef.current.pageFlip) {
             flipBookRef.current.pageFlip().flipNext();
@@ -179,8 +281,9 @@ const PDFFlipbook = () => {
     };
 
     const goToPage = (pageNum) => {
+        if (contentType === 'text') return; // No pagination for text content
+
         const targetPDFPage = Math.max(1, Math.min(pageNum, numPages));
-        // Convert PDF page to flipbook index (page 1 = index 0)
         const flipBookPageIndex = targetPDFPage - 1;
         if (flipBookRef.current && flipBookRef.current.pageFlip) {
             flipBookRef.current.pageFlip().flip(flipBookPageIndex);
@@ -189,17 +292,14 @@ const PDFFlipbook = () => {
 
     // Handle page flip events
     const onFlip = (e) => {
-        // Điều chỉnh logic trang cho spread view
-        // e.data là index của trang trong flipbook
-        // Cần convert về page number thực của PDF
+        if (contentType === 'text') return;
+
         const flipBookPageIndex = e.data;
         let actualPDFPage;
 
         if (flipBookPageIndex <= 1) {
-            // Cover và blank page
             actualPDFPage = 0;
         } else {
-            // PDF pages bắt đầu từ index 2 trong flipbook
             actualPDFPage = flipBookPageIndex - 1;
         }
 
@@ -212,18 +312,26 @@ const PDFFlipbook = () => {
             setLoading(true);
             try {
                 const response = await fetch(
-                    `http://localhost:8000/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
+                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
                 );
                 const data = await response.json();
                 setChapterData(data);
                 setCurrentPage(0);
 
-                // Load PDF của chapter mới với cache
-                if (data.chapter.pdf_url) {
+                // Update localStorage
+                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+                localStorage.setItem('currentChapterId', data.chapter.id.toString());
+
+                // Load content based on type
+                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                    setContentType('pdf');
                     await loadPDF(data.chapter.pdf_url, data.chapter.id);
+                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+                    setContentType('text');
+                    loadHTMLContent(data.chapter.content);
                 }
 
-                // Reset flipbook về trang đầu
+                // Reset flipbook
                 if (flipBookRef.current) {
                     flipBookRef.current.flip(0);
                 }
@@ -239,18 +347,26 @@ const PDFFlipbook = () => {
             setLoading(true);
             try {
                 const response = await fetch(
-                    `http://localhost:8000/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
+                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
                 );
                 const data = await response.json();
                 setChapterData(data);
                 setCurrentPage(0);
 
-                // Load PDF của chapter mới với cache
-                if (data.chapter.pdf_url) {
+                // Update localStorage
+                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+                localStorage.setItem('currentChapterId', data.chapter.id.toString());
+
+                // Load content based on type
+                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                    setContentType('pdf');
                     await loadPDF(data.chapter.pdf_url, data.chapter.id);
+                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+                    setContentType('text');
+                    loadHTMLContent(data.chapter.content);
                 }
 
-                // Reset flipbook về trang đầu
+                // Reset flipbook
                 if (flipBookRef.current) {
                     flipBookRef.current.flip(0);
                 }
@@ -270,7 +386,9 @@ const PDFFlipbook = () => {
             <div style={styles.loadingContainer}>
                 <div style={styles.loadingContent}>
                     <Loader style={styles.loadingIcon} />
-                    <p style={styles.loadingText}>Đang tải PDF...</p>
+                    <p style={styles.loadingText}>
+                        {contentType === 'pdf' ? 'Đang tải PDF...' : 'Đang tải nội dung...'}
+                    </p>
                     <div style={styles.progressContainer}>
                         <div style={styles.progressBar}></div>
                     </div>
@@ -288,7 +406,10 @@ const PDFFlipbook = () => {
                         <Book style={styles.bookIcon} />
                         <div>
                             <h1 style={styles.bookTitle}>{chapterData?.chapter?.book?.title}</h1>
-                            <p style={styles.chapterTitle}>Chương {chapterData?.chapter?.title}</p>
+                            <p style={styles.chapterTitle}>
+                                Chương {chapterData?.chapter?.title}
+                                <span style={styles.contentType}>({contentType === 'pdf' ? 'PDF' : 'Văn bản'})</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -311,6 +432,17 @@ const PDFFlipbook = () => {
                     <button style={styles.headerButton} title="Trang chủ">
                         <Home style={styles.controlIcon} />
                     </button>
+                    <button
+                        style={styles.chapterListButton}
+                        title="Danh sách chương"
+                        onClick={() => {
+                            setShowChapterModal(true);
+                            fetchAllChapters(bookId);
+                        }}
+                    >
+                        <List style={styles.controlIcon} />
+                        <span style={styles.buttonText}>Danh sách chương</span>
+                    </button>
                     <button style={styles.headerButton} title="Menu">
                         <Menu style={styles.controlIcon} />
                     </button>
@@ -325,27 +457,43 @@ const PDFFlipbook = () => {
                 </div>
 
                 <div style={styles.contentWrapper}>
-                    {/* Navigation Buttons */}
-                    <button
-                        onClick={prevPage}
-                        disabled={currentPage <= 0}
-                        style={{
-                            ...styles.navButton,
-                            ...styles.prevButton,
-                            ...(currentPage <= 0 ? styles.disabledButton : {}),
-                        }}
-                    >
-                        <ChevronLeft style={styles.navIcon} />
-                    </button>
+                    {/* Navigation Buttons - only show for PDF */}
+                    {contentType === 'pdf' && (
+                        <>
+                            <button
+                                onClick={prevPage}
+                                disabled={currentPage <= 0}
+                                style={{
+                                    ...styles.navButton,
+                                    ...styles.prevButton,
+                                    ...(currentPage <= 0 ? styles.disabledButton : {}),
+                                }}
+                            >
+                                <ChevronLeft style={styles.navIcon} />
+                            </button>
 
-                    {/* Flipbook Container */}
+                            <button
+                                onClick={nextPage}
+                                disabled={currentPage >= numPages - 1}
+                                style={{
+                                    ...styles.navButton,
+                                    ...styles.nextButton,
+                                    ...(currentPage >= numPages - 1 ? styles.disabledButton : {}),
+                                }}
+                            >
+                                <ChevronRight style={styles.navIcon} />
+                            </button>
+                        </>
+                    )}
+
+                    {/* Content Container */}
                     <div
                         style={{
                             ...styles.flipbookWrapper,
                             transform: `scale(${zoom})`,
                         }}
                     >
-                        {pdfPages.length > 0 && (
+                        {contentType === 'pdf' && pdfPages.length > 0 && (
                             <HTMLFlipBook
                                 ref={flipBookRef}
                                 width={700}
@@ -405,19 +553,19 @@ const PDFFlipbook = () => {
                                 ))}
                             </HTMLFlipBook>
                         )}
-                    </div>
 
-                    <button
-                        onClick={nextPage}
-                        disabled={currentPage >= numPages - 1}
-                        style={{
-                            ...styles.navButton,
-                            ...styles.nextButton,
-                            ...(currentPage >= numPages - 1 ? styles.disabledButton : {}),
-                        }}
-                    >
-                        <ChevronRight style={styles.navIcon} />
-                    </button>
+                        {contentType === 'text' && htmlContent && (
+                            <div style={styles.textContentContainer}>
+                                <div style={styles.textPage}>
+                                    <div style={styles.textHeader}>
+                                        <FileText style={styles.textIcon} />
+                                        <h2 style={styles.textTitle}>Chương {chapterData?.chapter?.title}</h2>
+                                    </div>
+                                    <div style={styles.textContent} dangerouslySetInnerHTML={{ __html: htmlContent }} />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -430,37 +578,41 @@ const PDFFlipbook = () => {
                         <span>{chapterData?.chapter?.book?.title}</span>
                     </div>
 
-                    {/* Page Navigation */}
-                    <div style={styles.pageNavigation}>
-                        <div style={styles.pageInputGroup}>
-                            <span style={styles.pageLabel}>Trang:</span>
-                            <div style={styles.pageInputContainer}>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max={numPages}
-                                    value={currentPage}
-                                    onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
-                                    style={styles.pageInput}
-                                />
-                                <span style={styles.pageLabel}>/ {numPages}</span>
+                    {/* Page Navigation - only for PDF */}
+                    {contentType === 'pdf' && (
+                        <div style={styles.pageNavigation}>
+                            <div style={styles.pageInputGroup}>
+                                <span style={styles.pageLabel}>Trang:</span>
+                                <div style={styles.pageInputContainer}>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max={numPages}
+                                        value={currentPage + 1}
+                                        onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
+                                        style={styles.pageInput}
+                                    />
+                                    <span style={styles.pageLabel}>/ {numPages}</span>
+                                </div>
                             </div>
-                        </div>
 
-                        {/* Progress Bar */}
-                        <div style={styles.progressGroup}>
-                            <span style={styles.pageLabel}>Tiến độ:</span>
-                            <div style={styles.progressBarContainer}>
-                                <div
-                                    style={{
-                                        ...styles.progressBarFill,
-                                        width: `${((currentPage + 1) / numPages) * 100}%`,
-                                    }}
-                                />
+                            {/* Progress Bar */}
+                            <div style={styles.progressGroup}>
+                                <span style={styles.pageLabel}>Tiến độ:</span>
+                                <div style={styles.progressBarContainer}>
+                                    <div
+                                        style={{
+                                            ...styles.progressBarFill,
+                                            width: `${((currentPage + 1) / numPages) * 100}%`,
+                                        }}
+                                    />
+                                </div>
+                                <span style={styles.pageLabel}>
+                                    {Math.round(((currentPage + 1) / numPages) * 100)}%
+                                </span>
                             </div>
-                            <span style={styles.pageLabel}>{Math.round((currentPage / numPages) * 100)}%</span>
                         </div>
-                    </div>
+                    )}
 
                     {/* Chapter Navigation */}
                     <div style={styles.chapterNavigation}>
@@ -481,6 +633,95 @@ const PDFFlipbook = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Chapter Modal */}
+            {showChapterModal && (
+                <div style={styles.modalOverlay} onClick={() => setShowChapterModal(false)}>
+                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        <div style={styles.modalHeader}>
+                            <div style={styles.modalTitle}>
+                                <List style={styles.modalIcon} />
+                                <span>Danh sách chương ({allChapters.length})</span>
+                            </div>
+                            <button style={styles.closeButton} onClick={() => setShowChapterModal(false)}>
+                                <X style={styles.controlIcon} />
+                            </button>
+                        </div>
+
+                        <div style={styles.modalBody}>
+                            {loadingChapters ? (
+                                <div style={styles.modalLoading}>
+                                    <Loader style={styles.loadingSpinner} />
+                                    <span>Đang tải danh sách chương...</span>
+                                </div>
+                            ) : (
+                                <div style={styles.chaptersList}>
+                                    {allChapters.map((chapter) => (
+                                        <div
+                                            key={chapter.id}
+                                            style={{
+                                                ...styles.chapterItem,
+                                                ...(chapter.id === chapterData?.chapter?.id
+                                                    ? styles.currentChapterItem
+                                                    : {}),
+                                            }}
+                                            onClick={() => navigateToChapter(chapter.id)}
+                                        >
+                                            <div style={styles.chapterInfo}>
+                                                <div style={styles.chapterHeader}>
+                                                    <div style={styles.chapterIcon}>
+                                                        {chapter.content_type === 'pdf' ? (
+                                                            <FileType style={styles.chapterTypeIcon} />
+                                                        ) : (
+                                                            <FileText style={styles.chapterTypeIcon} />
+                                                        )}
+                                                    </div>
+                                                    <div style={styles.chapterTitle}>
+                                                        <h4 style={styles.chapterName}>{chapter.title}</h4>
+                                                        <div style={styles.chapterMeta}>
+                                                            <span style={styles.chapterOrder}>
+                                                                #{chapter.chapter_order}
+                                                            </span>
+                                                            <span style={styles.chapterType}>
+                                                                {chapter.content_type === 'pdf' ? 'PDF' : 'Văn bản'}
+                                                            </span>
+                                                            {chapter.wordCount > 0 && (
+                                                                <span style={styles.wordCount}>
+                                                                    <Clock style={styles.clockIcon} />
+                                                                    {chapter.wordCount.toLocaleString()} ký tự
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {chapter.display_content && (
+                                                    <div style={styles.chapterPreview}>
+                                                        <div
+                                                            style={styles.previewText}
+                                                            dangerouslySetInnerHTML={{
+                                                                __html:
+                                                                    chapter.display_content.length > 200
+                                                                        ? chapter.display_content.substring(0, 200) +
+                                                                          '...'
+                                                                        : chapter.display_content,
+                                                            }}
+                                                        />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {chapter.id === chapterData?.chapter?.id && (
+                                                <div style={styles.currentBadge}>Đang đọc</div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -568,6 +809,11 @@ const styles = {
         color: '#d1d5db',
         margin: 0,
     },
+    contentType: {
+        fontSize: '12px',
+        color: '#9ca3af',
+        fontStyle: 'italic',
+    },
     headerRight: {
         display: 'flex',
         alignItems: 'center',
@@ -610,6 +856,25 @@ const styles = {
         cursor: 'pointer',
         transition: 'background-color 0.2s',
     },
+    chapterListButton: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 16px',
+        backgroundColor: '#2563eb',
+        border: 'none',
+        borderRadius: '8px',
+        color: 'white',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: '500',
+        transition: 'all 0.2s ease',
+        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
+    },
+    buttonText: {
+        fontSize: '14px',
+        fontWeight: '500',
+    },
 
     // Main content styles
     mainContent: {
@@ -638,6 +903,8 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        width: '100%',
+        height: '100%',
     },
     navButton: {
         position: 'absolute',
@@ -670,9 +937,60 @@ const styles = {
     flipbookWrapper: {
         transformOrigin: 'center',
         transition: 'transform 0.3s ease',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
     },
 
-    // Page styles
+    // Text content styles
+    textContentContainer: {
+        width: '800px',
+        height: '900px',
+        maxWidth: '90vw',
+        maxHeight: '80vh',
+        background: 'white',
+        borderRadius: '12px',
+        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    textPage: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+    },
+    textHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '24px 32px 16px',
+        borderBottom: '2px solid #f3f4f6',
+        background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
+    },
+    textIcon: {
+        width: '24px',
+        height: '24px',
+        color: '#2563eb',
+    },
+    textTitle: {
+        fontSize: '24px',
+        fontWeight: 'bold',
+        color: '#1f2937',
+        margin: 0,
+    },
+    textContent: {
+        flex: 1,
+        padding: '32px',
+        overflow: 'auto',
+        fontSize: '16px',
+        lineHeight: '1.8',
+        color: '#374151',
+        backgroundColor: 'white',
+    },
+
+    // Page styles (for PDF)
     page: {
         background: 'white',
         display: 'flex',
@@ -737,6 +1055,20 @@ const styles = {
         fontSize: '12px',
         fontWeight: 500,
         zIndex: 10,
+    },
+    blankPage: {
+        flex: 1,
+        backgroundColor: '#f8f9fa',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: '8px',
+    },
+    blankText: {
+        color: '#6c757d',
+        fontSize: '14px',
+        fontStyle: 'italic',
+        margin: 0,
     },
 
     // Footer styles
@@ -834,23 +1166,186 @@ const styles = {
     nextChapterButton: {
         background: 'linear-gradient(to right, #2563eb, #1d4ed8)',
     },
-    chapterButtonDisabled: {
-        opacity: 0.5,
-        cursor: 'not-allowed',
-    },
-    blankPage: {
-        flex: 1,
-        backgroundColor: '#f8f9fa',
+
+    // Modal styles
+    modalOverlay: {
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: '8px',
+        zIndex: 1000,
+        backdropFilter: 'blur(4px)',
     },
-    blankText: {
-        color: '#6c757d',
+    modalContent: {
+        backgroundColor: 'white',
+        borderRadius: '12px',
+        width: '90vw',
+        maxWidth: '800px',
+        maxHeight: '80vh',
+        display: 'flex',
+        flexDirection: 'column',
+        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+    },
+    modalHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '20px 24px',
+        borderBottom: '1px solid #e5e7eb',
+        backgroundColor: '#f8fafc',
+        borderRadius: '12px 12px 0 0',
+    },
+    modalTitle: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        fontSize: '18px',
+        fontWeight: '600',
+        color: '#1f2937',
+    },
+    modalIcon: {
+        width: '20px',
+        height: '20px',
+        color: '#2563eb',
+    },
+    closeButton: {
+        padding: '8px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        color: '#6b7280',
+        transition: 'all 0.2s',
+    },
+    modalBody: {
+        flex: 1,
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+    },
+    modalLoading: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '12px',
+        padding: '48px',
+        color: '#6b7280',
+    },
+    loadingSpinner: {
+        width: '20px',
+        height: '20px',
+        animation: 'spin 1s linear infinite',
+    },
+    chaptersList: {
+        flex: 1,
+        overflow: 'auto',
+        padding: '8px',
+    },
+    chapterItem: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
+        padding: '16px',
+        margin: '8px',
+        backgroundColor: '#f9fafb',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        border: '1px solid #e5e7eb',
+    },
+    currentChapterItem: {
+        backgroundColor: '#eff6ff',
+        borderColor: '#2563eb',
+        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)',
+    },
+    chapterInfo: {
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '8px',
+    },
+    chapterHeader: {
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '12px',
+    },
+    chapterIcon: {
+        padding: '8px',
+        backgroundColor: '#e5e7eb',
+        borderRadius: '6px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    chapterTypeIcon: {
+        width: '16px',
+        height: '16px',
+        color: '#6b7280',
+    },
+    chapterTitle: {
+        flex: 1,
+    },
+    chapterName: {
+        fontSize: '16px',
+        fontWeight: '600',
+        color: '#1f2937',
+        margin: '0 0 4px 0',
+    },
+    chapterMeta: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px',
+        flexWrap: 'wrap',
+    },
+    chapterOrder: {
+        fontSize: '12px',
+        color: '#6b7280',
+        backgroundColor: '#e5e7eb',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        fontWeight: '500',
+    },
+    chapterType: {
+        fontSize: '12px',
+        color: '#059669',
+        backgroundColor: '#d1fae5',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        fontWeight: '500',
+    },
+    wordCount: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        fontSize: '12px',
+        color: '#6b7280',
+    },
+    clockIcon: {
+        width: '12px',
+        height: '12px',
+    },
+    chapterPreview: {
+        marginTop: '8px',
+    },
+    previewText: {
         fontSize: '14px',
-        fontStyle: 'italic',
-        margin: 0,
+        color: '#6b7280',
+        lineHeight: '1.5',
+        display: '-webkit-box',
+        WebkitLineClamp: 3,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+    },
+    currentBadge: {
+        padding: '4px 8px',
+        backgroundColor: '#2563eb',
+        color: 'white',
+        borderRadius: '12px',
+        fontSize: '12px',
+        fontWeight: '500',
+        alignSelf: 'flex-start',
     },
 };
 

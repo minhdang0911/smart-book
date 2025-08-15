@@ -84,7 +84,7 @@ const useBookChapters = (bookId) => {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await fetch(`http://localhost:8000/api/admin/books/${bookId}/chapters`);
+                const response = await fetch(`https://smartbook.io.vn/api/admin/books/${bookId}/chapters`);
                 const data = await response.json();
 
                 if (data.success) {

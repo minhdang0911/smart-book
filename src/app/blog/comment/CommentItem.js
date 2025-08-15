@@ -54,7 +54,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
         if (!showReplies && replies.length === 0) {
             setLoadingReplies(true);
             try {
-                const res = await fetch(`http://localhost:8000/api/comments/replies?parent_id=${comment.id}`, {
+                const res = await fetch(`https://smartbook.io.vn/api/comments/replies?parent_id=${comment.id}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
 
         setIsSaving(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/comments/${commentData.id}`, {
+            const res = await fetch(`https://smartbook.io.vn/api/comments/${commentData.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -149,7 +149,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
     const handleDeleteComment = async () => {
         setIsDeleting(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/comments/${commentData.id}`, {
+            const res = await fetch(`https://smartbook.io.vn/api/comments/${commentData.id}`, {
                 method: 'PATCH',
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -193,7 +193,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                 return;
             }
 
-            const res = await fetch(`http://localhost:8000/api/comments`, {
+            const res = await fetch(`https://smartbook.io.vn/api/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -459,7 +459,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                                     onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
                                     onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
                                 >
-                                  &quot;&quot;
+                                    &quot;&quot;
                                 </button>
                                 <button
                                     style={{

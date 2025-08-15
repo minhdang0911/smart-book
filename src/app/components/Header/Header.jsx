@@ -1,3 +1,4 @@
+// Header.js - Thêm listener để cập nhật user data
 'use client';
 import {
     BellOutlined,
@@ -77,7 +78,7 @@ const Header = () => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
-                const response = await fetch('http://localhost:8000/api/cart/count', {
+                const response = await fetch('https://smartbook.io.vn/api/cart/count', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json',
@@ -91,6 +92,22 @@ const Header = () => {
                 }
             } catch (error) {
                 console.error('Error fetching cart count:', error);
+            }
+        }
+    };
+
+    // ✅ Fetch user info function
+    const fetchUserInfo = async () => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const response = await apiGetMe(token);
+                if (response?.status === true) {
+                    setUser(response?.user);
+                    console.log('✅ Header: User info updated:', response?.user);
+                }
+            } catch (error) {
+                console.error('Error getting user info:', error);
             }
         }
     };
@@ -109,31 +126,36 @@ const Header = () => {
     }, []);
 
     useEffect(() => {
+        // Initial load
+        fetchUserInfo();
+
         const token = localStorage.getItem('token');
         if (token) {
-            const getUserInfo = async () => {
-                try {
-                    const response = await apiGetMe(token);
-                    if (response?.status === true) {
-                        setUser(response?.user);
-                        fetchCartCount();
-                    }
-                } catch (error) {
-                    console.error('Error getting user info:', error);
-                }
-            };
-            getUserInfo();
+            fetchCartCount();
         }
     }, []);
 
-    // Listen for cart update events
     useEffect(() => {
+        const handleUserDataUpdate = (event) => {
+            console.log('🔄 Header received user data update event:', event.detail);
+
+            if (event.detail?.user) {
+                setUser(event.detail.user);
+            } else {
+                fetchUserInfo();
+            }
+        };
+
         const handleCartUpdate = () => {
             fetchCartCount();
         };
 
+        // Add event listeners
+        window.addEventListener('userDataUpdated', handleUserDataUpdate);
         window.addEventListener('cartUpdated', handleCartUpdate);
+
         return () => {
+            window.removeEventListener('userDataUpdated', handleUserDataUpdate);
             window.removeEventListener('cartUpdated', handleCartUpdate);
         };
     }, []);

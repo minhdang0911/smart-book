@@ -1,8 +1,8 @@
-import useSWR from 'swr';
 import { message } from 'antd';
+import useSWR from 'swr';
 
 const fetchFavoriteBooks = async (token) => {
-    const response = await fetch('http://localhost:8000/api/books/followed', {
+    const response = await fetch('https://smartbook.io.vn/api/books/followed', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -11,11 +11,11 @@ const fetchFavoriteBooks = async (token) => {
     });
 
     const data = await response.json();
-    
+
     if (!data.status) {
         throw new Error('Không thể tải danh sách yêu thích');
     }
-    
+
     return data.followed_books;
 };
 
@@ -27,8 +27,8 @@ export const useFavoriteBooks = (token, enabled = false) => {
             revalidateOnFocus: false,
             onError: (error) => {
                 message.error(error.message || 'Lỗi kết nối API');
-            }
-        }
+            },
+        },
     );
 
     // Mock data fallback
@@ -66,9 +66,9 @@ export const useFavoriteBooks = (token, enabled = false) => {
     ];
 
     return {
-        favoriteBooks: error ? mockData : (data || []),
+        favoriteBooks: error ? mockData : data || [],
         loading: isLoading,
         error,
-        mutate
+        mutate,
     };
 };

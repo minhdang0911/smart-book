@@ -13,7 +13,7 @@ export const useComments = (postId) => {
     const fetchComments = async () => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/api/comments?post_id=${postId}`);
+            const res = await fetch(`https://smartbook.io.vn/api/comments?post_id=${postId}`);
             const data = await res.json();
             if (data.success) {
                 setComments(data.data);
@@ -31,7 +31,7 @@ export const useComments = (postId) => {
         const token = localStorage.getItem('token');
 
         try {
-            const res = await fetch('http://localhost:8000/api/comments', {
+            const res = await fetch('https://smartbook.io.vn/api/comments', {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

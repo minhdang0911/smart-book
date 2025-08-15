@@ -1,7 +1,9 @@
 export const toggleWishlist = async ({ bookId, token, wishlist, setWishlist }) => {
     try {
         const isFollowed = wishlist.includes(bookId);
-        const url = isFollowed ? 'http://localhost:8000/api/books/unfollow' : 'http://localhost:8000/api/books/follow';
+        const url = isFollowed
+            ? 'https://smartbook.io.vn/api/books/unfollow'
+            : 'https://smartbook.io.vn/api/books/follow';
 
         const response = await fetch(url, {
             method: isFollowed ? 'DELETE' : 'POST',

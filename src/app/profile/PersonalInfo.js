@@ -26,6 +26,7 @@ import {
 import dayjs from 'dayjs';
 import customParseFormat from 'dayjs/plugin/customParseFormat';
 import { useMemo, useRef, useState } from 'react';
+import { toast } from 'react-toastify';
 
 dayjs.extend(customParseFormat);
 
@@ -123,8 +124,8 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                 });
                 fd.append('avatar', avatarFile);
 
-                res = await fetch('http://localhost:8000/api/user/profile', {
-                    method: 'PUT',
+                res = await fetch('https://smartbook.io.vn/api/user/profile', {
+                    method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
                         Accept: 'application/json',
@@ -132,8 +133,8 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                     body: fd,
                 });
             } else {
-                res = await fetch('http://localhost:8000/api/user/profile', {
-                    method: 'PUT',
+                res = await fetch('https://smartbook.io.vn/api/user/profile', {
+                    method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         Accept: 'application/json',
@@ -157,13 +158,21 @@ export default function PersonalInfo({ user, token, mutateUser }) {
             }
 
             message.success('Cập nhật thông tin thành công.');
+            toast.success('Cập nhật thông tin thành công.');
             setEditing(false);
             setAvatarFile(null);
 
+            // ✅ QUAN TRỌNG: Refresh dữ liệu user để cập nhật header và sidebar
             if (mutateUser) {
-                await mutateUser();
+                try {
+                    await mutateUser(); // Refresh user data
+                    console.log('✅ User data refreshed successfully');
+                } catch (mutateError) {
+                    console.error('❌ Error refreshing user data:', mutateError);
+                }
             }
 
+            // Update form với dữ liệu mới trả về từ API
             if (data?.user) {
                 form.setFieldsValue({
                     name: data.user.name ?? undefined,
@@ -172,8 +181,25 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                     gender: data.user.gender ?? undefined,
                 });
             }
+
+            // ✅ THÊM: Trigger event để Header component cũng refresh cart count và user info
+            if (typeof window !== 'undefined') {
+                // Dispatch custom event để thông báo user data đã thay đổi
+                window.dispatchEvent(
+                    new CustomEvent('userDataUpdated', {
+                        detail: { user: data?.user || user },
+                    }),
+                );
+
+                // Nếu có function updateCartCount global, gọi nó
+                if (window.updateCartCount) {
+                    window.updateCartCount();
+                }
+            }
         } catch (err) {
+            console.error('Update profile error:', err);
             message.error(err.message || 'Có lỗi xảy ra.');
+            toast.error(err.message || 'Có lỗi xảy ra.');
         } finally {
             setSubmitting(false);
         }
@@ -264,12 +290,6 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                                 />
                             </Form.Item>
                         </Col>
-
-                        {/* <Col xs={24} md={12}>
-                            <Form.Item label="ID người dùng">
-                                <Input className="field" value={user?.id ?? ''} readOnly disabled />
-                            </Form.Item>
-                        </Col> */}
 
                         <Col xs={24} md={12}>
                             <Form.Item

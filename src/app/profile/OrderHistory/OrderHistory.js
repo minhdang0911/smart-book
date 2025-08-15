@@ -1,4 +1,3 @@
-'use client';
 import {
     Check,
     ChevronDown,
@@ -449,7 +448,7 @@ const OrderHistory = ({ token, enabled }) => {
         const fetchOrders = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`http://localhost:8000/api/orders?page=${currentPage}`, {
+                const response = await fetch(`https://smartbook.io.vn/api/orders?page=${currentPage}`, {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -479,7 +478,7 @@ const OrderHistory = ({ token, enabled }) => {
 
         const fetchOrderDetail = async () => {
             try {
-                const response = await fetch(`http://localhost:8000/api/orders/${selectedOrderId}`, {
+                const response = await fetch(`https://smartbook.io.vn/api/orders/${selectedOrderId}`, {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -590,7 +589,7 @@ const OrderHistory = ({ token, enabled }) => {
     // Cancel order function
     const cancelOrder = async (orderId) => {
         try {
-            const response = await fetch(`http://localhost:8000/api/orders/${orderId}/cancel`, {
+            const response = await fetch(`https://smartbook.io.vn/api/orders/${orderId}/cancel`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

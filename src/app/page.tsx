@@ -1,5 +1,5 @@
 import Author from './components/Author/Author';
-import Banner from './components/banner/banner';
+import VoyageSlider from './components/banner/banner';
 import Blog from './components/blog/blog';
 import BookAIChatbot from './components/Chatbot/BookAIChatbot';
 import CouponSlider from './components/coupon/coupon';
@@ -10,15 +10,18 @@ import BookRunningBanner from './components/RunningBookBanner';
 export default function Home() {
     return (
         <div>
-            <Banner />
+            <VoyageSlider />
 
             <CouponSlider />
+
             <Event />
+            {/* <VietnameseBookstore /> */}
+            {/* <div style={{ marginTop: '120px' }}> */}
             <Author />
+            {/* </div> */}
             <Product />
             <Gift />
             <Blog />
-
             <BookAIChatbot />
             <div style={{ width: '100%' }}>
                 <BookRunningBanner />

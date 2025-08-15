@@ -1,7 +1,7 @@
 // hooks/useBooksByCategory.js
 import useSWR from 'swr';
 
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://smartbook.io.vn/api';
 
 const fetcher = async (url) => {
     const res = await fetch(url);
@@ -22,7 +22,7 @@ export const useBooksByCategory = (category) => {
         {
             revalidateOnFocus: false,
             dedupingInterval: 3600000,
-        }
+        },
     );
 
     return {
@@ -32,4 +32,3 @@ export const useBooksByCategory = (category) => {
         mutate,
     };
 };
-

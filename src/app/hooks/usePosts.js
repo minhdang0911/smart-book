@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://smartbook.io.vn/api';
 
 const fetcher = async (url) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -22,14 +22,10 @@ const fetcher = async (url) => {
 };
 
 export const useAllPosts = (page = 1, perPage = 10) => {
-    const { data, error, isLoading, mutate } = useSWR(
-        `${BASE_URL}/posts?page=${page}&per_page=${perPage}`,
-        fetcher,
-        {
-            revalidateOnFocus: false,
-            dedupingInterval: 3600000, // 1 hour
-        }
-    );
+    const { data, error, isLoading, mutate } = useSWR(`${BASE_URL}/posts?page=${page}&per_page=${perPage}`, fetcher, {
+        revalidateOnFocus: false,
+        dedupingInterval: 3600000, // 1 hour
+    });
 
     const posts = data?.data || [];
     const meta = data?.meta || {};

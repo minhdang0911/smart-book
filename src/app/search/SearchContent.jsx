@@ -33,32 +33,23 @@ const SearchContent = () => {
     const [books, setBooks] = useState([]);
     const [pagination, setPagination] = useState({});
     const [authors, setAuthors] = useState([]);
-    const [categories, setCategories] = useState([]);
-
-    // Get URL parameters
-    const keyword = searchParams.get('keyword') || searchParams.get('name') || '';
-    const urlType = searchParams.get('type') || '';
-    const urlSort = searchParams.get('sort') || 'popular';
-    const urlPage = parseInt(searchParams.get('page')) || 1;
-    const urlLimit = parseInt(searchParams.get('limit')) || 12;
-    const urlCategory = searchParams.get('category') || '';
-    const urlAuthor = searchParams.get('author') || '';
-    const urlPriceMin = parseInt(searchParams.get('price_min')) || 0;
-    const urlPriceMax = parseInt(searchParams.get('price_max')) || 1000000;
-    const urlAvailable = searchParams.get('available') === '1';
-
-    const [pageSize, setPageSize] = useState(urlLimit);
+    const keyword = searchParams.get('keyword');
+    const [pageSize, setPageSize] = useState(12);
     const [priceDebounce, setPriceDebounce] = useState(null);
+    const [categories, setCategories] = useState([]);
+    const [publishers, setPublishers] = useState([]); // Thêm state cho publishers
     const [filters, setFilters] = useState({
-        name: keyword,
-        selectedAuthors: urlAuthor ? urlAuthor.split(',') : [],
-        selectedCategories: urlCategory ? urlCategory.split(',') : [],
-        priceRange: [urlPriceMin, urlPriceMax],
-        bookType: urlType,
-        available: urlAvailable,
-        sort: urlSort,
+        name: searchParams.get('keyword') || '',
+        selectedAuthors: [],
+        selectedCategories: searchParams.get('category') ? [searchParams.get('category')] : [],
+        selectedPublisher: searchParams.get('publisher') || '',
+        publisherName: searchParams.get('publisher_name') || '',
+        priceRange: [0, 1000000],
+        bookType: searchParams.get('type') || '', // Lấy type từ URL
+        available: false,
+        sort: searchParams.get('sort') || 'popular', // Lấy sort từ URL
     });
-    const [currentPage, setCurrentPage] = useState(urlPage);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // AI Search states - Enhanced for OCR.space compatibility
     const [isAISearch, setIsAISearch] = useState(false);
@@ -70,19 +61,13 @@ const SearchContent = () => {
         currentSearchType: null,
     });
 
-    // Update filters when URL parameters change
     useEffect(() => {
-        const newCategory = searchParams.get('category') || '';
-        const newKeyword = searchParams.get('keyword') || searchParams.get('name') || '';
-        const newType = searchParams.get('type') || '';
-        const newSort = searchParams.get('sort') || 'popular';
-        const newPage = parseInt(searchParams.get('page')) || 1;
-        const newLimit = parseInt(searchParams.get('limit')) || 12;
-        const newAuthor = searchParams.get('author') || '';
-        const newPriceMin = parseInt(searchParams.get('price_min')) || 0;
-        const newPriceMax = parseInt(searchParams.get('price_max')) || 1000000;
-        const newAvailable = searchParams.get('available') === '1';
-
+        const newCategory = searchParams.get('category');
+        const newKeyword = searchParams.get('keyword');
+        const newPublisher = searchParams.get('publisher');
+        const newPublisherName = searchParams.get('publisher_name');
+        const newType = searchParams.get('type'); // Thêm type
+        const newSort = searchParams.get('sort'); // Thêm sort
         const aiSearch = searchParams.get('ai_search');
         const aiBookTitle = searchParams.get('ai_book_title');
         const aiAuthor = searchParams.get('ai_author');
@@ -96,27 +81,26 @@ const SearchContent = () => {
                 author: aiAuthor,
                 category: aiCategory,
                 isAI: true,
-                ocrEngine: 'OCR.space',
+                ocrEngine: 'OCR.space', // Track OCR engine used
             });
         }
 
-        setFilters({
-            name: newKeyword,
-            selectedAuthors: newAuthor ? newAuthor.split(',') : [],
-            selectedCategories: newCategory ? newCategory.split(',') : [],
-            priceRange: [newPriceMin, newPriceMax],
-            bookType: newType,
-            available: newAvailable,
-            sort: newSort,
-        });
-
-        setCurrentPage(newPage);
-        setPageSize(newLimit);
+        setFilters((prev) => ({
+            ...prev,
+            name: newKeyword || '',
+            selectedCategories: newCategory ? [newCategory] : [],
+            selectedPublisher: newPublisher || '',
+            publisherName: newPublisherName || '',
+            bookType: newType || '', // Cập nhật bookType từ URL
+            sort: newSort || 'popular', // Cập nhật sort từ URL
+        }));
+        setCurrentPage(1);
     }, [searchParams]);
 
     useEffect(() => {
         loadAuthors();
         loadCategories();
+        loadPublishers(); // Thêm hàm load publishers
     }, []);
 
     useEffect(() => {
@@ -125,7 +109,7 @@ const SearchContent = () => {
         } else {
             searchBooks();
         }
-    }, [searchParams, currentPage, pageSize]);
+    }, [searchParams.get('keyword'), filters, currentPage, pageSize, isAISearch, aiSearchInfo]);
 
     const loadAuthors = async () => {
         const response = await apiGetAuthors();
@@ -138,6 +122,19 @@ const SearchContent = () => {
         const response = await apiGetCategories();
         if (response.success === true) {
             setCategories(response.data);
+        }
+    };
+
+    // Thêm hàm load publishers
+    const loadPublishers = async () => {
+        try {
+            const response = await fetch('https://smartbook.io.vn/api/publisher');
+            const data = await response.json();
+            if (data.status) {
+                setPublishers(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching publishers:', error);
         }
     };
 
@@ -238,7 +235,7 @@ const SearchContent = () => {
             for (const query of searchQueries) {
                 console.log('🔎 Trying query:', query);
 
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         name: query,
                         limit: 20,
@@ -267,7 +264,7 @@ const SearchContent = () => {
             if (matchedAuthor) {
                 console.log('✅ Found matching author:', matchedAuthor);
 
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         author: matchedAuthor.id,
                         limit: 20,
@@ -284,7 +281,7 @@ const SearchContent = () => {
             const searchQueries = generateEnhancedSearchQueries(normalizedAuthor);
 
             for (const query of searchQueries) {
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         author: query,
                         limit: 20,
@@ -314,7 +311,7 @@ const SearchContent = () => {
                 console.log('✅ Found matching category:', matchedCategory);
 
                 // Tìm theo category ID
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         category: matchedCategory.id,
                         limit: 20,
@@ -331,7 +328,7 @@ const SearchContent = () => {
             const searchQueries = generateEnhancedSearchQueries(normalizedCategory);
 
             for (const query of searchQueries) {
-                const response = await axios.get('http://localhost:8000/api/books/search', {
+                const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                     params: {
                         category: query,
                         limit: 20,
@@ -523,67 +520,73 @@ const SearchContent = () => {
         return maxLen === 0 ? 1 : (maxLen - matrix[len2][len1]) / maxLen;
     };
 
-    // Updated searchBooks function to properly handle all URL parameters
+    // Legacy function compatibility
+    const normalizeSearchText = (text) => {
+        return normalizeOCRSpaceText(text);
+    };
+
+    const generateSearchQueries = (text) => {
+        return generateEnhancedSearchQueries(text);
+    };
+
+    const findMatchingAuthor = async (authorName) => {
+        return await findMatchingAuthorEnhanced(authorName);
+    };
+
+    const findMatchingCategory = async (categoryName) => {
+        return await findMatchingCategoryEnhanced(categoryName);
+    };
+
     const searchBooks = async () => {
         setLoading(true);
         try {
             const params = {};
+            if (searchParams.get('keyword')) {
+                params.name = searchParams.get('keyword');
+            }
+            if (filters.selectedAuthors.length > 0) {
+                params.author = filters.selectedAuthors.join(',');
+            }
+            if (filters.selectedCategories.length > 0) {
+                params.category = filters.selectedCategories.join(',');
+            }
+            // Thêm publisher param
+            if (filters.selectedPublisher) {
+                params.publisher = filters.selectedPublisher;
+            }
 
-            // Get parameters from URL or current filters
-            const currentKeyword = searchParams.get('keyword') || searchParams.get('name') || filters.name;
-            const currentType = searchParams.get('type') || filters.bookType;
-            const currentSort = searchParams.get('sort') || filters.sort;
-            const currentPage = parseInt(searchParams.get('page')) || 1;
-            const currentLimit = parseInt(searchParams.get('limit')) || pageSize;
-            const currentCategory =
-                searchParams.get('category') ||
-                (filters.selectedCategories.length > 0 ? filters.selectedCategories.join(',') : '');
-            const currentAuthor =
-                searchParams.get('author') ||
-                (filters.selectedAuthors.length > 0 ? filters.selectedAuthors.join(',') : '');
-            const currentPriceMin =
-                parseInt(searchParams.get('price_min')) || (filters.priceRange[0] > 0 ? filters.priceRange[0] : null);
-            const currentPriceMax =
-                parseInt(searchParams.get('price_max')) ||
-                (filters.priceRange[1] < 1000000 ? filters.priceRange[1] : null);
-            const currentAvailable = searchParams.get('available') === '1' || filters.available;
+            if (filters.priceRange[0] > 0) {
+                params.price_min = filters.priceRange[0];
+            }
+            if (filters.priceRange[1] < 1000000) {
+                params.price_max = filters.priceRange[1];
+            }
 
-            // Build API parameters
-            if (currentKeyword) {
-                params.name = currentKeyword;
-            }
-            if (currentAuthor) {
-                params.author = currentAuthor;
-            }
-            if (currentCategory) {
-                params.category = currentCategory;
-            }
-            if (currentPriceMin) {
-                params.price_min = currentPriceMin;
-            }
-            if (currentPriceMax) {
-                params.price_max = currentPriceMax;
-            }
-            if (currentType) {
-                if (currentType === 'physical') {
+            // Cập nhật xử lý bookType để map với API
+            if (filters.bookType) {
+                if (filters.bookType === 'physical') {
                     params.type = 'paper';
-                } else if (currentType === 'ebook') {
+                } else if (filters.bookType === 'ebook') {
                     params.type = 'ebook';
+                } else {
+                    // Nếu là 'paper' hoặc 'ebook' trực tiếp từ URL
+                    params.type = filters.bookType;
                 }
             }
-            if (currentAvailable) {
+
+            if (filters.available) {
                 params.available = 1;
             }
-            if (currentSort) {
-                params.sort = currentSort;
+            if (filters.sort) {
+                params.sort = filters.sort;
             }
 
             params.page = currentPage;
-            params.limit = currentLimit;
+            params.limit = pageSize;
 
-            console.log('🔍 Search API params:', params);
+            console.log('🔍 Search params:', params); // Debug log
 
-            const response = await axios.get('http://localhost:8000/api/books/search', {
+            const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                 params: params,
             });
 
@@ -600,38 +603,31 @@ const SearchContent = () => {
         }
     };
 
-    // Update URL when filters change
-    const updateURL = (newFilters = {}, newPage = currentPage, newPageSize = pageSize) => {
-        const params = new URLSearchParams();
-
-        const finalFilters = { ...filters, ...newFilters };
-
-        if (finalFilters.name) params.set('name', finalFilters.name);
-        if (finalFilters.bookType) params.set('type', finalFilters.bookType);
-        if (finalFilters.sort) params.set('sort', finalFilters.sort);
-        if (newPage > 1) params.set('page', newPage.toString());
-        if (newPageSize !== 12) params.set('limit', newPageSize.toString());
-        if (finalFilters.selectedCategories.length > 0)
-            params.set('category', finalFilters.selectedCategories.join(','));
-        if (finalFilters.selectedAuthors.length > 0) params.set('author', finalFilters.selectedAuthors.join(','));
-        if (finalFilters.priceRange[0] > 0) params.set('price_min', finalFilters.priceRange[0].toString());
-        if (finalFilters.priceRange[1] < 1000000) params.set('price_max', finalFilters.priceRange[1].toString());
-        if (finalFilters.available) params.set('available', '1');
-
-        const newURL = `/search${params.toString() ? '?' + params.toString() : ''}`;
-        router.push(newURL);
-    };
-
     const handleAuthorChange = (checkedValues) => {
-        const newFilters = { selectedAuthors: checkedValues };
-        setFilters((prev) => ({ ...prev, ...newFilters }));
-        updateURL(newFilters, 1);
+        setFilters((prev) => ({
+            ...prev,
+            selectedAuthors: checkedValues,
+        }));
+        setCurrentPage(1);
     };
 
     const handleCategoryChange = (checkedValues) => {
-        const newFilters = { selectedCategories: checkedValues };
-        setFilters((prev) => ({ ...prev, ...newFilters }));
-        updateURL(newFilters, 1);
+        setFilters((prev) => ({
+            ...prev,
+            selectedCategories: checkedValues,
+        }));
+        setCurrentPage(1);
+    };
+
+    // Thêm handler cho publisher
+    const handlePublisherChange = (value) => {
+        const selectedPub = publishers.find((pub) => pub.id.toString() === value);
+        setFilters((prev) => ({
+            ...prev,
+            selectedPublisher: value,
+            publisherName: selectedPub ? selectedPub.name : '',
+        }));
+        setCurrentPage(1);
     };
 
     const handlePriceChange = (value) => {
@@ -639,46 +635,54 @@ const SearchContent = () => {
             clearTimeout(priceDebounce);
         }
 
-        const newFilters = { priceRange: value };
-        setFilters((prev) => ({ ...prev, ...newFilters }));
+        setFilters((prev) => ({
+            ...prev,
+            priceRange: value,
+        }));
 
         const timeout = setTimeout(() => {
-            updateURL(newFilters, 1);
+            setCurrentPage(1);
         }, 500);
 
         setPriceDebounce(timeout);
     };
 
     const handleTypeChange = (value) => {
-        const newFilters = { bookType: value };
-        setFilters((prev) => ({ ...prev, ...newFilters }));
-        updateURL(newFilters, 1);
+        setFilters((prev) => ({
+            ...prev,
+            bookType: value,
+        }));
+        setCurrentPage(1);
     };
 
     const handleAvailableChange = (e) => {
-        const newFilters = { available: e.target.checked };
-        setFilters((prev) => ({ ...prev, ...newFilters }));
-        updateURL(newFilters, 1);
+        setFilters((prev) => ({
+            ...prev,
+            available: e.target.checked,
+        }));
+        setCurrentPage(1);
     };
 
     const handleSortChange = (value) => {
-        const newFilters = { sort: value };
-        setFilters((prev) => ({ ...prev, ...newFilters }));
-        updateURL(newFilters, 1);
+        setFilters((prev) => ({
+            ...prev,
+            sort: value,
+        }));
+        setCurrentPage(1);
     };
 
     const clearFilters = () => {
-        const defaultFilters = {
+        setFilters({
             name: '',
             selectedAuthors: [],
             selectedCategories: [],
+            selectedPublisher: '',
+            publisherName: '',
             priceRange: [0, 1000000],
             bookType: '',
             available: false,
             sort: 'popular',
-        };
-
-        setFilters(defaultFilters);
+        });
         setCurrentPage(1);
         setIsAISearch(false);
         setAiSearchInfo(null);
@@ -689,8 +693,18 @@ const SearchContent = () => {
             currentSearchType: null,
         });
 
-        // Clear URL params
-        router.push('/search');
+        // Clear URL params nhưng giữ lại type và sort nếu có
+        const currentType = searchParams.get('type');
+        const currentSort = searchParams.get('sort');
+
+        if (currentType || currentSort) {
+            const newParams = new URLSearchParams();
+            if (currentType) newParams.set('type', currentType);
+            if (currentSort) newParams.set('sort', currentSort);
+            router.push(`/search?${newParams.toString()}`);
+        } else {
+            router.push('/search');
+        }
     };
 
     const handlePageChange = (page, size) => {
@@ -698,7 +712,6 @@ const SearchContent = () => {
         if (size !== pageSize) {
             setPageSize(size);
         }
-        updateURL({}, page, size);
     };
 
     const formatPrice = (price) => {
@@ -789,6 +802,19 @@ const SearchContent = () => {
     };
 
     const getSearchTitle = () => {
+        // Hiển thị title dựa trên type từ URL
+        if (filters.bookType === 'ebook') {
+            return 'Ebooks';
+        }
+        if (filters.bookType === 'paper') {
+            return 'Sách bán';
+        }
+
+        // Hiển thị publisher title nếu có
+        if (filters.selectedPublisher && filters.publisherName) {
+            return `Sách từ nhà xuất bản: "${filters.publisherName}"`;
+        }
+
         if (isAISearch && aiSearchInfo) {
             if (aiSearchResults.currentSearchType === 'title') {
                 return `AI OCR.space tìm thấy sách: "${aiSearchInfo.bookTitle}"`;
@@ -801,9 +827,8 @@ const SearchContent = () => {
             }
         }
 
-        if (filters.name || searchParams.get('name') || searchParams.get('keyword')) {
-            const searchTerm = filters.name || searchParams.get('name') || searchParams.get('keyword');
-            return `Kết quả tìm kiếm: "${searchTerm}"`;
+        if (filters.name) {
+            return `Kết quả tìm kiếm: "${filters.name}"`;
         }
 
         return 'Tất cả sách';
@@ -866,6 +891,31 @@ const SearchContent = () => {
 
                             <Divider />
 
+                            {/* Thêm bộ lọc Nhà xuất bản */}
+                            <div className={styles.filterSection}>
+                                <Title level={5}>Nhà xuất bản</Title>
+                                <Select
+                                    value={filters.selectedPublisher}
+                                    onChange={handlePublisherChange}
+                                    placeholder="Chọn nhà xuất bản"
+                                    style={{ width: '100%' }}
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {publishers.map((publisher) => (
+                                        <Option key={publisher.id} value={publisher.id.toString()}>
+                                            {publisher.name}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <Divider />
+
                             <div className={styles.filterSection}>
                                 <Title level={5}>Khoảng giá</Title>
                                 <Slider
@@ -897,7 +947,7 @@ const SearchContent = () => {
                                     allowClear
                                 >
                                     <Option value="ebook">Ebook</Option>
-                                    <Option value="physical">Sách giấy</Option>
+                                    <Option value="paper">Sách giấy</Option>
                                 </Select>
                             </div>
 
@@ -935,6 +985,20 @@ const SearchContent = () => {
                                                     : 'Phân tích'}
                                             </Tag>
                                         )}
+                                        {filters.selectedPublisher && (
+                                            <Tag color="green" style={{ marginLeft: 8 }}>
+                                                {filters.publisherName}
+                                            </Tag>
+                                        )}
+                                        {filters.bookType && (
+                                            <Tag color="orange" style={{ marginLeft: 8 }}>
+                                                {filters.bookType === 'ebook'
+                                                    ? 'Ebook'
+                                                    : filters.bookType === 'paper'
+                                                    ? 'Sách giấy'
+                                                    : filters.bookType}
+                                            </Tag>
+                                        )}
                                     </Text>
                                 )}
                             </div>
@@ -951,6 +1015,7 @@ const SearchContent = () => {
 
                         {(filters.selectedAuthors.length > 0 ||
                             filters.selectedCategories.length > 0 ||
+                            filters.selectedPublisher ||
                             filters.bookType ||
                             filters.available ||
                             isAISearch) && (
@@ -980,6 +1045,12 @@ const SearchContent = () => {
                                         Thể loại: {category}
                                     </Tag>
                                 ))}
+                                {/* Thêm tag cho publisher */}
+                                {filters.selectedPublisher && (
+                                    <Tag color="green" closable onClose={() => handlePublisherChange('')}>
+                                        NXB: {filters.publisherName}
+                                    </Tag>
+                                )}
                                 {isAISearch && (
                                     <Tag color="blue" closable onClose={() => router.push('/search')}>
                                         OCR.space AI:{' '}
@@ -988,7 +1059,12 @@ const SearchContent = () => {
                                 )}
                                 {filters.bookType && (
                                     <Tag closable onClose={() => handleTypeChange('')}>
-                                        Loại: {filters.bookType === 'ebook' ? 'Ebook' : 'Sách giấy'}
+                                        Loại:{' '}
+                                        {filters.bookType === 'ebook'
+                                            ? 'Ebook'
+                                            : filters.bookType === 'paper'
+                                            ? 'Sách giấy'
+                                            : filters.bookType}
                                     </Tag>
                                 )}
                                 {filters.available && (
@@ -1037,13 +1113,14 @@ const SearchContent = () => {
                                                         position: 'relative',
                                                         width: '100%',
                                                         height: '280px',
+
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                         padding: '12px',
                                                     }}
                                                 >
-                                                    {/* Khung hình ảnh bên trong */}
+                                                    {/* Khung hình ảnh bên trong - THÊM MỚI */}
                                                     <div
                                                         style={{
                                                             width: '200px',
@@ -1099,7 +1176,7 @@ const SearchContent = () => {
                                                         ></div>
                                                     </div>
 
-                                                    {/* Badges và overlays */}
+                                                    {/* Badges và overlays - position absolute so với bookImageContainer */}
                                                     {book.discount_percent && book.is_physical === 1 && (
                                                         <div
                                                             className={styles.discountBadge}
@@ -1244,6 +1321,11 @@ const SearchContent = () => {
                                                             </Tag>
                                                         )}
                                                         {book.is_physical === 0 && <Tag color="lime">Miễn phí</Tag>}
+                                                        {book.publisher && (
+                                                            <Tag color="purple" style={{ fontSize: '11px' }}>
+                                                                {book.publisher.name}
+                                                            </Tag>
+                                                        )}
                                                         {isAISearch && (
                                                             <Tag color="purple" size="small">
                                                                 OCR.space AI
@@ -1258,7 +1340,9 @@ const SearchContent = () => {
                             ) : (
                                 <Empty
                                     description={
-                                        isAISearch
+                                        filters.selectedPublisher && filters.publisherName
+                                            ? `Không tìm thấy sách nào từ nhà xuất bản "${filters.publisherName}"`
+                                            : isAISearch
                                             ? `OCR.space AI không tìm thấy sách phù hợp với "${
                                                   aiSearchInfo?.bookTitle ||
                                                   aiSearchInfo?.author ||
@@ -1283,7 +1367,6 @@ const SearchContent = () => {
                                     onShowSizeChange={(current, size) => {
                                         setPageSize(size);
                                         setCurrentPage(1);
-                                        updateURL({}, 1, size);
                                     }}
                                     showQuickJumper
                                     showTotal={(total, range) => `${range[0]}-${range[1]} của ${total} sách`}
