@@ -1,5 +1,5 @@
 'use client';
-'use client';
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 const AdvancedPartnersMarquee = () => {
@@ -7,6 +7,7 @@ const AdvancedPartnersMarquee = () => {
     const [loading, setLoading] = useState(true);
     const marqueeRef = useRef(null);
     const containerRef = useRef(null);
+    const router = useRouter();
 
     // Fetch publishers from API
     useEffect(() => {
@@ -65,6 +66,12 @@ const AdvancedPartnersMarquee = () => {
         fetchPublishers();
     }, []);
 
+    // Handle publisher click
+    const handlePublisherClick = (publisherId, publisherName) => {
+        console.log('Navigating to search with publisher:', publisherId, publisherName);
+        router.push(`/search?publisher=${publisherId}&publisher_name=${encodeURIComponent(publisherName)}`);
+    };
+
     // Advanced GSAP-style animations with smoother effects
     useEffect(() => {
         if (!loading && partners.length > 0 && marqueeRef.current) {
@@ -103,6 +110,7 @@ const AdvancedPartnersMarquee = () => {
                 if (target) {
                     target.style.transform = 'scale(1.1) translateY(-5px)';
                     target.style.zIndex = '10';
+                    target.style.cursor = 'pointer';
                 }
             };
 
@@ -281,6 +289,28 @@ const AdvancedPartnersMarquee = () => {
                     box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15), 0 4px 20px rgba(0, 0, 0, 0.08);
                 }
 
+                .partner-logo-container::after {
+                    content: 'Xem sách từ nhà xuất bản này';
+                    position: absolute;
+                    bottom: -35px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.8);
+                    color: white;
+                    padding: 6px 12px;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    white-space: nowrap;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: opacity 0.3s ease;
+                    z-index: 20;
+                }
+
+                .partner-logo-container:hover::after {
+                    opacity: 1;
+                }
+
                 .partner-logo {
                     max-height: 60px;
                     max-width: 140px;
@@ -289,6 +319,7 @@ const AdvancedPartnersMarquee = () => {
                     object-fit: contain;
                     filter: grayscale(100%) opacity(0.7);
                     transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+                    pointer-events: none;
                 }
 
                 .partner-logo-container:hover .partner-logo {
@@ -406,6 +437,11 @@ const AdvancedPartnersMarquee = () => {
                         max-height: 40px;
                         max-width: 100px;
                     }
+
+                    .partner-logo-container::after {
+                        font-size: 10px;
+                        padding: 4px 8px;
+                    }
                 }
 
                 @media (prefers-reduced-motion: reduce) {
@@ -441,7 +477,11 @@ const AdvancedPartnersMarquee = () => {
                     <div className="marquee-track">
                         <div className="marquee-content" ref={marqueeRef}>
                             {triplePartners.map((partner, index) => (
-                                <div key={`${partner.id}-${index}`} className="partner-logo-container">
+                                <div
+                                    key={`${partner.id}-${index}`}
+                                    className="partner-logo-container"
+                                    onClick={() => handlePublisherClick(partner.id, partner.name)}
+                                >
                                     <img
                                         src={partner.image_url}
                                         alt={partner.name}

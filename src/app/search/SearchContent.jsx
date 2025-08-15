@@ -37,14 +37,17 @@ const SearchContent = () => {
     const [pageSize, setPageSize] = useState(12);
     const [priceDebounce, setPriceDebounce] = useState(null);
     const [categories, setCategories] = useState([]);
+    const [publishers, setPublishers] = useState([]); // Thêm state cho publishers
     const [filters, setFilters] = useState({
         name: searchParams.get('keyword') || '',
         selectedAuthors: [],
         selectedCategories: searchParams.get('category') ? [searchParams.get('category')] : [],
+        selectedPublisher: searchParams.get('publisher') || '',
+        publisherName: searchParams.get('publisher_name') || '',
         priceRange: [0, 1000000],
-        bookType: '',
+        bookType: searchParams.get('type') || '', // Lấy type từ URL
         available: false,
-        sort: 'popular',
+        sort: searchParams.get('sort') || 'popular', // Lấy sort từ URL
     });
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -61,6 +64,10 @@ const SearchContent = () => {
     useEffect(() => {
         const newCategory = searchParams.get('category');
         const newKeyword = searchParams.get('keyword');
+        const newPublisher = searchParams.get('publisher');
+        const newPublisherName = searchParams.get('publisher_name');
+        const newType = searchParams.get('type'); // Thêm type
+        const newSort = searchParams.get('sort'); // Thêm sort
         const aiSearch = searchParams.get('ai_search');
         const aiBookTitle = searchParams.get('ai_book_title');
         const aiAuthor = searchParams.get('ai_author');
@@ -82,6 +89,10 @@ const SearchContent = () => {
             ...prev,
             name: newKeyword || '',
             selectedCategories: newCategory ? [newCategory] : [],
+            selectedPublisher: newPublisher || '',
+            publisherName: newPublisherName || '',
+            bookType: newType || '', // Cập nhật bookType từ URL
+            sort: newSort || 'popular', // Cập nhật sort từ URL
         }));
         setCurrentPage(1);
     }, [searchParams]);
@@ -89,6 +100,7 @@ const SearchContent = () => {
     useEffect(() => {
         loadAuthors();
         loadCategories();
+        loadPublishers(); // Thêm hàm load publishers
     }, []);
 
     useEffect(() => {
@@ -110,6 +122,19 @@ const SearchContent = () => {
         const response = await apiGetCategories();
         if (response.success === true) {
             setCategories(response.data);
+        }
+    };
+
+    // Thêm hàm load publishers
+    const loadPublishers = async () => {
+        try {
+            const response = await fetch('https://smartbook.io.vn/api/publisher');
+            const data = await response.json();
+            if (data.status) {
+                setPublishers(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching publishers:', error);
         }
     };
 
@@ -525,6 +550,10 @@ const SearchContent = () => {
             if (filters.selectedCategories.length > 0) {
                 params.category = filters.selectedCategories.join(',');
             }
+            // Thêm publisher param
+            if (filters.selectedPublisher) {
+                params.publisher = filters.selectedPublisher;
+            }
 
             if (filters.priceRange[0] > 0) {
                 params.price_min = filters.priceRange[0];
@@ -532,13 +561,19 @@ const SearchContent = () => {
             if (filters.priceRange[1] < 1000000) {
                 params.price_max = filters.priceRange[1];
             }
+
+            // Cập nhật xử lý bookType để map với API
             if (filters.bookType) {
                 if (filters.bookType === 'physical') {
                     params.type = 'paper';
                 } else if (filters.bookType === 'ebook') {
                     params.type = 'ebook';
+                } else {
+                    // Nếu là 'paper' hoặc 'ebook' trực tiếp từ URL
+                    params.type = filters.bookType;
                 }
             }
+
             if (filters.available) {
                 params.available = 1;
             }
@@ -548,6 +583,8 @@ const SearchContent = () => {
 
             params.page = currentPage;
             params.limit = pageSize;
+
+            console.log('🔍 Search params:', params); // Debug log
 
             const response = await axios.get('https://smartbook.io.vn/api/books/search', {
                 params: params,
@@ -578,6 +615,17 @@ const SearchContent = () => {
         setFilters((prev) => ({
             ...prev,
             selectedCategories: checkedValues,
+        }));
+        setCurrentPage(1);
+    };
+
+    // Thêm handler cho publisher
+    const handlePublisherChange = (value) => {
+        const selectedPub = publishers.find((pub) => pub.id.toString() === value);
+        setFilters((prev) => ({
+            ...prev,
+            selectedPublisher: value,
+            publisherName: selectedPub ? selectedPub.name : '',
         }));
         setCurrentPage(1);
     };
@@ -628,6 +676,8 @@ const SearchContent = () => {
             name: '',
             selectedAuthors: [],
             selectedCategories: [],
+            selectedPublisher: '',
+            publisherName: '',
             priceRange: [0, 1000000],
             bookType: '',
             available: false,
@@ -643,8 +693,18 @@ const SearchContent = () => {
             currentSearchType: null,
         });
 
-        // Clear URL params
-        router.push('/search');
+        // Clear URL params nhưng giữ lại type và sort nếu có
+        const currentType = searchParams.get('type');
+        const currentSort = searchParams.get('sort');
+
+        if (currentType || currentSort) {
+            const newParams = new URLSearchParams();
+            if (currentType) newParams.set('type', currentType);
+            if (currentSort) newParams.set('sort', currentSort);
+            router.push(`/search?${newParams.toString()}`);
+        } else {
+            router.push('/search');
+        }
     };
 
     const handlePageChange = (page, size) => {
@@ -742,6 +802,19 @@ const SearchContent = () => {
     };
 
     const getSearchTitle = () => {
+        // Hiển thị title dựa trên type từ URL
+        if (filters.bookType === 'ebook') {
+            return 'Ebooks';
+        }
+        if (filters.bookType === 'paper') {
+            return 'Sách bán';
+        }
+
+        // Hiển thị publisher title nếu có
+        if (filters.selectedPublisher && filters.publisherName) {
+            return `Sách từ nhà xuất bản: "${filters.publisherName}"`;
+        }
+
         if (isAISearch && aiSearchInfo) {
             if (aiSearchResults.currentSearchType === 'title') {
                 return `AI OCR.space tìm thấy sách: "${aiSearchInfo.bookTitle}"`;
@@ -818,6 +891,31 @@ const SearchContent = () => {
 
                             <Divider />
 
+                            {/* Thêm bộ lọc Nhà xuất bản */}
+                            <div className={styles.filterSection}>
+                                <Title level={5}>Nhà xuất bản</Title>
+                                <Select
+                                    value={filters.selectedPublisher}
+                                    onChange={handlePublisherChange}
+                                    placeholder="Chọn nhà xuất bản"
+                                    style={{ width: '100%' }}
+                                    allowClear
+                                    showSearch
+                                    optionFilterProp="children"
+                                    filterOption={(input, option) =>
+                                        option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                                    }
+                                >
+                                    {publishers.map((publisher) => (
+                                        <Option key={publisher.id} value={publisher.id.toString()}>
+                                            {publisher.name}
+                                        </Option>
+                                    ))}
+                                </Select>
+                            </div>
+
+                            <Divider />
+
                             <div className={styles.filterSection}>
                                 <Title level={5}>Khoảng giá</Title>
                                 <Slider
@@ -849,7 +947,7 @@ const SearchContent = () => {
                                     allowClear
                                 >
                                     <Option value="ebook">Ebook</Option>
-                                    <Option value="physical">Sách giấy</Option>
+                                    <Option value="paper">Sách giấy</Option>
                                 </Select>
                             </div>
 
@@ -887,6 +985,20 @@ const SearchContent = () => {
                                                     : 'Phân tích'}
                                             </Tag>
                                         )}
+                                        {filters.selectedPublisher && (
+                                            <Tag color="green" style={{ marginLeft: 8 }}>
+                                                {filters.publisherName}
+                                            </Tag>
+                                        )}
+                                        {filters.bookType && (
+                                            <Tag color="orange" style={{ marginLeft: 8 }}>
+                                                {filters.bookType === 'ebook'
+                                                    ? 'Ebook'
+                                                    : filters.bookType === 'paper'
+                                                    ? 'Sách giấy'
+                                                    : filters.bookType}
+                                            </Tag>
+                                        )}
                                     </Text>
                                 )}
                             </div>
@@ -903,6 +1015,7 @@ const SearchContent = () => {
 
                         {(filters.selectedAuthors.length > 0 ||
                             filters.selectedCategories.length > 0 ||
+                            filters.selectedPublisher ||
                             filters.bookType ||
                             filters.available ||
                             isAISearch) && (
@@ -932,6 +1045,12 @@ const SearchContent = () => {
                                         Thể loại: {category}
                                     </Tag>
                                 ))}
+                                {/* Thêm tag cho publisher */}
+                                {filters.selectedPublisher && (
+                                    <Tag color="green" closable onClose={() => handlePublisherChange('')}>
+                                        NXB: {filters.publisherName}
+                                    </Tag>
+                                )}
                                 {isAISearch && (
                                     <Tag color="blue" closable onClose={() => router.push('/search')}>
                                         OCR.space AI:{' '}
@@ -940,7 +1059,12 @@ const SearchContent = () => {
                                 )}
                                 {filters.bookType && (
                                     <Tag closable onClose={() => handleTypeChange('')}>
-                                        Loại: {filters.bookType === 'ebook' ? 'Ebook' : 'Sách giấy'}
+                                        Loại:{' '}
+                                        {filters.bookType === 'ebook'
+                                            ? 'Ebook'
+                                            : filters.bookType === 'paper'
+                                            ? 'Sách giấy'
+                                            : filters.bookType}
                                     </Tag>
                                 )}
                                 {filters.available && (
@@ -1197,6 +1321,11 @@ const SearchContent = () => {
                                                             </Tag>
                                                         )}
                                                         {book.is_physical === 0 && <Tag color="lime">Miễn phí</Tag>}
+                                                        {book.publisher && (
+                                                            <Tag color="purple" style={{ fontSize: '11px' }}>
+                                                                {book.publisher.name}
+                                                            </Tag>
+                                                        )}
                                                         {isAISearch && (
                                                             <Tag color="purple" size="small">
                                                                 OCR.space AI
@@ -1211,7 +1340,9 @@ const SearchContent = () => {
                             ) : (
                                 <Empty
                                     description={
-                                        isAISearch
+                                        filters.selectedPublisher && filters.publisherName
+                                            ? `Không tìm thấy sách nào từ nhà xuất bản "${filters.publisherName}"`
+                                            : isAISearch
                                             ? `OCR.space AI không tìm thấy sách phù hợp với "${
                                                   aiSearchInfo?.bookTitle ||
                                                   aiSearchInfo?.author ||

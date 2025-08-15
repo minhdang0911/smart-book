@@ -135,16 +135,13 @@ const Header = () => {
         }
     }, []);
 
-    // ✅ QUAN TRỌNG: Listen for user data update events
     useEffect(() => {
         const handleUserDataUpdate = (event) => {
             console.log('🔄 Header received user data update event:', event.detail);
 
-            // Update user state with new data
             if (event.detail?.user) {
                 setUser(event.detail.user);
             } else {
-                // Fallback: refetch user info
                 fetchUserInfo();
             }
         };
