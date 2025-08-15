@@ -1,1352 +1,1722 @@
 'use client';
 import {
-    Book,
-    ChevronLeft,
-    ChevronRight,
-    Clock,
-    FileText,
-    FileType,
-    Home,
+    BookOutlined,
+    CaretRightOutlined,
+    DollarOutlined,
+    DownOutlined,
+    EditOutlined,
+    EyeOutlined,
+    HeartFilled,
+    HeartOutlined,
+    HomeOutlined,
+    InfoCircleOutlined,
+    MessageOutlined,
+    MinusOutlined,
+    NumberOutlined,
+    PlusOutlined,
+    ReadOutlined,
+    ShareAltOutlined,
+    ShoppingCartOutlined,
+    UpOutlined,
+    UserOutlined,
+    WarningOutlined,
+} from '@ant-design/icons';
+import {
+    Alert,
+    Avatar,
+    Breadcrumb,
+    Button,
+    Card,
+    Col,
+    Descriptions,
+    Divider,
+    Empty,
+    Form,
+    Input,
     List,
-    Loader,
-    Menu,
-    RotateCcw,
-    X,
-    ZoomIn,
-    ZoomOut,
-} from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
-import HTMLFlipBook from 'react-pageflip';
+    message,
+    Modal,
+    Progress,
+    Rate,
+    Row,
+    Space,
+    Spin,
+    Tabs,
+    Tag,
+    Typography,
+} from 'antd';
+import { marked } from 'marked';
+import { useParams, useRouter } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
+import ReactImageMagnify from 'react-image-magnify';
+import { toast } from 'react-toastify';
 
-const PDFFlipbook = () => {
-    const [chapterData, setChapterData] = useState(null);
-    const [numPages, setNumPages] = useState(0);
-    const [currentPage, setCurrentPage] = useState(0);
-    const [loading, setLoading] = useState(true);
-    const [zoom, setZoom] = useState(1);
-    const [pdfPages, setPdfPages] = useState([]);
-    const [htmlContent, setHtmlContent] = useState('');
-    const [contentType, setContentType] = useState('text'); // 'pdf' or 'text'
-    const [pdfDoc, setPdfDoc] = useState(null);
-    const [bookId, setBookId] = useState(null);
-    const [chapterId, setChapterId] = useState(null);
-    const [pdfCache, setPdfCache] = useState({}); // Cache cho PDF pages
-    const [showChapterModal, setShowChapterModal] = useState(false);
-    const [allChapters, setAllChapters] = useState([]);
-    const [loadingChapters, setLoadingChapters] = useState(false);
-    const flipBookRef = useRef();
+// Import custom hooks
+import { useBookDetail } from '../../hooks/useBookDetail';
+import { useBookImages } from '../../hooks/useBookImages';
+import { useCart } from '../../hooks/useCart';
+import { useReviewActions } from '../../hooks/useReviewActions';
+import { useReviews } from '../../hooks/useReviews';
+import { useReviewStats } from '../../hooks/useReviewStats';
+import { useSameAuthorBooks } from '../../hooks/useSameAuthorBooks';
+import { useSameCategoryBooks } from '../../hooks/useSameCategoryBooks';
+import { useUser } from '../../hooks/useUser';
+import { useWishlist } from '../../hooks/useWishlist';
 
-    // Load PDF.js and get data from localStorage
+import './BookDetail.css';
+
+// ===== New constants for consistent sizing =====
+const COVER_RATIO = 150; // paddingTop percentage for 2:3 ratio (150%)
+const CARD_COVER_INSET = 8; // inner frame inset in px
+const THUMB_W = 60;
+const THUMB_H = 90; // keep 2:3 thumbnails
+
+// Custom hook để fetch chapters data từ API
+const useBookChapters = (bookId) => {
+    const [chapters, setChapters] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
     useEffect(() => {
-        const loadPDFJS = async () => {
-            // Get bookId and chapterId from localStorage
-            const storedBookId = localStorage.getItem('currentBookId');
-            const storedChapterId = localStorage.getItem('currentChapterId');
+        if (!bookId) return;
 
-            if (!storedBookId || !storedChapterId) {
-                console.error('BookId or ChapterId not found in localStorage');
-                setLoading(false);
-                return;
-            }
+        const fetchChapters = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const response = await fetch(`https://smartbook.io.vn/api/admin/books/${bookId}/chapters`);
+                const data = await response.json();
 
-            setBookId(storedBookId);
-            setChapterId(storedChapterId);
-
-            // Load PDF.js only if we need it
-            if (typeof window !== 'undefined' && !window.pdfjsLib) {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                script.onload = () => {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                    fetchChapterData(storedBookId, storedChapterId);
-                };
-                document.head.appendChild(script);
-            } else {
-                fetchChapterData(storedBookId, storedChapterId);
+                if (data.success) {
+                    setChapters(data.chapters || []);
+                } else {
+                    setError('Không thể tải danh sách chương');
+                }
+            } catch (err) {
+                console.error('Error fetching chapters:', err);
+                setError('Lỗi khi tải danh sách chương');
+            } finally {
+                setIsLoading(false);
             }
         };
-        loadPDFJS();
-    }, []);
 
-    // Fetch chapter data
-    const fetchChapterData = async (currentBookId, currentChapterId) => {
-        try {
-            setLoading(true);
-            const response = await fetch(
-                `https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
-            );
-            const data = await response.json();
-            setChapterData(data);
+        fetchChapters();
+    }, [bookId]);
 
-            // Update localStorage with current chapter info
-            localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-            localStorage.setItem('currentChapterId', data.chapter.id.toString());
+    return { chapters, isLoading, error };
+};
 
-            setBookId(data.chapter.book_id);
-            setChapterId(data.chapter.id);
+// Modern BookList component with Swiper slider
+const BookList = ({ books }) => {
+    const router = useRouter();
+    const [showNavigation, setShowNavigation] = useState(false);
+    const { user, isLoading, mutate: mutateUser } = useUser();
 
-            // Determine content type and load accordingly
-            if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                setContentType('pdf');
-                await loadPDF(data.chapter.pdf_url, data.chapter.id);
-            } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                setContentType('text');
-                loadHTMLContent(data.chapter.content);
-            } else {
-                console.error('No valid content found');
-                setLoading(false);
-            }
-        } catch (error) {
-            console.error('Error fetching chapter data:', error);
-            setLoading(false);
+    const getNames = (field) => {
+        if (!field) return 'Không rõ';
+        if (Array.isArray(field)) {
+            return field.map((item) => (typeof item === 'string' ? item : item.name)).join(', ');
         }
+        if (typeof field === 'object' && field.name) return field.name;
+        if (typeof field === 'string') return field;
+        return 'Không rõ';
     };
 
-    // Load HTML content for text-based chapters
-    const loadHTMLContent = (content) => {
-        setHtmlContent(content);
-        setNumPages(1); // HTML content is treated as a single page
-        setLoading(false);
+    if (!books || !Array.isArray(books) || books.length === 0) {
+        return <Empty description="Không có sách nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+    }
 
-        // Reset flipbook to first page
-        setTimeout(() => {
-            if (flipBookRef.current && flipBookRef.current.pageFlip) {
-                flipBookRef.current.pageFlip().flip(0);
-            }
-        }, 100);
-    };
+    // Desktop: Hiển thị grid 5 cột nếu <= 5 sách, slider nếu > 5
+    // Mobile: Luôn là scroll horizontal
+    const shouldUseSlider = books.length > 5;
 
-    // Load PDF with PDF.js and caching
-    const loadPDF = async (pdfUrl, chapterIdForCache) => {
-        try {
-            // Check cache first
-            const cacheKey = `${chapterIdForCache}_${pdfUrl}`;
-            if (pdfCache[cacheKey]) {
-                console.log('Using cached PDF pages for chapter:', chapterIdForCache);
-                setPdfPages(pdfCache[cacheKey].pages);
-                setNumPages(pdfCache[cacheKey].numPages);
-                setLoading(false);
+    if (!shouldUseSlider) {
+        // Grid layout cho <= 5 sách
+        return (
+            <Row gutter={[16, 24]}>
+                {books.map((book, index) => (
+                    <Col xs={12} sm={8} md={6} lg={4} xl={4} key={book.id || index}>
+                        <BookCard book={book} router={router} getNames={getNames} />
+                    </Col>
+                ))}
+            </Row>
+        );
+    }
 
-                // Force flipbook to reset về trang đầu sau khi load
-                setTimeout(() => {
-                    if (flipBookRef.current && flipBookRef.current.pageFlip) {
-                        flipBookRef.current.pageFlip().flip(0);
+    // Slider layout cho > 5 sách
+    return (
+        <div
+            className="book-slider-container"
+            onMouseEnter={() => setShowNavigation(true)}
+            onMouseLeave={() => setShowNavigation(false)}
+            style={{ position: 'relative' }}
+        >
+            {/* Desktop Slider */}
+            <div className="desktop-slider" style={{ display: 'block' }}>
+                <div style={{ position: 'relative' }}>
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: '16px',
+                            overflowX: 'hidden',
+                            scrollBehavior: 'smooth',
+                            paddingBottom: '10px',
+                        }}
+                        id="books-slider"
+                    >
+                        {books.map((book, index) => (
+                            <div
+                                key={book.id || index}
+                                style={{
+                                    minWidth: '200px',
+                                    maxWidth: '200px',
+                                    flex: '0 0 auto',
+                                }}
+                            >
+                                <BookCard book={book} router={router} getNames={getNames} />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Navigation arrows - chỉ hiện khi hover */}
+                    {showNavigation && (
+                        <>
+                            <Button
+                                className="slider-nav-btn slider-prev"
+                                shape="circle"
+                                icon={<CaretRightOutlined style={{ transform: 'rotate(180deg)' }} />}
+                                style={{
+                                    position: 'absolute',
+                                    left: '-20px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    zIndex: 10,
+                                    backgroundColor: 'white',
+                                    border: '1px solid #d9d9d9',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                }}
+                                onClick={() => {
+                                    const slider = document.getElementById('books-slider');
+                                    slider.scrollLeft -= 220;
+                                }}
+                            />
+                            <Button
+                                className="slider-nav-btn slider-next"
+                                shape="circle"
+                                icon={<CaretRightOutlined />}
+                                style={{
+                                    position: 'absolute',
+                                    right: '-20px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    zIndex: 10,
+                                    backgroundColor: 'white',
+                                    border: '1px solid #d9d9d9',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                                }}
+                                onClick={() => {
+                                    const slider = document.getElementById('books-slider');
+                                    slider.scrollLeft += 220;
+                                }}
+                            />
+                        </>
+                    )}
+                </div>
+            </div>
+
+            {/* Mobile Scroll - hiển thị khi < 768px */}
+            <style jsx>{`
+                @media (max-width: 767px) {
+                    .desktop-slider {
+                        display: none !important;
                     }
-                }, 100);
-                return;
-            }
-
-            console.log('Loading PDF from URL:', pdfUrl);
-            const loadingTask = window.pdfjsLib.getDocument(pdfUrl);
-            const pdf = await loadingTask.promise;
-            setPdfDoc(pdf);
-            setNumPages(pdf.numPages);
-
-            // Render all pages as images
-            const pages = [];
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const pageImage = await renderPageToImage(pdf, i);
-                pages.push({
-                    pageNumber: i,
-                    imageUrl: pageImage,
-                    width: 600,
-                    height: 800,
-                });
-            }
-
-            setPdfPages(pages);
-            console.log('PDF Pages loaded:', pages.length);
-
-            // Cache the pages
-            setPdfCache((prev) => ({
-                ...prev,
-                [cacheKey]: {
-                    pages,
-                    numPages: pdf.numPages,
-                    timestamp: Date.now(),
-                },
-            }));
-
-            setLoading(false);
-
-            // Force flipbook to start at page 0 after loading
-            setTimeout(() => {
-                if (flipBookRef.current && flipBookRef.current.pageFlip) {
-                    flipBookRef.current.pageFlip().flip(0);
+                    .mobile-scroll {
+                        display: block !important;
+                    }
                 }
-            }, 100);
-        } catch (error) {
-            console.error('Error loading PDF:', error);
-            setLoading(false);
+                @media (min-width: 768px) {
+                    .mobile-scroll {
+                        display: none !important;
+                    }
+                }
+            `}</style>
+
+            <div className="mobile-scroll" style={{ display: 'none' }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        gap: '12px',
+                        overflowX: 'auto',
+                        scrollBehavior: 'smooth',
+                        paddingBottom: '10px',
+                        scrollbarWidth: 'none',
+                        msOverflowStyle: 'none',
+                    }}
+                >
+                    {books.map((book, index) => (
+                        <div
+                            key={book.id || index}
+                            style={{
+                                minWidth: '140px',
+                                maxWidth: '140px',
+                                flex: '0 0 auto',
+                            }}
+                        >
+                            <BookCard book={book} router={router} getNames={getNames} isMobile />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Separate BookCard component
+const BookCard = ({ book, router, getNames, isMobile = false }) => {
+    return (
+        <Card
+            hoverable
+            className="book-card"
+            style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                border: 'none',
+                borderRadius: '12px',
+                overflow: 'hidden',
+                backgroundColor: '#ffffff',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+            }}
+            cover={
+                <div
+                    style={{
+                        position: 'relative',
+                        paddingTop: `${COVER_RATIO}%`,
+                        overflow: 'hidden',
+                        backgroundColor: '#f8f9fa',
+                        borderRadius: '8px 8px 0 0',
+                    }}
+                >
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: CARD_COVER_INSET,
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1,
+                        }}
+                    >
+                        <img
+                            src={book.cover_image || '/placeholder-book.jpg'}
+                            alt={book.title}
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '100%',
+                                objectFit: 'contain',
+                                display: 'block',
+                            }}
+                            onError={(e) => {
+                                e.currentTarget.src = '/placeholder-book.jpg';
+                            }}
+                        />
+                    </div>
+
+                    {/* Discount badge (kept above frame) */}
+                    {book.discount && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '8px',
+                                left: '8px',
+                                backgroundColor: '#52c41a',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                zIndex: 2,
+                            }}
+                        >
+                            -{book.discount}%
+                        </div>
+                    )}
+
+                    {/* Out of stock badge */}
+                    {book.is_physical === 1 && book.stock === 0 && (
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '8px',
+                                right: '8px',
+                                backgroundColor: '#ff4d4f',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                zIndex: 2,
+                            }}
+                        >
+                            Hết hàng
+                        </div>
+                    )}
+                </div>
+            }
+            bodyStyle={{
+                padding: isMobile ? '12px' : '16px',
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                backgroundColor: '#ffffff',
+            }}
+            onClick={() => router.push(`/book/${book.id}`)}
+        >
+            <div style={{ flex: 1 }}>
+                {/* Book title (fixed height) */}
+                <div
+                    style={{
+                        fontSize: isMobile ? '13px' : '14px',
+                        lineHeight: '1.4',
+                        color: '#1890ff',
+                        fontWeight: '400',
+                        marginBottom: '8px',
+                        height: isMobile ? '36px' : '40px',
+                        overflow: 'hidden',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        cursor: 'pointer',
+                    }}
+                    title={book.title}
+                >
+                    {book.title || 'Tên sách'}
+                </div>
+
+                {/* Author (single line, fixed height) */}
+                <div
+                    style={{
+                        fontSize: isMobile ? '11px' : '12px',
+                        color: '#8c8c8c',
+                        marginBottom: '12px',
+                        height: '18px',
+                        overflow: 'hidden',
+                        whiteSpace: 'nowrap',
+                        textOverflow: 'ellipsis',
+                    }}
+                >
+                    {getNames(book.author)}
+                </div>
+            </div>
+
+            {/* Price section */}
+            <div style={{ marginTop: 'auto' }}>
+                {/* Rating - chỉ hiển thị nếu có */}
+                {book.rating_avg && (
+                    <div style={{ marginBottom: '8px' }}>
+                        <Rate
+                            disabled
+                            defaultValue={parseFloat(book.rating_avg)}
+                            style={{ fontSize: isMobile ? '10px' : '11px' }}
+                            allowHalf
+                        />
+                        <span style={{ fontSize: '10px', color: '#bfbfbf', marginLeft: '4px' }}>
+                            ({book.rating_count || 0})
+                        </span>
+                    </div>
+                )}
+
+                {/* Stock info for physical books */}
+                {book.is_physical === 1 && (
+                    <div style={{ marginBottom: '8px' }}>
+                        <span
+                            style={{
+                                fontSize: '10px',
+                                color: book.stock > 10 ? '#52c41a' : book.stock > 0 ? '#faad14' : '#ff4d4f',
+                            }}
+                        >
+                            {book.stock === 0 ? 'Hết hàng' : `Còn ${book.stock} cuốn`}
+                        </span>
+                    </div>
+                )}
+
+                {/* Price */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                    {book.original_price && book.original_price !== book.price && (
+                        <span
+                            style={{
+                                fontSize: '11px',
+                                color: '#bfbfbf',
+                                textDecoration: 'line-through',
+                            }}
+                        >
+                            {Number(book.original_price).toLocaleString('vi-VN')} đ
+                        </span>
+                    )}
+                    <span
+                        style={{
+                            color: '#262626',
+                            fontSize: isMobile ? '14px' : '16px',
+                            fontWeight: '600',
+                            lineHeight: '1.2',
+                        }}
+                    >
+                        {book.price ? `${Number(book.price).toLocaleString('vi-VN')} đ` : 'Liên hệ'}
+                    </span>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
+const { Title, Paragraph, Text } = Typography;
+const { TextArea } = Input;
+const { TabPane } = Tabs;
+
+const BookDetailPage = () => {
+    const router = useRouter();
+    const params = useParams();
+    const { id } = params;
+
+    // Helper functions to safely extract string values from objects
+    const getAuthorName = (author) => {
+        if (!author) return 'Không rõ';
+        if (typeof author === 'string') return author;
+        if (typeof author === 'object' && author.name) return author.name;
+        return 'Không rõ';
+    };
+
+    const getCategoryName = (category) => {
+        if (!category) return 'Không rõ';
+        if (typeof category === 'string') return category;
+        if (typeof category === 'object' && category.name) return category.name;
+        return 'Không rõ';
+    };
+
+    // Local state
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [selectedStarFilter, setSelectedStarFilter] = useState('all');
+    const [quantity, setQuantity] = useState(1);
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
+    const [mainImage, setMainImage] = useState(null);
+    const [activeTab, setActiveTab] = useState('1');
+    const [showAllChapters, setShowAllChapters] = useState(false);
+    const [showFullDescription, setShowFullDescription] = useState(false);
+    const [form] = Form.useForm();
+
+    // Custom hooks
+    const { book, isLoading: bookLoading, error: bookError, mutate: mutateBook } = useBookDetail(id);
+    const { images, isLoading: imagesLoading } = useBookImages(book?.id);
+    const { reviewStats, isLoading: statsLoading, mutate: mutateStats } = useReviewStats(book?.id);
+    const { reviews, isLoading: reviewsLoading, mutate: mutateReviews } = useReviews(book?.id, selectedStarFilter);
+
+    // Use the new chapters hook
+    const { chapters, isLoading: chaptersLoading, error: chaptersError } = useBookChapters(book?.id);
+
+    // Use helper functions for the hooks that need string values
+    const { books: sameAuthorBooks, isLoading: authorBooksLoading } = useSameAuthorBooks(book?.author, book?.id);
+
+    const { books: sameCategoryBooks, isLoading: categoryBooksLoading } = useSameCategoryBooks(
+        book?.category,
+        book?.id,
+    );
+
+    const { wishlist, toggleWishlist, isLoading: wishlistLoading } = useWishlist();
+    const { user, isLoggedIn, isLoading: userLoading } = useUser();
+    const { addToCart } = useCart();
+    const { checkCanReview, submitReview } = useReviewActions();
+
+    // Check if book is out of stock
+    const isOutOfStock = book?.is_physical === 1 && book?.stock === 0;
+
+    // Validate quantity against stock
+    useEffect(() => {
+        if (book?.is_physical === 1 && book?.stock && quantity > book.stock) {
+            setQuantity(book.stock);
+        }
+    }, [book?.stock, quantity]);
+
+    // Set main image when images load
+    useEffect(() => {
+        if (images.length > 0 && !mainImage) {
+            const main = images.find((img) => img.is_main === 1);
+            setMainImage(main?.image_url || images[0]?.image_url);
+        }
+    }, [images, mainImage]);
+
+    // Event handlers
+    const handleStarFilterChange = (starLevel) => {
+        setSelectedStarFilter(starLevel);
+    };
+
+    const handleQuantityChange = (action) => {
+        const maxQuantity = book?.stock || 99;
+        if (action === 'increase' && quantity < maxQuantity) {
+            setQuantity((prev) => prev + 1);
+        } else if (action === 'decrease' && quantity > 1) {
+            setQuantity((prev) => prev - 1);
         }
     };
 
-    // Render PDF page to image
-    const renderPageToImage = async (pdf, pageNumber) => {
+    const handleQuantityInputChange = (value) => {
+        const numValue = parseInt(value) || 1;
+        const maxQuantity = book?.stock || 99;
+        if (numValue >= 1 && numValue <= maxQuantity) {
+            setQuantity(numValue);
+        }
+    };
+
+    const handleSubmitReview = async (values) => {
+        if (!user) {
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return false;
+        }
+
         try {
-            const page = await pdf.getPage(pageNumber);
-            const scale = 2; // Higher quality
-            const viewport = page.getViewport({ scale });
+            const data = await submitReview(id, values.rating, values.comment);
 
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
+            if (data.status) {
+                message.success('Đánh giá của bạn đã được gửi thành công!');
+                setShowReviewModal(false);
+                form.resetFields();
 
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
+                // Cập nhật lại data
+                mutateStats();
+                mutateReviews();
+            } else {
+                message.error(data.message || 'Có lỗi xảy ra khi gửi đánh giá!');
+            }
+        } catch (error) {
+            console.error('Error submitting review:', error);
+
+            // Handle specific error cases
+            if (error.response?.status === 401) {
+                toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!');
+                // Clear token và redirect
+                localStorage.removeItem('token');
+                router.push('/login');
+            } else {
+                message.error('Có lỗi xảy ra khi gửi đánh giá!');
+            }
+        }
+    };
+
+    const handleAddToCart = async () => {
+        if (!user) {
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return;
+        }
+
+        if (isOutOfStock) {
+            toast.error('🚫 Sách này hiện đã hết hàng!');
+            return;
+        }
+
+        try {
+            setIsAddingToCart(true);
+            const result = await addToCart(book.id, quantity);
+
+            if (result.success) {
+                toast.success('🎉 Đã thêm sách vào giỏ hàng!');
+            } else {
+                toast.error(`🚫 ${result.message || result.error || 'Không thể thêm vào giỏ hàng'}`);
+            }
+        } catch (error) {
+            toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error.message || 'Không rõ lỗi'}`);
+        } finally {
+            setIsAddingToCart(false);
+        }
+    };
+
+    const handleBuyNow = async () => {
+        if (!user) {
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return;
+        }
+
+        if (isOutOfStock) {
+            toast.error('🚫 Sách này hiện đã hết hàng!');
+            return;
+        }
+
+        try {
+            const checkoutData = {
+                items: [
+                    {
+                        id: book.id,
+                        name: book.title || book.name,
+                        price: book.price,
+                        quantity: 1,
+                        image: book.cover_image,
+                        author: getAuthorName(book.author),
+                    },
+                ],
+                totalAmount: book.price,
+                totalDiscount: 0,
             };
 
-            await page.render(renderContext).promise;
-            return canvas.toDataURL('image/jpeg', 0.8);
-        } catch (error) {
-            console.error(`Error rendering page ${pageNumber}:`, error);
-            return null;
-        }
-    };
+            setIsAddingToCart(true);
+            toast.info('🔄 Đang thêm vào giỏ hàng...');
 
-    // Fetch all chapters for the book
-    const fetchAllChapters = async (currentBookId) => {
-        if (allChapters.length > 0) return; // Already loaded
+            const result = await addToCart(book.id, 1);
 
-        try {
-            setLoadingChapters(true);
-            const response = await fetch(`https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters`);
-            const data = await response.json();
+            if (result.success) {
+                toast.success(`✅ Đã thêm "${book.title}" vào giỏ hàng!`);
 
-            if (data.success) {
-                // Calculate word count for each chapter
-                const chaptersWithStats = data.chapters.map((chapter) => ({
-                    ...chapter,
-                    wordCount: chapter.display_content
-                        ? chapter.display_content.replace(/<[^>]*>/g, '').trim().length
-                        : 0,
-                }));
-                setAllChapters(chaptersWithStats);
+                localStorage.setItem(
+                    'buyNowData',
+                    JSON.stringify({
+                        isBuyNow: true,
+                        bookId: book.id,
+                        checkoutData,
+                        processed: false,
+                        timestamp: Date.now(),
+                    }),
+                );
+
+                setTimeout(() => {
+                    toast.info('🛒 Chuyển đến trang đặt đơn...');
+                    router.push('/cart');
+                }, 800);
+            } else {
+                toast.error(`🚫 ${result.message || 'Không thể thêm vào giỏ hàng'}`);
             }
         } catch (error) {
-            console.error('Error fetching chapters:', error);
+            console.error('Lỗi khi thêm vào giỏ hàng:', error);
+            toast.error(`🚨 Lỗi hệ thống: ${error.message}`);
         } finally {
-            setLoadingChapters(false);
+            setIsAddingToCart(false);
         }
     };
 
-    // Navigate to specific chapter
-    const navigateToChapter = async (chapterId) => {
-        setShowChapterModal(false);
-        setLoading(true);
-
-        try {
-            const response = await fetch(
-                `https://smartbook.io.vn/api/admin/books/${bookId}/chapters/${chapterId}/detail`,
-            );
-            const data = await response.json();
-            setChapterData(data);
-            setCurrentPage(0);
-
-            // Update localStorage
-            localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-            localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-            // Load content based on type
-            if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                setContentType('pdf');
-                await loadPDF(data.chapter.pdf_url, data.chapter.id);
-            } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                setContentType('text');
-                loadHTMLContent(data.chapter.content);
-            }
-
-            // Reset flipbook
-            if (flipBookRef.current) {
-                flipBookRef.current.flip(0);
-            }
-        } catch (error) {
-            console.error('Error navigating to chapter:', error);
-            setLoading(false);
+    const handleToggleWishlist = async () => {
+        if (!user) {
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return;
         }
-    };
-    const nextPage = () => {
-        if (flipBookRef.current && flipBookRef.current.pageFlip) {
-            flipBookRef.current.pageFlip().flipNext();
-        }
-    };
 
-    const prevPage = () => {
-        if (flipBookRef.current && flipBookRef.current.pageFlip) {
-            flipBookRef.current.pageFlip().flipPrev();
-        }
-    };
-
-    const goToPage = (pageNum) => {
-        if (contentType === 'text') return; // No pagination for text content
-
-        const targetPDFPage = Math.max(1, Math.min(pageNum, numPages));
-        const flipBookPageIndex = targetPDFPage - 1;
-        if (flipBookRef.current && flipBookRef.current.pageFlip) {
-            flipBookRef.current.pageFlip().flip(flipBookPageIndex);
-        }
-    };
-
-    // Handle page flip events
-    const onFlip = (e) => {
-        if (contentType === 'text') return;
-
-        const flipBookPageIndex = e.data;
-        let actualPDFPage;
-
-        if (flipBookPageIndex <= 1) {
-            actualPDFPage = 0;
+        const success = await toggleWishlist(book.id);
+        if (success) {
+            const isInWishlist = wishlist.includes(book.id);
+            toast.success(isInWishlist ? 'Đã thêm vào yêu thích!' : 'Đã xóa khỏi yêu thích!');
         } else {
-            actualPDFPage = flipBookPageIndex - 1;
-        }
-
-        setCurrentPage(Math.min(actualPDFPage, numPages - 1));
-    };
-
-    // Navigation functions for chapters
-    const goToPreviousChapter = async () => {
-        if (chapterData?.previous) {
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
-                );
-                const data = await response.json();
-                setChapterData(data);
-                setCurrentPage(0);
-
-                // Update localStorage
-                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-                localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-                // Load content based on type
-                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                    setContentType('pdf');
-                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
-                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                    setContentType('text');
-                    loadHTMLContent(data.chapter.content);
-                }
-
-                // Reset flipbook
-                if (flipBookRef.current) {
-                    flipBookRef.current.flip(0);
-                }
-            } catch (error) {
-                console.error('Error loading previous chapter:', error);
-                setLoading(false);
-            }
+            toast.error('Có lỗi xảy ra!');
         }
     };
 
-    const goToNextChapter = async () => {
-        if (chapterData?.next) {
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
-                );
-                const data = await response.json();
-                setChapterData(data);
-                setCurrentPage(0);
-
-                // Update localStorage
-                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-                localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-                // Load content based on type
-                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                    setContentType('pdf');
-                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
-                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                    setContentType('text');
-                    loadHTMLContent(data.chapter.content);
-                }
-
-                // Reset flipbook
-                if (flipBookRef.current) {
-                    flipBookRef.current.flip(0);
-                }
-            } catch (error) {
-                console.error('Error loading next chapter:', error);
-                setLoading(false);
-            }
+    const handleOpenReviewModal = async () => {
+        if (!user) {
+            toast.error('🔒 Vui lòng đăng nhập để thực hiện hành động này!');
+            router.push('/login');
+            return;
         }
+
+        const { canReview, message: msg } = await checkCanReview(book.id);
+        if (!canReview) {
+            toast.error(msg);
+            return;
+        }
+
+        setShowReviewModal(true);
     };
 
-    const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 3));
-    const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.5));
-    const resetZoom = () => setZoom(1);
+    // Utility functions
+    const formatPrice = (price) => {
+        return new Intl.NumberFormat('vi-VN').format(price);
+    };
 
-    if (loading) {
+    // Render functions
+    const renderStats = () => {
+        const baseStats = [
+            {
+                title: 'Lượt xem',
+                value: book?.views || 0,
+                prefix: <EyeOutlined />,
+                color: '#3f8600',
+            },
+        ];
+
+        // Chỉ hiển thị giá nếu là sách giấy (is_physical = 1)
+        if (book?.is_physical === 1) {
+            baseStats.push({
+                title: 'Giá',
+                value: (
+                    <span style={{ color: 'red' }}>
+                        <DollarOutlined /> {formatPrice(book?.price)} VND
+                    </span>
+                ),
+                color: 'red',
+            });
+
+            // Thêm thông tin tồn kho
+            baseStats.push({
+                title: 'Tồn kho',
+                value: book?.stock || 0,
+                prefix: <NumberOutlined />,
+                color: book?.stock > 10 ? '#52c41a' : book?.stock > 0 ? '#faad14' : '#ff4d4f',
+            });
+        }
+
+        // Hiển thị số chương nếu là ebook
+        if (book?.is_physical === 0 && chapters.length > 0) {
+            baseStats.push({
+                title: 'Số chương',
+                value: chapters.length,
+                prefix: <NumberOutlined />,
+                color: '#1890ff',
+            });
+        }
+
+        return baseStats;
+    };
+
+    const renderReviewStats = () => {
+        if (statsLoading) {
+            return (
+                <Card className="review-stats-card" bordered={false}>
+                    <Spin />
+                </Card>
+            );
+        }
+
         return (
-            <div style={styles.loadingContainer}>
-                <div style={styles.loadingContent}>
-                    <Loader style={styles.loadingIcon} />
-                    <p style={styles.loadingText}>
-                        {contentType === 'pdf' ? 'Đang tải PDF...' : 'Đang tải nội dung...'}
-                    </p>
-                    <div style={styles.progressContainer}>
-                        <div style={styles.progressBar}></div>
+            <Card
+                title={
+                    <Space>
+                        <Text strong style={{ fontSize: '16px' }}>
+                            Tóm tắt đánh giá
+                        </Text>
+                        <InfoCircleOutlined style={{ color: '#8c8c8c' }} />
+                    </Space>
+                }
+                className="review-stats-card"
+                bordered={false}
+            >
+                <Row gutter={[32, 24]} align="middle">
+                    <Col xs={24} md={12} lg={8}>
+                        <div className="overall-rating" style={{ textAlign: 'center' }}>
+                            <div
+                                className="rating-number"
+                                style={{
+                                    fontSize: '48px',
+                                    fontWeight: 'bold',
+                                    color: '#262626',
+                                    lineHeight: 1,
+                                }}
+                            >
+                                {reviewStats?.totalReviews > 0 ? reviewStats.averageRating.toFixed(1) : '0'}
+                            </div>
+                            <div className="rating-stars" style={{ margin: '8px 0' }}>
+                                <Rate
+                                    disabled
+                                    value={reviewStats?.totalReviews > 0 ? reviewStats.averageRating : 0}
+                                    allowHalf
+                                    style={{ fontSize: '20px' }}
+                                />
+                            </div>
+                            <div
+                                className="rating-count"
+                                style={{
+                                    color: '#8c8c8c',
+                                    fontSize: '14px',
+                                }}
+                            >
+                                {reviewStats?.totalReviews || 0} đánh giá
+                            </div>
+                        </div>
+                    </Col>
+
+                    <Col xs={24} md={12} lg={16}>
+                        {reviewStats?.totalReviews > 0 ? (
+                            <div className="rating-breakdown">
+                                {[5, 4, 3, 2, 1].map((rating) => (
+                                    <div
+                                        key={rating}
+                                        className="rating-row"
+                                        onClick={() => handleStarFilterChange(rating.toString())}
+                                        style={{
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            marginBottom: '8px',
+                                            padding: '4px 0',
+                                        }}
+                                    >
+                                        <span
+                                            className="rating-label"
+                                            style={{
+                                                minWidth: '12px',
+                                                textAlign: 'center',
+                                                marginRight: '8px',
+                                                fontSize: '14px',
+                                            }}
+                                        >
+                                            {rating}
+                                        </span>
+                                        <Progress
+                                            percent={reviewStats.starPercentages?.[rating] || 0}
+                                            showInfo={false}
+                                            strokeColor="#faad14"
+                                            size="small"
+                                            style={{
+                                                flex: 1,
+                                                margin: '0 12px',
+                                                height: '8px',
+                                            }}
+                                        />
+                                        <span
+                                            className="rating-count-small"
+                                            style={{
+                                                minWidth: '30px',
+                                                textAlign: 'right',
+                                                fontSize: '14px',
+                                                color: '#595959',
+                                            }}
+                                        >
+                                            {reviewStats.ratingDistribution?.[rating] || 0}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    height: '120px',
+                                    color: '#8c8c8c',
+                                    fontSize: '14px',
+                                }}
+                            >
+                                Chưa có đánh giá nào
+                            </div>
+                        )}
+
+                        <Divider style={{ margin: '16px 0' }} />
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Button
+                                type="link"
+                                onClick={() => handleStarFilterChange('all')}
+                                style={{
+                                    padding: 0,
+                                    fontSize: '14px',
+                                    color: '#1890ff',
+                                }}
+                            >
+                                → Xem tất cả đánh giá
+                            </Button>
+
+                            <Button type="primary" icon={<EditOutlined />} onClick={handleOpenReviewModal} size="small">
+                                Viết đánh giá
+                            </Button>
+                        </div>
+                    </Col>
+                </Row>
+            </Card>
+        );
+    };
+
+    const renderReviews = () => {
+        if (reviewsLoading) {
+            return <Spin />;
+        }
+
+        if (!reviews || reviews.length === 0) {
+            return <Empty description="Chưa có đánh giá nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />;
+        }
+
+        return (
+            <List
+                dataSource={reviews}
+                renderItem={(review) => (
+                    <List.Item>
+                        <List.Item.Meta
+                            avatar={<Avatar src={review.user?.avatar} icon={<UserOutlined />} />}
+                            title={
+                                <Space>
+                                    <Text strong>{review.user?.name || 'Người dùng ẩn danh'}</Text>
+                                    <Rate disabled defaultValue={review.rating} style={{ fontSize: '12px' }} />
+                                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                                        {review.timeAgo}
+                                    </Text>
+                                </Space>
+                            }
+                            description={
+                                <div>
+                                    <Paragraph style={{ marginBottom: 8 }}>{review.comment}</Paragraph>
+                                    <Space>
+                                        <Button type="text" size="small" icon={<MessageOutlined />}>
+                                            Phản hồi
+                                        </Button>
+                                        <Text type="secondary">{review.likes} lượt thích</Text>
+                                    </Space>
+                                </div>
+                            }
+                        />
+                    </List.Item>
+                )}
+            />
+        );
+    };
+
+    const renderBookImages = () => {
+        if (imagesLoading) {
+            return <Spin />;
+        }
+
+        if (!images || images.length === 0) {
+            return (
+                <div style={{ textAlign: 'center', padding: '40px' }}>
+                    {/* Fallback frame so cover is always fully shown */}
+                    <div
+                        style={{
+                            width: 300,
+                            height: 450,
+                            margin: '0 auto',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 8,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <img
+                            src={book?.cover_image || '/placeholder-book.jpg'}
+                            alt={book?.title}
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
                     </div>
                 </div>
+            );
+        }
+
+        return (
+            <div>
+                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                    {/* Wrap magnify image with a fixed 2:3 frame so it never bleeds */}
+                    <div
+                        style={{
+                            width: 300,
+                            height: 450,
+                            margin: '0 auto',
+                            background: '#fff',
+                            border: '1px solid #e5e7eb',
+                            borderRadius: 8,
+                            padding: 6,
+                        }}
+                    >
+                        <ReactImageMagnify
+                            {...{
+                                smallImage: {
+                                    alt: book?.title,
+                                    isFluidWidth: true,
+                                    src: mainImage || book?.cover_image,
+                                },
+                                largeImage: {
+                                    src: mainImage || book?.cover_image,
+                                    width: 1200,
+                                    height: 1800,
+                                },
+                                enlargedImageContainerStyle: { zIndex: 1500 },
+                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                        />
+                    </div>
+                </div>
+
+                {images.length > 1 && (
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        {images.map((img, index) => (
+                            <div
+                                key={index}
+                                style={{
+                                    width: THUMB_W,
+                                    height: THUMB_H,
+                                    cursor: 'pointer',
+                                    border: mainImage === img.image_url ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                                    borderRadius: '6px',
+                                    overflow: 'hidden',
+                                    background: '#fff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                                onClick={() => setMainImage(img.image_url)}
+                            >
+                                <img
+                                    src={img.image_url}
+                                    alt={`${book?.title} - ${index + 1}`}
+                                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                    onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // Render Mục lục với dữ liệu từ API
+    const renderChaptersList = () => {
+        if (chaptersLoading) {
+            return (
+                <Card
+                    title={
+                        <Space>
+                            <BookOutlined />
+                            <Text strong>Mục lục</Text>
+                        </Space>
+                    }
+                    style={{ marginBottom: '24px' }}
+                >
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                        <Spin size="large" />
+                        <Text style={{ display: 'block', marginTop: '16px', color: '#8c8c8c' }}>
+                            Đang tải danh sách chương...
+                        </Text>
+                    </div>
+                </Card>
+            );
+        }
+
+        if (chaptersError) {
+            return (
+                <Card
+                    title={
+                        <Space>
+                            <BookOutlined />
+                            <Text strong>Mục lục</Text>
+                        </Space>
+                    }
+                    style={{ marginBottom: '24px' }}
+                >
+                    <Empty description={chaptersError} image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </Card>
+            );
+        }
+
+        if (!chapters || chapters.length === 0) {
+            return (
+                <Card
+                    title={
+                        <Space>
+                            <BookOutlined />
+                            <Text strong>Mục lục</Text>
+                        </Space>
+                    }
+                    style={{ marginBottom: '24px' }}
+                >
+                    <Empty description="Chưa có chương nào" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+                </Card>
+            );
+        }
+
+        const displayChapters = showAllChapters ? chapters : chapters.slice(0, 5);
+
+        return (
+            <Card
+                title={
+                    <Space>
+                        <BookOutlined />
+                        <Text strong>Mục lục</Text>
+                        <Text type="secondary">({chapters.length} chương)</Text>
+                    </Space>
+                }
+                style={{ marginBottom: '24px' }}
+            >
+                <div
+                    style={{
+                        maxHeight: showAllChapters ? '400px' : 'none',
+                        overflowY: showAllChapters ? 'auto' : 'visible',
+                        paddingRight: showAllChapters ? '8px' : '0',
+                    }}
+                >
+                    <List
+                        dataSource={displayChapters}
+                        renderItem={(chapter) => (
+                            <List.Item
+                                style={{
+                                    padding: '12px 0',
+                                    borderBottom: '1px solid #f0f0f0',
+                                    cursor: 'pointer',
+                                }}
+                                onClick={() => {
+                                    localStorage.setItem('currentBookId', book.id.toString());
+                                    localStorage.setItem('currentChapterId', chapter.id.toString());
+
+                                    router.push(`/chapterdetail`);
+                                }}
+                            >
+                                <List.Item.Meta
+                                    title={<Text strong>{chapter.title}</Text>}
+                                    description={
+                                        <Space>
+                                            <Text type="secondary">Chương {chapter.chapter_order}</Text>
+                                            <Text type="secondary">•</Text>
+                                            <Text type="secondary">
+                                                {chapter.content_type === 'pdf' ? 'Định dạng PDF' : 'Văn bản'}
+                                            </Text>
+                                            {chapter.pdf_filename && (
+                                                <>
+                                                    <Text type="secondary">•</Text>
+                                                    <Text type="secondary">{chapter.pdf_filename}</Text>
+                                                </>
+                                            )}
+                                        </Space>
+                                    }
+                                />
+                            </List.Item>
+                        )}
+                    />
+                </div>
+
+                {chapters.length > 5 && (
+                    <div style={{ textAlign: 'center', marginTop: '16px' }}>
+                        <Button
+                            type="dashed"
+                            icon={showAllChapters ? <UpOutlined /> : <DownOutlined />}
+                            onClick={() => setShowAllChapters(!showAllChapters)}
+                            style={{
+                                borderColor: '#1890ff',
+                                color: '#1890ff',
+                            }}
+                        >
+                            {showAllChapters ? 'Thu gọn' : `Xem thêm ${chapters.length - 5} chương`}
+                        </Button>
+                    </div>
+                )}
+
+                {/* Scroll indicator khi đang expand */}
+                {showAllChapters && chapters.length > 8 && (
+                    <div
+                        style={{
+                            textAlign: 'center',
+                            marginTop: '8px',
+                            color: '#8c8c8c',
+                            fontSize: '12px',
+                        }}
+                    >
+                        <Text type="secondary">↕️ Cuộn để xem thêm chương</Text>
+                    </div>
+                )}
+            </Card>
+        );
+    };
+
+    // Render Sách cùng tác giả riêng biệt
+    const renderSameAuthorBooks = () => {
+        if (authorBooksLoading) {
+            return (
+                <Card title={<Text strong>Sách cùng tác giả</Text>} style={{ marginBottom: '24px' }}>
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                        <Spin size="large" />
+                    </div>
+                </Card>
+            );
+        }
+
+        if (!sameAuthorBooks || sameAuthorBooks.length === 0) {
+            return (
+                <Card title={<Text strong>Sách cùng tác giả</Text>} style={{ marginBottom: '24px' }}>
+                    <Empty description="Không có sách cùng tác giả" />
+                </Card>
+            );
+        }
+
+        return (
+            <Card
+                title={
+                    <Space>
+                        <UserOutlined />
+                        <Text strong>Sách cùng tác giả: {getAuthorName(book?.author)}</Text>
+                        <Text type="secondary">({sameAuthorBooks.length} sách)</Text>
+                    </Space>
+                }
+                style={{ marginBottom: '24px' }}
+            >
+                {/* BookList -> BookCard now has an inner frame so all covers are fully visible */}
+                <BookList books={sameAuthorBooks} />
+            </Card>
+        );
+    };
+
+    // Render Sách cùng thể loại riêng biệt
+    const renderSameCategoryBooks = () => {
+        if (categoryBooksLoading) {
+            return (
+                <Card title={<Text strong>Sách cùng thể loại</Text>} style={{ marginBottom: '24px' }}>
+                    <div style={{ textAlign: 'center', padding: '40px' }}>
+                        <Spin size="large" />
+                    </div>
+                </Card>
+            );
+        }
+
+        if (!sameCategoryBooks || sameCategoryBooks.length === 0) {
+            return (
+                <Card title={<Text strong>Sách cùng thể loại</Text>} style={{ marginBottom: '24px' }}>
+                    <Empty description="Không có sách cùng thể loại" />
+                </Card>
+            );
+        }
+
+        return (
+            <Card
+                title={
+                    <Space>
+                        <BookOutlined />
+                        <Text strong>Sách cùng thể loại: {getCategoryName(book?.category)}</Text>
+                        <Text type="secondary">({sameCategoryBooks.length} sách)</Text>
+                    </Space>
+                }
+                style={{ marginBottom: '24px' }}
+            >
+                <BookList books={sameCategoryBooks} />
+            </Card>
+        );
+    };
+
+    // Function to render tabs based on book type (chỉ còn tab đánh giá)
+    const renderTabs = () => {
+        const tabs = [];
+
+        // Tab đánh giá - chỉ hiển thị nếu is_physical = 1
+        if (book?.is_physical === 1) {
+            tabs.push(
+                <TabPane tab="Đánh giá" key="1">
+                    <div style={{ marginBottom: '24px' }}>{renderReviewStats()}</div>
+
+                    {/* Star Filter */}
+                    <div style={{ marginBottom: '16px' }}>
+                        <Space>
+                            <Text>Lọc theo sao:</Text>
+                            <Button
+                                size="small"
+                                type={selectedStarFilter === 'all' ? 'primary' : 'default'}
+                                onClick={() => handleStarFilterChange('all')}
+                            >
+                                Tất cả
+                            </Button>
+                            {[5, 4, 3, 2, 1].map((star) => (
+                                <Button
+                                    key={star}
+                                    size="small"
+                                    type={selectedStarFilter === star.toString() ? 'primary' : 'default'}
+                                    onClick={() => handleStarFilterChange(star.toString())}
+                                >
+                                    {star} sao
+                                </Button>
+                            ))}
+                        </Space>
+                    </div>
+
+                    {renderReviews()}
+                </TabPane>,
+            );
+        }
+
+        return tabs;
+    };
+
+    // Render description với chức năng show more/less
+    const renderDescription = () => {
+        const description = book?.description || 'Chưa có mô tả';
+        const maxLength = 200; // Giảm xuống để phù hợp với layout
+
+        if (description.length <= maxLength) {
+            // Nếu mô tả ngắn, hiển thị toàn bộ
+            return (
+                <div
+                    style={{
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        color: '#555',
+                        marginTop: '16px',
+                    }}
+                    dangerouslySetInnerHTML={{
+                        __html: marked(description),
+                    }}
+                />
+            );
+        }
+
+        // Nếu mô tả dài, cần show more/less
+        const shortDescription = showFullDescription ? description : description.substring(0, maxLength) + '...';
+
+        return (
+            <div style={{ marginTop: '16px' }}>
+                <div
+                    style={{
+                        fontSize: '14px',
+                        lineHeight: '1.6',
+                        color: '#555',
+                    }}
+                    dangerouslySetInnerHTML={{
+                        __html: marked(shortDescription),
+                    }}
+                />
+                <div style={{ marginTop: '8px' }}>
+                    <Button
+                        type="link"
+                        onClick={() => setShowFullDescription(!showFullDescription)}
+                        style={{
+                            padding: 0,
+                            fontSize: '12px',
+                            color: '#1890ff',
+                            height: 'auto',
+                        }}
+                    >
+                        {showFullDescription ? (
+                            <>
+                                <UpOutlined style={{ marginRight: '4px', fontSize: '10px' }} />
+                                Thu gọn
+                            </>
+                        ) : (
+                            <>
+                                <DownOutlined style={{ marginRight: '4px', fontSize: '10px' }} />
+                                Xem thêm
+                            </>
+                        )}
+                    </Button>
+                </div>
+            </div>
+        );
+    };
+
+    // Loading state
+    if (bookLoading || userLoading) {
+        return (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                <Spin size="large" />
+            </div>
+        );
+    }
+
+    // Error state
+    if (bookError || !book) {
+        return (
+            <div style={{ textAlign: 'center', padding: '100px 0' }}>
+                <Empty description="Không tìm thấy sách" />
             </div>
         );
     }
 
     return (
-        <div style={styles.container}>
-            {/* Header */}
-            <div style={styles.header}>
-                <div style={styles.headerLeft}>
-                    <div style={styles.bookInfo}>
-                        <Book style={styles.bookIcon} />
-                        <div>
-                            <h1 style={styles.bookTitle}>{chapterData?.chapter?.book?.title}</h1>
-                            <p style={styles.chapterTitle}>
-                                Chương {chapterData?.chapter?.title}
-                                <span style={styles.contentType}>({contentType === 'pdf' ? 'PDF' : 'Văn bản'})</span>
-                            </p>
+        <div className="book-detail-page scaled-80" style={{ padding: '24px' }}>
+            {/* Global 80% scale for the whole page */}
+            <style jsx global>{`
+                .scaled-80 {
+                    zoom: 0.8;
+                }
+                /* Fallback for browsers not supporting zoom */
+                @supports not (zoom: 0.8) {
+                    .scaled-80 {
+                        transform: scale(0.8);
+                        transform-origin: top left;
+                        width: 125%;
+                    }
+                }
+            `}</style>
+
+            {/* Breadcrumb */}
+            <Breadcrumb style={{ marginBottom: '24px' }}>
+                <Breadcrumb.Item>
+                    <HomeOutlined />
+                    <span>Trang chủ</span>
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>
+                    <BookOutlined />
+                    <span>Sách</span>
+                </Breadcrumb.Item>
+                <Breadcrumb.Item>{book.title}</Breadcrumb.Item>
+            </Breadcrumb>
+
+            <Row gutter={[24, 24]}>
+                {/* Left Column - Book Images */}
+                <Col xs={24} md={8} lg={6}>
+                    <Card bordered={false}>{renderBookImages()}</Card>
+                </Col>
+
+                {/* Middle Column - Book Info */}
+                <Col xs={24} md={12} lg={12}>
+                    <Card bordered={false} style={{ height: '100%' }}>
+                        <Title level={2} style={{ marginBottom: '16px', fontSize: '20px' }}>
+                            {book.title}
+                        </Title>
+
+                        <Descriptions column={1} size="small" style={{ marginBottom: '16px' }}>
+                            <Descriptions.Item label="Tác giả">
+                                <Text strong style={{ fontSize: '14px' }}>
+                                    {getAuthorName(book?.author)}
+                                </Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Thể loại">
+                                <Tag color="blue" style={{ fontSize: '12px' }}>
+                                    {getCategoryName(book?.category)}
+                                </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Năm xuất bản">
+                                <Text style={{ fontSize: '14px' }}>{book?.publication_year || 'Không rõ'}</Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Định dạng">
+                                <Tag color={book?.is_physical === 0 ? 'green' : 'orange'} style={{ fontSize: '12px' }}>
+                                    {book?.is_physical === 0 ? 'Sách điện tử' : 'Sách giấy'}
+                                </Tag>
+                            </Descriptions.Item>
+                            {/* Hiển thị tình trạng tồn kho cho sách giấy */}
+                            {book?.is_physical === 1 && (
+                                <Descriptions.Item label="Tình trạng">
+                                    <Tag
+                                        color={book?.stock > 10 ? 'green' : book?.stock > 0 ? 'orange' : 'red'}
+                                        style={{ fontSize: '12px' }}
+                                    >
+                                        {book?.stock === 0 ? 'Hết hàng' : `Còn ${book.stock} cuốn`}
+                                    </Tag>
+                                </Descriptions.Item>
+                            )}
+                        </Descriptions>
+
+                        {/* Out of stock alert */}
+                        {isOutOfStock && (
+                            <Alert
+                                message="Sách hiện đã hết hàng"
+                                description="Sản phẩm tạm thời không có sẵn. Vui lòng liên hệ để được tư vấn."
+                                type="warning"
+                                icon={<WarningOutlined />}
+                                style={{ marginBottom: '16px' }}
+                                showIcon
+                                size="small"
+                            />
+                        )}
+
+                        {/* Stats */}
+                        <Row gutter={[8, 8]} style={{ marginBottom: '16px' }}>
+                            {renderStats().map((stat, index) => (
+                                <Col span={8} key={index}>
+                                    <Card size="small" style={{ textAlign: 'center', fontSize: '12px' }}>
+                                        <Space size="small">
+                                            {stat.prefix &&
+                                                React.cloneElement(stat.prefix, { style: { fontSize: '12px' } })}
+                                            <Text style={{ color: stat.color, fontSize: '12px' }}>
+                                                {stat.title && `${stat.title}: `}
+                                                {stat.value}
+                                            </Text>
+                                        </Space>
+                                    </Card>
+                                </Col>
+                            ))}
+                        </Row>
+
+                        {/* Description - Hiển thị trực tiếp không dùng Collapse */}
+                        <div style={{ marginBottom: '16px' }}>
+                            <Text strong style={{ fontSize: '16px', display: 'block', marginBottom: '8px' }}>
+                                Mô tả sách
+                            </Text>
+                            {renderDescription()}
                         </div>
-                    </div>
-                </div>
+                    </Card>
+                </Col>
 
-                {/* Controls */}
-                <div style={styles.headerRight}>
-                    <div style={styles.zoomControls}>
-                        <button onClick={zoomOut} style={styles.controlButton} title="Thu nhỏ">
-                            <ZoomOut style={styles.controlIcon} />
-                        </button>
-                        <span style={styles.zoomDisplay}>{Math.round(zoom * 100)}%</span>
-                        <button onClick={zoomIn} style={styles.controlButton} title="Phóng to">
-                            <ZoomIn style={styles.controlIcon} />
-                        </button>
-                        <button onClick={resetZoom} style={styles.controlButton} title="Reset">
-                            <RotateCcw style={styles.controlIcon} />
-                        </button>
-                    </div>
-
-                    <button style={styles.headerButton} title="Trang chủ">
-                        <Home style={styles.controlIcon} />
-                    </button>
-                    <button
-                        style={styles.chapterListButton}
-                        title="Danh sách chương"
-                        onClick={() => {
-                            setShowChapterModal(true);
-                            fetchAllChapters(bookId);
-                        }}
-                    >
-                        <List style={styles.controlIcon} />
-                        <span style={styles.buttonText}>Danh sách chương</span>
-                    </button>
-                    <button style={styles.headerButton} title="Menu">
-                        <Menu style={styles.controlIcon} />
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <div style={styles.mainContent}>
-                {/* Background Pattern */}
-                <div style={styles.backgroundPattern}>
-                    <div style={styles.backgroundGradient}></div>
-                </div>
-
-                <div style={styles.contentWrapper}>
-                    {/* Navigation Buttons - only show for PDF */}
-                    {contentType === 'pdf' && (
-                        <>
-                            <button
-                                onClick={prevPage}
-                                disabled={currentPage <= 0}
-                                style={{
-                                    ...styles.navButton,
-                                    ...styles.prevButton,
-                                    ...(currentPage <= 0 ? styles.disabledButton : {}),
-                                }}
-                            >
-                                <ChevronLeft style={styles.navIcon} />
-                            </button>
-
-                            <button
-                                onClick={nextPage}
-                                disabled={currentPage >= numPages - 1}
-                                style={{
-                                    ...styles.navButton,
-                                    ...styles.nextButton,
-                                    ...(currentPage >= numPages - 1 ? styles.disabledButton : {}),
-                                }}
-                            >
-                                <ChevronRight style={styles.navIcon} />
-                            </button>
-                        </>
-                    )}
-
-                    {/* Content Container */}
-                    <div
-                        style={{
-                            ...styles.flipbookWrapper,
-                            transform: `scale(${zoom})`,
-                        }}
-                    >
-                        {contentType === 'pdf' && pdfPages.length > 0 && (
-                            <HTMLFlipBook
-                                ref={flipBookRef}
-                                width={700}
-                                height={900}
-                                size="fixed"
-                                minWidth={500}
-                                maxWidth={1200}
-                                minHeight={600}
-                                maxHeight={1400}
-                                maxShadowOpacity={0.5}
-                                showCover={true}
-                                mobileScrollSupport={false}
-                                onFlip={onFlip}
-                                className="flipbook"
-                                startPage={0}
-                                drawShadow={true}
-                                flippingTime={800}
-                                usePortrait={false}
-                                startZIndex={0}
-                                autoSize={false}
-                                clickEventForward={true}
-                                useMouseEvents={true}
-                                swipeDistance={30}
-                                showPageCorners={true}
-                                disableFlipByClick={false}
-                            >
-                                {/* Cover Page */}
-                                <div style={styles.page}>
-                                    <div style={styles.coverPage}>
-                                        <Book style={styles.coverIcon} />
-                                        <h1 style={styles.coverTitle}>{chapterData?.chapter?.book?.title}</h1>
-                                        <p style={styles.coverChapter}>Chương {chapterData?.chapter?.title}</p>
-                                        <p style={styles.coverAuthor}>{chapterData?.chapter?.book?.author?.name}</p>
-                                    </div>
-                                </div>
-
-                                {/* Blank page sau cover để tạo spread đúng */}
-                                <div style={styles.page}>
-                                    <div style={styles.blankPage}>
-                                        <p style={styles.blankText}>Trang trắng</p>
-                                    </div>
-                                </div>
-
-                                {/* PDF Pages */}
-                                {pdfPages.map((page, index) => (
-                                    <div key={page.pageNumber} style={styles.page}>
-                                        <div style={styles.pdfPageContent}>
-                                            <img
-                                                src={page.imageUrl}
-                                                alt={`Trang ${page.pageNumber}`}
-                                                style={styles.pageImage}
-                                                loading="lazy"
-                                            />
-                                            <div style={styles.pageNumber}>{page.pageNumber}</div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </HTMLFlipBook>
-                        )}
-
-                        {contentType === 'text' && htmlContent && (
-                            <div style={styles.textContentContainer}>
-                                <div style={styles.textPage}>
-                                    <div style={styles.textHeader}>
-                                        <FileText style={styles.textIcon} />
-                                        <h2 style={styles.textTitle}>Chương {chapterData?.chapter?.title}</h2>
-                                    </div>
-                                    <div style={styles.textContent} dangerouslySetInnerHTML={{ __html: htmlContent }} />
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Footer */}
-            <div style={styles.footer}>
-                <div style={styles.footerContent}>
-                    <div style={styles.footerInfo}>
-                        <span style={styles.authorName}>{chapterData?.chapter?.book?.author?.name}</span>
-                        <span style={styles.separator}>•</span>
-                        <span>{chapterData?.chapter?.book?.title}</span>
-                    </div>
-
-                    {/* Page Navigation - only for PDF */}
-                    {contentType === 'pdf' && (
-                        <div style={styles.pageNavigation}>
-                            <div style={styles.pageInputGroup}>
-                                <span style={styles.pageLabel}>Trang:</span>
-                                <div style={styles.pageInputContainer}>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max={numPages}
-                                        value={currentPage + 1}
-                                        onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
-                                        style={styles.pageInput}
-                                    />
-                                    <span style={styles.pageLabel}>/ {numPages}</span>
-                                </div>
-                            </div>
-
-                            {/* Progress Bar */}
-                            <div style={styles.progressGroup}>
-                                <span style={styles.pageLabel}>Tiến độ:</span>
-                                <div style={styles.progressBarContainer}>
-                                    <div
-                                        style={{
-                                            ...styles.progressBarFill,
-                                            width: `${((currentPage + 1) / numPages) * 100}%`,
-                                        }}
-                                    />
-                                </div>
-                                <span style={styles.pageLabel}>
-                                    {Math.round(((currentPage + 1) / numPages) * 100)}%
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Chapter Navigation */}
-                    <div style={styles.chapterNavigation}>
-                        {chapterData?.previous && (
-                            <button style={styles.chapterButton} onClick={goToPreviousChapter} disabled={loading}>
-                                ← Chương trước
-                            </button>
-                        )}
-                        {chapterData?.next && (
-                            <button
-                                style={{ ...styles.chapterButton, ...styles.nextChapterButton }}
-                                onClick={goToNextChapter}
-                                disabled={loading}
-                            >
-                                Chương tiếp →
-                            </button>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            {/* Chapter Modal */}
-            {showChapterModal && (
-                <div style={styles.modalOverlay} onClick={() => setShowChapterModal(false)}>
-                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-                        <div style={styles.modalHeader}>
-                            <div style={styles.modalTitle}>
-                                <List style={styles.modalIcon} />
-                                <span>Danh sách chương ({allChapters.length})</span>
-                            </div>
-                            <button style={styles.closeButton} onClick={() => setShowChapterModal(false)}>
-                                <X style={styles.controlIcon} />
-                            </button>
-                        </div>
-
-                        <div style={styles.modalBody}>
-                            {loadingChapters ? (
-                                <div style={styles.modalLoading}>
-                                    <Loader style={styles.loadingSpinner} />
-                                    <span>Đang tải danh sách chương...</span>
-                                </div>
-                            ) : (
-                                <div style={styles.chaptersList}>
-                                    {allChapters.map((chapter) => (
-                                        <div
-                                            key={chapter.id}
-                                            style={{
-                                                ...styles.chapterItem,
-                                                ...(chapter.id === chapterData?.chapter?.id
-                                                    ? styles.currentChapterItem
-                                                    : {}),
-                                            }}
-                                            onClick={() => navigateToChapter(chapter.id)}
-                                        >
-                                            <div style={styles.chapterInfo}>
-                                                <div style={styles.chapterHeader}>
-                                                    <div style={styles.chapterIcon}>
-                                                        {chapter.content_type === 'pdf' ? (
-                                                            <FileType style={styles.chapterTypeIcon} />
-                                                        ) : (
-                                                            <FileText style={styles.chapterTypeIcon} />
-                                                        )}
-                                                    </div>
-                                                    <div style={styles.chapterTitle}>
-                                                        <h4 style={styles.chapterName}>{chapter.title}</h4>
-                                                        <div style={styles.chapterMeta}>
-                                                            <span style={styles.chapterOrder}>
-                                                                #{chapter.chapter_order}
-                                                            </span>
-                                                            <span style={styles.chapterType}>
-                                                                {chapter.content_type === 'pdf' ? 'PDF' : 'Văn bản'}
-                                                            </span>
-                                                            {chapter.wordCount > 0 && (
-                                                                <span style={styles.wordCount}>
-                                                                    <Clock style={styles.clockIcon} />
-                                                                    {chapter.wordCount.toLocaleString()} ký tự
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {chapter.display_content && (
-                                                    <div style={styles.chapterPreview}>
-                                                        <div
-                                                            style={styles.previewText}
-                                                            dangerouslySetInnerHTML={{
-                                                                __html:
-                                                                    chapter.display_content.length > 200
-                                                                        ? chapter.display_content.substring(0, 200) +
-                                                                          '...'
-                                                                        : chapter.display_content,
-                                                            }}
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {chapter.id === chapterData?.chapter?.id && (
-                                                <div style={styles.currentBadge}>Đang đọc</div>
-                                            )}
-                                        </div>
-                                    ))}
+                {/* Right Column - Actions */}
+                <Col xs={24} md={4} lg={6}>
+                    <Card title="Thao tác" bordered={false}>
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                            {/* Price - chỉ hiển thị nếu là sách giấy */}
+                            {book.is_physical === 1 && (
+                                <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+                                    <Text style={{ fontSize: '24px', fontWeight: 'bold', color: 'red' }}>
+                                        {formatPrice(book.price)} VND
+                                    </Text>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
+
+                            {/* Quantity - chỉ hiển thị nếu là sách giấy và có tồn kho */}
+                            {book.is_physical === 1 && book.stock > 0 && (
+                                <div>
+                                    <Text strong>Số lượng:</Text>
+                                    <div style={{ display: 'flex', alignItems: 'center', marginTop: '8px' }}>
+                                        <Button
+                                            icon={<MinusOutlined />}
+                                            size="small"
+                                            onClick={() => handleQuantityChange('decrease')}
+                                            disabled={quantity <= 1}
+                                        />
+                                        <Input
+                                            value={quantity}
+                                            onChange={(e) => handleQuantityInputChange(e.target.value)}
+                                            style={{ width: '60px', textAlign: 'center', margin: '0 8px' }}
+                                            size="small"
+                                            max={book.stock}
+                                        />
+                                        <Button
+                                            icon={<PlusOutlined />}
+                                            size="small"
+                                            onClick={() => handleQuantityChange('increase')}
+                                            disabled={quantity >= book.stock}
+                                        />
+                                    </div>
+                                    <Text
+                                        type="secondary"
+                                        style={{ fontSize: '12px', display: 'block', marginTop: '4px' }}
+                                    >
+                                        Tối đa {book.stock} cuốn
+                                    </Text>
+                                </div>
+                            )}
+
+                            {/* Action Buttons - Logic theo yêu cầu */}
+                            {book.is_physical === 0 ? (
+                                // Sách điện tử - chỉ hiển thị nút "Đọc sách"
+                                <Button
+                                    type="primary"
+                                    size="large"
+                                    block
+                                    icon={<ReadOutlined />}
+                                    onClick={() => router.push(`/reader/${book.id}`)}
+                                >
+                                    Đọc sách
+                                </Button>
+                            ) : (
+                                // Sách giấy - hiển thị "Mua ngay" và "Thêm vào giỏ hàng"
+                                <>
+                                    <Button
+                                        type="primary"
+                                        size="large"
+                                        block
+                                        icon={<ShoppingCartOutlined />}
+                                        onClick={handleBuyNow}
+                                        loading={isAddingToCart}
+                                        disabled={isOutOfStock}
+                                    >
+                                        {isOutOfStock ? 'Hết hàng' : 'Mua ngay'}
+                                    </Button>
+
+                                    <Button
+                                        size="large"
+                                        block
+                                        icon={<ShoppingCartOutlined />}
+                                        onClick={handleAddToCart}
+                                        loading={isAddingToCart}
+                                        disabled={isOutOfStock}
+                                    >
+                                        {isOutOfStock ? 'Hết hàng' : 'Thêm vào giỏ hàng'}
+                                    </Button>
+                                </>
+                            )}
+
+                            <Button
+                                size="large"
+                                block
+                                icon={
+                                    wishlist?.includes(book.id) ? (
+                                        <HeartFilled style={{ color: 'red' }} />
+                                    ) : (
+                                        <HeartOutlined />
+                                    )
+                                }
+                                onClick={handleToggleWishlist}
+                                loading={wishlistLoading}
+                            >
+                                {wishlist?.includes(book.id) ? 'Đã yêu thích' : 'Thêm vào yêu thích'}
+                            </Button>
+
+                            <Button size="large" block icon={<ShareAltOutlined />}>
+                                Chia sẻ
+                            </Button>
+                        </Space>
+                    </Card>
+                </Col>
+            </Row>
+
+            {/* Tabs Section - chỉ còn tab đánh giá cho sách giấy */}
+            {book?.is_physical === 1 && (
+                <Row style={{ marginBottom: '32px' }}>
+                    <Col span={24}>
+                        <Tabs activeKey={activeTab} onChange={setActiveTab}>
+                            {renderTabs()}
+                        </Tabs>
+                    </Col>
+                </Row>
             )}
+
+            {/* Mục lục - chỉ hiển thị cho ebook (is_physical = 0) */}
+            {book?.is_physical === 0 && renderChaptersList()}
+
+            {/* Sách cùng tác giả - luôn hiển thị */}
+            {renderSameAuthorBooks()}
+
+            {/* Sách cùng thể loại - luôn hiển thị */}
+            {renderSameCategoryBooks()}
+
+            {/* Review Modal */}
+            <Modal
+                title="Viết đánh giá"
+                open={showReviewModal}
+                onCancel={() => {
+                    setShowReviewModal(false);
+                    form.resetFields();
+                }}
+                footer={null}
+                width={600}
+            >
+                <Form form={form} layout="vertical" onFinish={handleSubmitReview}>
+                    <Form.Item
+                        name="rating"
+                        label="Đánh giá"
+                        rules={[{ required: true, message: 'Vui lòng chọn số sao!' }]}
+                    >
+                        <Rate allowHalf />
+                    </Form.Item>
+
+                    <Form.Item
+                        name="comment"
+                        label="Nhận xét"
+                        rules={[
+                            { required: true, message: 'Vui lòng nhập nhận xét!' },
+                            { min: 10, message: 'Nhận xét phải có ít nhất 10 ký tự!' },
+                        ]}
+                    >
+                        <TextArea
+                            rows={4}
+                            placeholder="Chia sẻ cảm nhận của bạn về cuốn sách này..."
+                            maxLength={500}
+                            showCount
+                        />
+                    </Form.Item>
+
+                    <Form.Item style={{ textAlign: 'right', marginBottom: 0 }}>
+                        <Space>
+                            <Button
+                                onClick={() => {
+                                    setShowReviewModal(false);
+                                    form.resetFields();
+                                }}
+                            >
+                                Hủy
+                            </Button>
+                            <Button type="primary" htmlType="submit">
+                                Gửi đánh giá
+                            </Button>
+                        </Space>
+                    </Form.Item>
+                </Form>
+            </Modal>
         </div>
     );
 };
 
-const styles = {
-    // Loading styles
-    loadingContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        background: 'linear-gradient(135deg, #1f2937, #374151)',
-    },
-    loadingContent: {
-        textAlign: 'center',
-        color: 'white',
-    },
-    loadingIcon: {
-        width: '48px',
-        height: '48px',
-        margin: '0 auto 16px',
-        color: '#60a5fa',
-        animation: 'spin 1s linear infinite',
-    },
-    loadingText: {
-        fontSize: '18px',
-        marginBottom: '16px',
-    },
-    progressContainer: {
-        width: '256px',
-        height: '8px',
-        backgroundColor: '#374151',
-        borderRadius: '4px',
-        overflow: 'hidden',
-    },
-    progressBar: {
-        width: '60%',
-        height: '100%',
-        backgroundColor: '#2563eb',
-        animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-    },
-
-    // Main container styles
-    container: {
-        height: '100vh',
-        background: 'linear-gradient(135deg, #1f2937, #374151)',
-        display: 'flex',
-        flexDirection: 'column',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-    },
-
-    // Header styles
-    header: {
-        background: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(8px)',
-        color: 'white',
-        padding: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        borderBottom: '1px solid #374151',
-    },
-    headerLeft: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-    },
-    bookInfo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    bookIcon: {
-        width: '24px',
-        height: '24px',
-        color: '#60a5fa',
-    },
-    bookTitle: {
-        fontSize: '18px',
-        fontWeight: 'bold',
-        margin: 0,
-    },
-    chapterTitle: {
-        fontSize: '14px',
-        color: '#d1d5db',
-        margin: 0,
-    },
-    contentType: {
-        fontSize: '12px',
-        color: '#9ca3af',
-        fontStyle: 'italic',
-    },
-    headerRight: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    zoomControls: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        backgroundColor: '#374151',
-        borderRadius: '8px',
-        padding: '4px',
-    },
-    controlButton: {
-        padding: '8px',
-        backgroundColor: 'transparent',
-        border: 'none',
-        borderRadius: '4px',
-        color: 'white',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-    },
-    controlIcon: {
-        width: '16px',
-        height: '16px',
-    },
-    zoomDisplay: {
-        fontSize: '14px',
-        padding: '4px 12px',
-        minWidth: '60px',
-        textAlign: 'center',
-        color: 'white',
-    },
-    headerButton: {
-        padding: '8px',
-        backgroundColor: '#374151',
-        border: 'none',
-        borderRadius: '4px',
-        color: 'white',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-    },
-    chapterListButton: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '10px 16px',
-        backgroundColor: '#2563eb',
-        border: 'none',
-        borderRadius: '8px',
-        color: 'white',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '500',
-        transition: 'all 0.2s ease',
-        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
-    },
-    buttonText: {
-        fontSize: '14px',
-        fontWeight: '500',
-    },
-
-    // Main content styles
-    mainContent: {
-        flex: 1,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '32px',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    backgroundPattern: {
-        position: 'absolute',
-        inset: 0,
-        opacity: 0.05,
-    },
-    backgroundGradient: {
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(to right, transparent, white, transparent)',
-        transform: 'rotate(45deg)',
-    },
-    contentWrapper: {
-        position: 'relative',
-        zIndex: 10,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: '100%',
-        height: '100%',
-    },
-    navButton: {
-        position: 'absolute',
-        top: '50%',
-        transform: 'translateY(-50%)',
-        zIndex: 20,
-        padding: '16px',
-        background: 'linear-gradient(to right, #2563eb, #1d4ed8)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '50%',
-        cursor: 'pointer',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
-        transition: 'all 0.3s ease',
-    },
-    prevButton: {
-        left: '-80px',
-    },
-    nextButton: {
-        right: '-80px',
-    },
-    disabledButton: {
-        opacity: 0.3,
-        cursor: 'not-allowed',
-    },
-    navIcon: {
-        width: '24px',
-        height: '24px',
-    },
-    flipbookWrapper: {
-        transformOrigin: 'center',
-        transition: 'transform 0.3s ease',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-
-    // Text content styles
-    textContentContainer: {
-        width: '800px',
-        height: '900px',
-        maxWidth: '90vw',
-        maxHeight: '80vh',
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    textPage: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-    },
-    textHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '24px 32px 16px',
-        borderBottom: '2px solid #f3f4f6',
-        background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-    },
-    textIcon: {
-        width: '24px',
-        height: '24px',
-        color: '#2563eb',
-    },
-    textTitle: {
-        fontSize: '24px',
-        fontWeight: 'bold',
-        color: '#1f2937',
-        margin: 0,
-    },
-    textContent: {
-        flex: 1,
-        padding: '32px',
-        overflow: 'auto',
-        fontSize: '16px',
-        lineHeight: '1.8',
-        color: '#374151',
-        backgroundColor: 'white',
-    },
-
-    // Page styles (for PDF)
-    page: {
-        background: 'white',
-        display: 'flex',
-        flexDirection: 'column',
-        border: '1px solid #ddd',
-        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-    },
-    coverPage: {
-        flex: 1,
-        background: 'linear-gradient(135deg, #1e3a8a, #7c3aed)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: 'white',
-        padding: '32px',
-        borderRadius: '8px',
-    },
-    coverIcon: {
-        width: '64px',
-        height: '64px',
-        marginBottom: '16px',
-        color: '#93c5fd',
-    },
-    coverTitle: {
-        fontSize: '30px',
-        fontWeight: 'bold',
-        marginBottom: '8px',
-        textAlign: 'center',
-        margin: 0,
-    },
-    coverChapter: {
-        fontSize: '20px',
-        marginBottom: '16px',
-        margin: 0,
-    },
-    coverAuthor: {
-        fontSize: '18px',
-        color: '#d1d5db',
-        margin: 0,
-    },
-    pdfPageContent: {
-        flex: 1,
-        position: 'relative',
-        overflow: 'hidden',
-        padding: 0,
-        backgroundColor: 'white',
-    },
-    pageImage: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'contain',
-    },
-    pageNumber: {
-        position: 'absolute',
-        bottom: '20px',
-        right: '20px',
-        background: 'rgba(0, 0, 0, 0.7)',
-        color: 'white',
-        padding: '4px 8px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: 500,
-        zIndex: 10,
-    },
-    blankPage: {
-        flex: 1,
-        backgroundColor: '#f8f9fa',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderRadius: '8px',
-    },
-    blankText: {
-        color: '#6c757d',
-        fontSize: '14px',
-        fontStyle: 'italic',
-        margin: 0,
-    },
-
-    // Footer styles
-    footer: {
-        background: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(8px)',
-        color: 'white',
-        padding: '16px',
-        borderTop: '1px solid #374151',
-    },
-    footerContent: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        maxWidth: '1280px',
-        margin: '0 auto',
-        gap: '24px',
-        flexWrap: 'wrap',
-    },
-    footerInfo: {
-        fontSize: '14px',
-        color: '#d1d5db',
-    },
-    authorName: {
-        fontWeight: 500,
-    },
-    separator: {
-        margin: '0 8px',
-    },
-    pageNavigation: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '24px',
-    },
-    pageInputGroup: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    pageLabel: {
-        fontSize: '14px',
-        color: '#9ca3af',
-    },
-    pageInputContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        backgroundColor: '#374151',
-        borderRadius: '8px',
-        padding: '4px',
-    },
-    pageInput: {
-        width: '64px',
-        padding: '4px 8px',
-        backgroundColor: 'transparent',
-        color: 'white',
-        border: 'none',
-        textAlign: 'center',
-        fontSize: '14px',
-        borderRadius: '4px',
-    },
-    progressGroup: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    progressBarContainer: {
-        width: '160px',
-        height: '8px',
-        backgroundColor: '#374151',
-        borderRadius: '4px',
-        overflow: 'hidden',
-    },
-    progressBarFill: {
-        height: '100%',
-        background: 'linear-gradient(to right, #3b82f6, #2563eb)',
-        borderRadius: '4px',
-        transition: 'width 0.5s ease',
-    },
-    chapterNavigation: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    chapterButton: {
-        padding: '8px 16px',
-        backgroundColor: '#374151',
-        color: 'white',
-        border: 'none',
-        borderRadius: '8px',
-        fontSize: '14px',
-        cursor: 'pointer',
-        transition: 'background-color 0.2s',
-    },
-    nextChapterButton: {
-        background: 'linear-gradient(to right, #2563eb, #1d4ed8)',
-    },
-
-    // Modal styles
-    modalOverlay: {
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-        backdropFilter: 'blur(4px)',
-    },
-    modalContent: {
-        backgroundColor: 'white',
-        borderRadius: '12px',
-        width: '90vw',
-        maxWidth: '800px',
-        maxHeight: '80vh',
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
-    },
-    modalHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '20px 24px',
-        borderBottom: '1px solid #e5e7eb',
-        backgroundColor: '#f8fafc',
-        borderRadius: '12px 12px 0 0',
-    },
-    modalTitle: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        fontSize: '18px',
-        fontWeight: '600',
-        color: '#1f2937',
-    },
-    modalIcon: {
-        width: '20px',
-        height: '20px',
-        color: '#2563eb',
-    },
-    closeButton: {
-        padding: '8px',
-        backgroundColor: 'transparent',
-        border: 'none',
-        borderRadius: '6px',
-        cursor: 'pointer',
-        color: '#6b7280',
-        transition: 'all 0.2s',
-    },
-    modalBody: {
-        flex: 1,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    modalLoading: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        padding: '48px',
-        color: '#6b7280',
-    },
-    loadingSpinner: {
-        width: '20px',
-        height: '20px',
-        animation: 'spin 1s linear infinite',
-    },
-    chaptersList: {
-        flex: 1,
-        overflow: 'auto',
-        padding: '8px',
-    },
-    chapterItem: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        justifyContent: 'space-between',
-        padding: '16px',
-        margin: '8px',
-        backgroundColor: '#f9fafb',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        border: '1px solid #e5e7eb',
-    },
-    currentChapterItem: {
-        backgroundColor: '#eff6ff',
-        borderColor: '#2563eb',
-        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)',
-    },
-    chapterInfo: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-    },
-    chapterHeader: {
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: '12px',
-    },
-    chapterIcon: {
-        padding: '8px',
-        backgroundColor: '#e5e7eb',
-        borderRadius: '6px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    chapterTypeIcon: {
-        width: '16px',
-        height: '16px',
-        color: '#6b7280',
-    },
-    chapterTitle: {
-        flex: 1,
-    },
-    chapterName: {
-        fontSize: '16px',
-        fontWeight: '600',
-        color: '#1f2937',
-        margin: '0 0 4px 0',
-    },
-    chapterMeta: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        flexWrap: 'wrap',
-    },
-    chapterOrder: {
-        fontSize: '12px',
-        color: '#6b7280',
-        backgroundColor: '#e5e7eb',
-        padding: '2px 6px',
-        borderRadius: '4px',
-        fontWeight: '500',
-    },
-    chapterType: {
-        fontSize: '12px',
-        color: '#059669',
-        backgroundColor: '#d1fae5',
-        padding: '2px 6px',
-        borderRadius: '4px',
-        fontWeight: '500',
-    },
-    wordCount: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        fontSize: '12px',
-        color: '#6b7280',
-    },
-    clockIcon: {
-        width: '12px',
-        height: '12px',
-    },
-    chapterPreview: {
-        marginTop: '8px',
-    },
-    previewText: {
-        fontSize: '14px',
-        color: '#6b7280',
-        lineHeight: '1.5',
-        display: '-webkit-box',
-        WebkitLineClamp: 3,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-    },
-    currentBadge: {
-        padding: '4px 8px',
-        backgroundColor: '#2563eb',
-        color: 'white',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: '500',
-        alignSelf: 'flex-start',
-    },
-};
-
-export default PDFFlipbook;
+export default BookDetailPage;
