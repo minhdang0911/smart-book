@@ -1,68 +1,110 @@
 'use client';
 
 import { ShoppingCartOutlined } from '@ant-design/icons';
-import { Button, Card, Typography } from 'antd';
+import { Button, Card, Typography, message } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+import { apiAddToCart } from '../../../../apis/cart'; // 👈 THÊM IMPORT NÀY
+import { apiGetMe } from '../../../../apis/user';
+import { handleAddToCartHelper } from '../../utils/addToCartHandler';
 import './OnlinePromotion.css';
 
 const { Title } = Typography;
 
 const OnlinePromotion = () => {
+    const router = useRouter();
+
     const [events, setEvents] = useState([]);
     const [currentEvents, setCurrentEvents] = useState([]);
     const [upcomingEvents, setUpcomingEvents] = useState([]);
     const [selectedTab, setSelectedTab] = useState('current');
     const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [displayedBooks, setDisplayedBooks] = useState([]);
-    const router = useRouter();
 
+    // state bổ sung
+    const [user, setUser] = useState(null);
+    const [isAddingToCart, setIsAddingToCart] = useState(false);
+
+    // lấy danh sách sự kiện
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-                const response = await fetch('https://smartbook.io.vn/api/events');
-                const data = await response.json();
+                const res = await fetch('https://smartbook.io.vn/api/events');
+                const data = await res.json();
                 setEvents(data);
                 categorizeEvents(data);
-            } catch (error) {
-                console.error('Error fetching events:', error);
+            } catch (err) {
+                console.error('Error fetching events:', err);
+                message.error('Không tải được danh sách sự kiện.');
             }
         };
-
         fetchEvents();
     }, []);
 
+    // lấy user
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        const getUserInfo = async () => {
+            try {
+                const response = await apiGetMe(token);
+                if (response?.status === true) {
+                    setUser(response?.user);
+                }
+            } catch (error) {
+                console.error('Error getting user info:', error);
+            }
+        };
+        getUserInfo();
+    }, []);
+
+    // thêm vào giỏ
+    const handleAddToCart = async (book, qty = 1) => {
+        try {
+            if (!user) {
+                message.warning('Bạn cần đăng nhập để thêm vào giỏ hàng.');
+                router.push('/login');
+                return;
+            }
+
+            await handleAddToCartHelper({
+                user,
+                bookId: book.id,
+                quantity: qty,
+                addToCart: apiAddToCart, // 👈 giờ đã có
+                setIsAddingToCart,
+                router,
+            });
+        } catch (e) {
+            console.error(e);
+            message.error('Thêm vào giỏ thất bại.');
+        }
+    };
+
+    // phân loại sự kiện
     const categorizeEvents = (eventsData) => {
         const now = new Date();
         const current = [];
         let upcoming = [];
 
-        // Tìm các sự kiện đang diễn ra
         eventsData.forEach((event) => {
             const startDate = new Date(event.start_date);
             const endDate = new Date(event.end_date);
-
-            if (startDate <= now && endDate >= now) {
-                current.push(event);
-            }
+            if (startDate <= now && endDate >= now) current.push(event);
         });
 
-        // Sắp xếp sự kiện đang diễn ra theo thời gian kết thúc (sớm kết thúc nhất trước)
         const sortedCurrent = current.sort((a, b) => new Date(a.end_date) - new Date(b.end_date));
 
-        // Nếu có sự kiện đang diễn ra, tìm sự kiện sắp diễn ra gần nhất với ngày kết thúc
         if (sortedCurrent.length > 0) {
             const currentEndDate = new Date(sortedCurrent[0].end_date);
 
-            // Tìm sự kiện có ngày bắt đầu gần nhất với ngày kết thúc của sự kiện đang diễn ra
             let nearestUpcoming = null;
             let minDistance = Infinity;
 
             eventsData.forEach((event) => {
                 const startDate = new Date(event.start_date);
-                const endDate = new Date(event.end_date);
-
-                // Chỉ xét các sự kiện chưa bắt đầu hoặc bắt đầu sau khi sự kiện hiện tại kết thúc
                 if (startDate >= currentEndDate) {
                     const distance = Math.abs(startDate - currentEndDate);
                     if (distance < minDistance) {
@@ -72,11 +114,8 @@ const OnlinePromotion = () => {
                 }
             });
 
-            if (nearestUpcoming) {
-                upcoming = [nearestUpcoming];
-            }
+            if (nearestUpcoming) upcoming = [nearestUpcoming];
         } else {
-            // Nếu không có sự kiện đang diễn ra, tìm sự kiện sắp diễn ra gần nhất
             const futureEvents = eventsData.filter((event) => new Date(event.start_date) > now);
             if (futureEvents.length > 0) {
                 const sortedFuture = futureEvents.sort((a, b) => new Date(a.start_date) - new Date(b.start_date));
@@ -87,7 +126,6 @@ const OnlinePromotion = () => {
         setCurrentEvents(sortedCurrent);
         setUpcomingEvents(upcoming);
 
-        // Xác định tab mặc định và sách hiển thị
         if (sortedCurrent.length > 0) {
             setSelectedTab('current');
             setDisplayedBooks(sortedCurrent[0].books || []);
@@ -99,8 +137,10 @@ const OnlinePromotion = () => {
         }
     };
 
+    // countdown
     useEffect(() => {
         let timer;
+
         const updateCountdown = (targetTime) => {
             const now = new Date().getTime();
             const distance = targetTime - now;
@@ -113,7 +153,6 @@ const OnlinePromotion = () => {
                 setCountdown({ days, hours, minutes, seconds });
             } else {
                 setCountdown({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-                // Khi countdown kết thúc, tự động làm mới dữ liệu
                 setTimeout(() => {
                     categorizeEvents(events);
                 }, 1000);
@@ -121,10 +160,8 @@ const OnlinePromotion = () => {
         };
 
         if (selectedTab === 'current' && currentEvents.length > 0) {
-            // Đếm ngược đến khi kết thúc sự kiện hiện tại
             timer = setInterval(() => updateCountdown(new Date(currentEvents[0].end_date).getTime()), 1000);
         } else if (selectedTab === 'upcoming' && upcomingEvents.length > 0) {
-            // Đếm ngược đến khi bắt đầu sự kiện sắp diễn ra
             timer = setInterval(() => updateCountdown(new Date(upcomingEvents[0].start_date).getTime()), 1000);
         }
 
@@ -145,37 +182,27 @@ const OnlinePromotion = () => {
     };
 
     const calculateDiscountedPrice = (price, discount) => {
-        const originalPrice = parseFloat(price);
-        const discountAmount = originalPrice * (parseFloat(discount) / 100);
-        return originalPrice - discountAmount;
+        const p = Number(price) || 0;
+        const d = Number(discount) || 0;
+        const amount = p * (d / 100);
+        return Math.max(0, p - amount);
     };
 
-    const formatPrice = (price) => {
-        return new Intl.NumberFormat('vi-VN').format(price) + 'đ';
-    };
+    const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(Number(price) || 0) + 'đ';
 
     const formatDateRange = (startDate, endDate) => {
         const start = new Date(startDate);
         const end = new Date(endDate);
-
-        const startFormatted = `${start.getDate().toString().padStart(2, '0')}/${(start.getMonth() + 1)
-            .toString()
-            .padStart(2, '0')}`;
-        const endFormatted = `${end.getDate().toString().padStart(2, '0')}/${(end.getMonth() + 1)
-            .toString()
-            .padStart(2, '0')}`;
-
+        const startFormatted = `${String(start.getDate()).padStart(2, '0')}/${String(start.getMonth() + 1).padStart(
+            2,
+            '0',
+        )}`;
+        const endFormatted = `${String(end.getDate()).padStart(2, '0')}/${String(end.getMonth() + 1).padStart(2, '0')}`;
         return `${startFormatted} - ${endFormatted}`;
     };
 
-    const getCountdownLabel = () => {
-        if (selectedTab === 'current') {
-            return 'Kết thúc sau';
-        } else if (selectedTab === 'upcoming') {
-            return 'Bắt đầu sau';
-        }
-        return '';
-    };
+    const getCountdownLabel = () =>
+        selectedTab === 'current' ? 'Kết thúc sau' : selectedTab === 'upcoming' ? 'Bắt đầu sau' : '';
 
     return (
         <div className="bookstore-container">
@@ -220,10 +247,10 @@ const OnlinePromotion = () => {
                         <div className="countdown-container">
                             <span className="countdown-label">{getCountdownLabel()}</span>
                             <div className="countdown-timer">
-                                <span className="countdown-item">{countdown.days.toString().padStart(2, '0')}</span>
-                                <span className="countdown-item">{countdown.hours.toString().padStart(2, '0')}</span>
-                                <span className="countdown-item">{countdown.minutes.toString().padStart(2, '0')}</span>
-                                <span className="countdown-item">{countdown.seconds.toString().padStart(2, '0')}</span>
+                                <span className="countdown-item">{String(countdown.days).padStart(2, '0')}</span>
+                                <span className="countdown-item">{String(countdown.hours).padStart(2, '0')}</span>
+                                <span className="countdown-item">{String(countdown.minutes).padStart(2, '0')}</span>
+                                <span className="countdown-item">{String(countdown.seconds).padStart(2, '0')}</span>
                             </div>
                         </div>
                     )}
@@ -232,34 +259,38 @@ const OnlinePromotion = () => {
                 <div className="books-grid">
                     {displayedBooks.length > 0 ? (
                         displayedBooks.map((book) => (
-                            <div
-                                key={book.id}
-                                className="book-grid-item"
-                                onClick={() => router.push(`/book/${book.id}`)}
-                            >
+                            <div key={book.id} className="book-grid-item">
                                 <Card className="book-card">
                                     <div className="book-image-container">
                                         <img
                                             src={book?.thumb || 'https://via.placeholder.com/300x400?text=No+Image'}
-                                            alt={book.title}
+                                            alt={book?.title || 'Book'}
                                             className="book-image"
                                             onError={(e) => {
-                                                e.target.src = 'https://via.placeholder.com/300x400?text=No+Image';
+                                                e.currentTarget.src =
+                                                    'https://via.placeholder.com/300x400?text=No+Image';
                                             }}
                                         />
+
                                         <div className="discount-badge">
-                                            ƯU ĐÃI ĐẾN {Math.round(book.discount_percent)}%
+                                            ưu đãi đến {Math.round(Number(book.discount_percent) || 0)}%
                                         </div>
 
                                         <div className="book-actions">
-                                            <Button type="text" icon={<ShoppingCartOutlined />} className="cart-btn" />
+                                            <Button
+                                                onClick={() => handleAddToCart(book, 1)}
+                                                type="text"
+                                                icon={<ShoppingCartOutlined />}
+                                                className="cart-btn"
+                                                loading={isAddingToCart}
+                                            />
                                         </div>
                                     </div>
 
-                                    <div className="book-info">
+                                    <div className="book-info" onClick={() => router.push(`/book/${book.id}`)}>
                                         <h3 className="book-title">{book.title}</h3>
-                                        <span className="book-author">Số lượng: {book.quantity_limit}</span>
-                                        <span className="book-author">Đã bán: {book.sold_quantity}</span>
+                                        {/* <span className="book-author">Số lượng: {book.quantity_limit}</span>
+                                        <span className="book-author">Đã bán: {book.sold_quantity}</span> */}
 
                                         <div className="price-container">
                                             <span className="current-price">
@@ -268,7 +299,9 @@ const OnlinePromotion = () => {
                                                 )}
                                             </span>
                                             <span className="original-price">{formatPrice(book.price)}</span>
-                                            <span className="discount-price">-{book.discount_percent}%</span>
+                                            <span className="discount-price">
+                                                -{Number(book.discount_percent) || 0}%
+                                            </span>
                                         </div>
                                     </div>
                                 </Card>
