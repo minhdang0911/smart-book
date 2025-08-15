@@ -2,6 +2,7 @@
 
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import { Button, Card, Typography } from 'antd';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import './OnlinePromotion.css';
 
@@ -14,6 +15,7 @@ const OnlinePromotion = () => {
     const [selectedTab, setSelectedTab] = useState('current');
     const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [displayedBooks, setDisplayedBooks] = useState([]);
+    const router = useRouter();
 
     useEffect(() => {
         const fetchEvents = async () => {
