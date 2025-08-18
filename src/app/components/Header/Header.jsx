@@ -1,4 +1,7 @@
-// Header.js - Thêm listener để cập nhật user data
+// ============================================
+// 1. UPDATED HEADER COMPONENT (Header.js)
+// ============================================
+
 'use client';
 import {
     BellOutlined,
@@ -80,11 +83,12 @@ const Header = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    // Fetch cart count từ API count
+    // 🔥 UPDATED: Fetch cart count từ API count với debug
     const fetchCartCount = async () => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
+                console.log('🔄 Header: Fetching cart count...');
                 const response = await fetch('https://smartbook.io.vn/api/cart/count', {
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -93,13 +97,21 @@ const Header = () => {
                 });
 
                 const data = await response.json();
+                console.log('📊 Header: Cart count response:', data);
 
-                if (data) {
-                    setCartCount(data?.data?.count);
+                if (data && data.data && data.data.count !== undefined) {
+                    const newCount = data.data.count;
+                    setCartCount(newCount);
+                    console.log('✅ Header: Cart count updated to:', newCount);
+                } else {
+                    console.log('⚠️ Header: Invalid cart count response format');
                 }
             } catch (error) {
-                console.error('Error fetching cart count:', error);
+                console.error('❌ Header: Error fetching cart count:', error);
             }
+        } else {
+            console.log('⚠️ Header: No token found, setting cart count to 0');
+            setCartCount(0);
         }
     };
 
@@ -119,15 +131,19 @@ const Header = () => {
         }
     };
 
-    // Tạo function để update cart count từ component khác
-    const updateCartCount = () => {
-        fetchCartCount();
+    // 🔥 UPDATED: Tạo function để update cart count từ component khác với debug
+    const updateCartCount = async () => {
+        console.log('🔄 Header: updateCartCount called');
+        await fetchCartCount();
     };
 
-    // Expose updateCartCount function globally
+    // 🔥 UPDATED: Expose updateCartCount function globally với debug
     useEffect(() => {
+        console.log('🔧 Header: Setting up global updateCartCount function');
         window.updateCartCount = updateCartCount;
+
         return () => {
+            console.log('🔧 Header: Cleaning up global updateCartCount function');
             delete window.updateCartCount;
         };
     }, []);
@@ -142,10 +158,10 @@ const Header = () => {
         }
     }, []);
 
+    // 🔥 UPDATED: Enhanced event listeners với debug
     useEffect(() => {
         const handleUserDataUpdate = (event) => {
             console.log('🔄 Header received user data update event:', event.detail);
-
             if (event.detail?.user) {
                 setUser(event.detail.user);
             } else {
@@ -154,16 +170,130 @@ const Header = () => {
         };
 
         const handleCartUpdate = () => {
+            console.log('🔄 Header received cart update event');
             fetchCartCount();
         };
 
-        // Add event listeners
+        // 🔥 NEW: Optimistic cart update
+        const handleOptimisticCartUpdate = (event) => {
+            console.log('🚀 Header: Optimistic cart update:', event.detail);
+            if (event.detail?.increment) {
+                setCartCount((prev) => {
+                    const newCount = prev + event.detail.increment;
+                    console.log(`🚀 Optimistic: ${prev} + ${event.detail.increment} = ${newCount}`);
+                    return newCount;
+                });
+            }
+        };
+
+        // 🔥 NEW: Rollback optimistic update
+        const handleRollbackCartUpdate = (event) => {
+            console.log('↩️ Header: Rollback cart update:', event.detail);
+            if (event.detail?.decrement) {
+                setCartCount((prev) => {
+                    const newCount = Math.max(0, prev - event.detail.decrement);
+                    console.log(`↩️ Rollback: ${prev} - ${event.detail.decrement} = ${newCount}`);
+                    return newCount;
+                });
+            }
+        };
+
+        // 🔥 NEW: Direct cart count update
+        const handleDirectCartUpdate = (event) => {
+            console.log('🎯 Header: Direct cart update:', event.detail);
+            if (event.detail?.count !== undefined) {
+                setCartCount(event.detail.count);
+                console.log('🎯 Direct update to:', event.detail.count);
+            }
+        };
+
+        // 🔥 NEW: Realtime cart update (WebSocket/SSE)
+        const handleRealtimeCartUpdate = (event) => {
+            console.log('📡 Header: Realtime cart update:', event.detail);
+            if (event.detail?.count !== undefined) {
+                setCartCount(event.detail.count);
+                console.log('📡 Realtime update to:', event.detail.count);
+            }
+        };
+
+        // 🔥 NEW: Verify cart count với server
+        const handleVerifyCartCount = async () => {
+            console.log('✅ Header: Verifying cart count with server...');
+            const token = localStorage.getItem('token');
+            if (!token) return;
+
+            try {
+                const response = await fetch('https://smartbook.io.vn/api/cart/count', {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+                const data = await response.json();
+
+                if (data?.data?.count !== undefined) {
+                    const serverCount = data.data.count;
+                    setCartCount((prev) => {
+                        if (prev !== serverCount) {
+                            console.log(`✅ Sync: Local ${prev} → Server ${serverCount}`);
+                            return serverCount;
+                        }
+                        console.log(`✅ Sync: Already correct (${prev})`);
+                        return prev;
+                    });
+                }
+            } catch (error) {
+                console.error('❌ Error verifying cart count:', error);
+            }
+        };
+
+        // Legacy events
+        const handleCartCountUpdated = (event) => {
+            console.log('🔄 Header received cart count updated:', event.detail);
+            if (event.detail?.count !== undefined) {
+                setCartCount(event.detail.count);
+            }
+        };
+
+        const handleForceCartUpdate = (event) => {
+            console.log('🔄 Header received force cart update:', event.detail);
+            if (event.detail?.count !== undefined) {
+                setCartCount(event.detail.count);
+            } else {
+                fetchCartCount();
+            }
+        };
+
+        // 🔥 ADD ALL EVENT LISTENERS
         window.addEventListener('userDataUpdated', handleUserDataUpdate);
         window.addEventListener('cartUpdated', handleCartUpdate);
 
+        // New optimistic events
+        window.addEventListener('optimisticCartUpdate', handleOptimisticCartUpdate);
+        window.addEventListener('rollbackCartUpdate', handleRollbackCartUpdate);
+        window.addEventListener('directCartUpdate', handleDirectCartUpdate);
+        window.addEventListener('realtimeCartUpdate', handleRealtimeCartUpdate);
+        window.addEventListener('verifyCartCount', handleVerifyCartCount);
+
+        // Legacy events (keep for compatibility)
+        window.addEventListener('cartCountUpdated', handleCartCountUpdated);
+        window.addEventListener('forceCartUpdate', handleForceCartUpdate);
+
+        console.log('🔧 Header: All event listeners setup complete');
+
         return () => {
+            // Remove all event listeners
             window.removeEventListener('userDataUpdated', handleUserDataUpdate);
             window.removeEventListener('cartUpdated', handleCartUpdate);
+            window.removeEventListener('optimisticCartUpdate', handleOptimisticCartUpdate);
+            window.removeEventListener('rollbackCartUpdate', handleRollbackCartUpdate);
+            window.removeEventListener('directCartUpdate', handleDirectCartUpdate);
+            window.removeEventListener('realtimeCartUpdate', handleRealtimeCartUpdate);
+            window.removeEventListener('verifyCartCount', handleVerifyCartCount);
+            window.removeEventListener('cartCountUpdated', handleCartCountUpdated);
+            window.removeEventListener('forceCartUpdate', handleForceCartUpdate);
+
+            console.log('🔧 Header: All event listeners cleaned up');
         };
     }, []);
 

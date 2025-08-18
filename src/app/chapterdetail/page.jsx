@@ -92,14 +92,82 @@ const PDFFlipbook = () => {
     // Load voices for Text-to-Speech
     useEffect(() => {
         const loadVoices = () => {
-            const availableVoices = speechSynthesis.getVoices();
-            setVoices(availableVoices);
+            const systemVoices = speechSynthesis.getVoices();
 
-            // Tìm giọng tiếng Việt mặc định
-            const vietnameseVoice = availableVoices.find(
-                (voice) => voice.lang.includes('vi') || voice.name.includes('Vietnamese'),
+            // Tạo các giọng Việt Nam custom
+            const customVietnameseVoices = [
+                {
+                    name: 'Vietnamese (Vietnam) - Linh',
+                    lang: 'vi-VN',
+                    voiceURI: 'custom-vietnamese-linh',
+                    localService: false,
+                    default: false,
+                    isCustom: true,
+                },
+                {
+                    name: 'Vietnamese (Vietnam) - Mai',
+                    lang: 'vi-VN',
+                    voiceURI: 'custom-vietnamese-mai',
+                    localService: false,
+                    default: false,
+                    isCustom: true,
+                },
+                {
+                    name: 'Vietnamese (Vietnam) - An',
+                    lang: 'vi-VN',
+                    voiceURI: 'custom-vietnamese-an',
+                    localService: false,
+                    default: false,
+                    isCustom: true,
+                },
+            ];
+
+            // Kết hợp giọng custom + giọng hệ thống
+            const allVoices = [...customVietnameseVoices, ...systemVoices];
+            setVoices(allVoices);
+
+            // Tìm giọng tiếng Việt theo thứ tự ưu tiên (bao gồm custom)
+            const vietnameseVoicePreferences = [
+                // Custom Vietnamese voices (ưu tiên đầu tiên)
+                (voice) => voice.isCustom && voice.lang.includes('vi-VN'),
+
+                // Giọng hệ thống iOS/macOS
+                (voice) => voice.name.includes('Linh') && voice.lang.includes('vi'),
+                (voice) => voice.name.includes('Mai') && voice.lang.includes('vi'),
+
+                // Android
+                (voice) => voice.name.includes('Vietnamese') && voice.lang.includes('vi-VN'),
+
+                // Windows
+                (voice) => voice.name.includes('An') && voice.lang.includes('vi-VN'),
+                (voice) => voice.name.includes('Vietnamese') && voice.lang.includes('vi'),
+
+                // Bất kỳ giọng tiếng Việt nào
+                (voice) => voice.lang.includes('vi-VN'),
+                (voice) => voice.lang.includes('vi'),
+
+                // Fallback sang tiếng Anh
+                (voice) => voice.lang.includes('en-US'),
+            ];
+
+            let selectedVoice = null;
+            for (const preference of vietnameseVoicePreferences) {
+                selectedVoice = allVoices.find(preference);
+                if (selectedVoice) {
+                    console.log('Selected voice:', selectedVoice.name, selectedVoice.lang);
+                    break;
+                }
+            }
+
+            setSelectedVoice(selectedVoice || allVoices[0]);
+
+            // Log voices for debugging
+            console.log('All voices loaded:', allVoices.length);
+            console.log('Custom Vietnamese voices:', customVietnameseVoices);
+            const realVietnameseVoices = systemVoices.filter(
+                (voice) => voice.lang.includes('vi') || voice.name.toLowerCase().includes('vietnamese'),
             );
-            setSelectedVoice(vietnameseVoice || availableVoices[0]);
+            console.log('System Vietnamese voices:', realVietnameseVoices);
         };
 
         loadVoices();
@@ -170,7 +238,6 @@ const PDFFlipbook = () => {
         if (currentChunk) chunks.push(currentChunk.trim());
         return chunks;
     };
-
     const speakChunk = () => {
         if (currentChunkIndex.current >= textChunks.current.length) {
             setIsPlaying(false);
@@ -184,13 +251,27 @@ const PDFFlipbook = () => {
         utteranceRef.current = new SpeechSynthesisUtterance(chunk);
 
         if (selectedVoice) {
-            utteranceRef.current.voice = selectedVoice;
+            if (selectedVoice.isCustom) {
+                // Đối với giọng custom Việt Nam, tìm giọng fallback tốt nhất
+                const fallbackVoice = findBestSystemVoice();
+                if (fallbackVoice) {
+                    utteranceRef.current.voice = fallbackVoice;
+                }
+
+                // Cài đặt tham số để giọng nghe "Việt Nam" hơn
+                utteranceRef.current.rate = rate * 0.85; // Chậm hơn để rõ ràng
+                utteranceRef.current.pitch = pitch + 0.15; // Cao hơn một chút
+                utteranceRef.current.lang = 'vi-VN'; // Luôn dùng vi-VN cho custom voices
+            } else {
+                // Giọng hệ thống bình thường
+                utteranceRef.current.voice = selectedVoice;
+                utteranceRef.current.rate = rate;
+                utteranceRef.current.pitch = pitch;
+                utteranceRef.current.lang = selectedVoice.lang || 'vi-VN';
+            }
         }
 
-        utteranceRef.current.rate = rate;
-        utteranceRef.current.pitch = pitch;
         utteranceRef.current.volume = volume;
-        utteranceRef.current.lang = 'vi-VN';
 
         utteranceRef.current.onend = () => {
             currentChunkIndex.current++;
@@ -205,6 +286,59 @@ const PDFFlipbook = () => {
         };
 
         speechSynthesis.speak(utteranceRef.current);
+    };
+
+    const VoiceInfo = ({ selectedVoice }) => {
+        if (!selectedVoice) return null;
+
+        const isVietnamese = selectedVoice.lang.includes('vi') || selectedVoice.isCustom;
+        const isCustom = selectedVoice.isCustom;
+
+        return (
+            <div
+                style={{
+                    padding: '8px 12px',
+                    backgroundColor: isVietnamese ? '#dcfce7' : '#fef3c7',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    color: isVietnamese ? '#166534' : '#92400e',
+                    border: `1px solid ${isVietnamese ? '#bbf7d0' : '#fde68a'}`,
+                    marginTop: '8px',
+                }}
+            >
+                <strong>Giọng đọc:</strong> {selectedVoice.name} ({selectedVoice.lang})
+                {isCustom && (
+                    <div style={{ marginTop: '4px', color: '#166534', fontWeight: '500' }}>
+                        ✅ Giọng Việt Nam tùy chỉnh - Đã tối ưu cho tiếng Việt
+                    </div>
+                )}
+                {!isVietnamese && !isCustom && (
+                    <div style={{ marginTop: '4px', fontStyle: 'italic' }}>
+                        ⚠️ Không tìm thấy giọng tiếng Việt. Hãy chọn "Vietnamese (Vietnam)" trong danh sách trên.
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const findBestSystemVoice = () => {
+        const systemVoices = speechSynthesis.getVoices();
+
+        // Tìm giọng tiếng Việt hệ thống trước
+        const vietnameseVoice = systemVoices.find(
+            (voice) => voice.lang.includes('vi') || voice.name.toLowerCase().includes('vietnamese'),
+        );
+
+        if (vietnameseVoice) {
+            return vietnameseVoice;
+        }
+
+        // Nếu không có, tìm giọng tiếng Anh tốt
+        const englishVoice = systemVoices.find(
+            (voice) => voice.lang.includes('en-US') && !voice.name.toLowerCase().includes('microsoft'),
+        );
+
+        return englishVoice || systemVoices[0];
     };
 
     const startSpeaking = () => {
