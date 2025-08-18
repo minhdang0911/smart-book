@@ -5,6 +5,7 @@ import {
     ChevronRight,
     Clock,
     CreditCard,
+    Edit3,
     MapPin,
     MoreHorizontal,
     Package,
@@ -32,6 +33,9 @@ const OrderHistory = ({ token, enabled }) => {
         to: 10,
     });
     const [currentPage, setCurrentPage] = useState(1);
+    const [statusUpdateLoading, setStatusUpdateLoading] = useState(false);
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [statusCounts, setStatusCounts] = useState({});
 
     // CSS Styles
     const styles = {
@@ -165,16 +169,6 @@ const OrderHistory = ({ token, enabled }) => {
             fontWeight: 'bold',
             color: '#000000',
         },
-        orderIdClickable: {
-            fontWeight: 'bold',
-            color: '#0066cc',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            transition: 'color 0.2s ease',
-        },
-        orderIdClickableHover: {
-            color: '#0052a3',
-        },
         statusBadge: {
             display: 'flex',
             alignItems: 'center',
@@ -183,6 +177,19 @@ const OrderHistory = ({ token, enabled }) => {
             borderRadius: '9999px',
             fontSize: '14px',
             fontWeight: '500',
+            position: 'relative',
+        },
+        updateStatusButton: {
+            marginLeft: '8px',
+            padding: '2px 6px',
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+        },
+        updateStatusButtonHover: {
+            backgroundColor: 'rgba(255, 255, 255, 0.3)',
         },
         shippingCode: {
             fontSize: '14px',
@@ -439,7 +446,193 @@ const OrderHistory = ({ token, enabled }) => {
             color: '#9ca3af',
             fontSize: '14px',
         },
+        // Modal styles
+        modalOverlay: {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+        },
+        modal: {
+            backgroundColor: 'white',
+            borderRadius: '12px',
+            padding: '24px',
+            minWidth: '400px',
+            maxWidth: '500px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+        },
+        modalHeader: {
+            marginBottom: '20px',
+        },
+        modalTitle: {
+            fontSize: '20px',
+            fontWeight: 'bold',
+            color: '#000000',
+            marginBottom: '8px',
+        },
+        modalSubtitle: {
+            color: '#6b7280',
+            fontSize: '14px',
+        },
+        statusGrid: {
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px',
+            marginBottom: '24px',
+        },
+        statusOption: {
+            padding: '12px',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+        },
+        statusOptionActive: {
+            borderColor: '#000000',
+            backgroundColor: '#f9fafb',
+        },
+        statusOptionHover: {
+            borderColor: '#d1d5db',
+            backgroundColor: '#f9fafb',
+        },
+        modalActions: {
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'flex-end',
+        },
+        modalButton: {
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '14px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            border: 'none',
+        },
+        modalButtonCancel: {
+            backgroundColor: '#f3f4f6',
+            color: '#374151',
+        },
+        modalButtonCancelHover: {
+            backgroundColor: '#e5e7eb',
+        },
+        modalButtonSave: {
+            backgroundColor: '#000000',
+            color: '#ffffff',
+        },
+        modalButtonSaveHover: {
+            backgroundColor: '#374151',
+        },
+        modalButtonDisabled: {
+            opacity: 0.5,
+            cursor: 'not-allowed',
+        },
     };
+
+    // Function để cập nhật trạng thái đơn hàng
+    const updateOrderStatus = async (orderId, newStatus) => {
+        try {
+            const response = await fetch(`https://smartbook.io.vn/api/orders/${orderId}/status`, {
+                method: 'PUT',
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            return {
+                success: true,
+                message: data.message || 'Cập nhật trạng thái thành công',
+                data: data.data,
+                newStatus: newStatus,
+            };
+        } catch (error) {
+            console.error('Error updating order status:', error);
+            return {
+                success: false,
+                error: error.message,
+                newStatus: null,
+            };
+        }
+    };
+
+    // Fetch tổng số đơn hàng theo status
+    useEffect(() => {
+        if (!enabled || !token) return;
+
+        const fetchStatusCounts = async () => {
+            try {
+                // Gọi API để lấy tổng số đơn hàng cho mỗi status
+                const allStatusPromises = statusTabs.map(async (tab) => {
+                    if (tab.key === 'all') {
+                        const response = await fetch(`https://smartbook.io.vn/api/orders?page=1`, {
+                            method: 'GET',
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                            },
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            return { status: 'all', count: data.data?.pagination?.total || 0 };
+                        }
+                    } else {
+                        const response = await fetch(`https://smartbook.io.vn/api/orders?status=${tab.key}`, {
+                            method: 'GET',
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                            },
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            return { status: tab.key, count: data.data?.pagination?.total || 0 };
+                        }
+                    }
+                    return { status: tab.key, count: 0 };
+                });
+
+                const results = await Promise.all(allStatusPromises);
+                const counts = {};
+                results.forEach((result) => {
+                    counts[result.status] = result.count;
+                });
+                setStatusCounts(counts);
+            } catch (error) {
+                console.error('Error fetching status counts:', error);
+                // Fallback: đếm từ orders hiện tại
+                const c = { all: orders.length || 0 };
+                (orders || []).forEach((order) => {
+                    c[order.status] = (c[order.status] || 0) + 1;
+                });
+                setStatusCounts(c);
+            }
+        };
+
+        fetchStatusCounts();
+    }, [token, enabled]); // Chỉ gọi khi component mount hoặc token thay đổi
 
     // Fetch orders từ API
     useEffect(() => {
@@ -448,7 +641,14 @@ const OrderHistory = ({ token, enabled }) => {
         const fetchOrders = async () => {
             setLoading(true);
             try {
-                const response = await fetch(`https://smartbook.io.vn/api/orders?page=${currentPage}`, {
+                let url = `https://smartbook.io.vn/api/orders?page=${currentPage}`;
+
+                // Thêm filter theo status nếu không phải 'all'
+                if (activeTab !== 'all') {
+                    url += `&status=${activeTab}`;
+                }
+
+                const response = await fetch(url, {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -470,7 +670,7 @@ const OrderHistory = ({ token, enabled }) => {
         };
 
         fetchOrders();
-    }, [token, enabled, currentPage]);
+    }, [token, enabled, currentPage, activeTab]);
 
     // Fetch order detail khi chọn đơn hàng
     useEffect(() => {
@@ -489,7 +689,7 @@ const OrderHistory = ({ token, enabled }) => {
 
                 if (response.ok) {
                     const data = await response.json();
-                    setOrderDetail(data.data?.order);
+                    setOrderDetail(data.data);
                 }
             } catch (error) {
                 console.error('Error fetching order detail:', error);
@@ -515,26 +715,20 @@ const OrderHistory = ({ token, enabled }) => {
         { key: 'all', label: 'Tất cả' },
         { key: 'pending', label: 'Chờ xử lý' },
         { key: 'ready_to_pick', label: 'Chờ lấy hàng' },
+        { key: 'picking', label: 'Đang lấy hàng' },
+        { key: 'picked', label: 'Đã lấy hàng' },
         { key: 'delivering', label: 'Đang giao' },
         { key: 'delivered', label: 'Đã giao' },
         { key: 'cancelled', label: 'Đã hủy' },
     ];
 
-    // Count orders by status
-    const counts = useMemo(() => {
-        const c = { all: pagination.total || 0 };
-        // Đối với tab counts, ta có thể dùng tạm các con số từ orders hiện tại
-        // Trong thực tế, API nên trả về tổng số cho từng status
-        (orders || []).forEach((o) => {
-            c[o.status] = (c[o.status] || 0) + 1;
-        });
-        return c;
-    }, [orders, pagination.total]);
+    const [selectedOrderForUpdate, setSelectedOrderForUpdate] = useState(null);
 
-    // Filter orders
+    // Filter orders cho search (không cần filter theo tab vì đã filter từ API)
     const filteredOrders = useMemo(() => {
-        let filtered = activeTab === 'all' ? orders : (orders || []).filter((o) => o.status === activeTab);
+        let filtered = orders;
 
+        // Chỉ filter theo search text vì activeTab đã được filter từ API
         if (searchText) {
             filtered = filtered.filter(
                 (order) =>
@@ -545,7 +739,7 @@ const OrderHistory = ({ token, enabled }) => {
         }
 
         return filtered;
-    }, [orders, activeTab, searchText]);
+    }, [orders, searchText]);
 
     // Format currency
     const formatCurrency = (amount) => {
@@ -584,6 +778,45 @@ const OrderHistory = ({ token, enabled }) => {
         } else {
             setSelectedOrderId(orderId);
         }
+    };
+
+    // Handle status update
+    const handleStatusUpdate = (order) => {
+        setSelectedOrderForUpdate(order);
+        setShowStatusModal(true);
+    };
+
+    const [selectedNewStatus, setSelectedNewStatus] = useState('');
+    const [hoveredStatus, setHoveredStatus] = useState(null);
+
+    const confirmStatusUpdate = async () => {
+        if (!selectedOrderForUpdate || !selectedNewStatus) return;
+
+        setStatusUpdateLoading(true);
+        const result = await updateOrderStatus(selectedOrderForUpdate.id, selectedNewStatus);
+
+        if (result.success) {
+            // Cập nhật orders list
+            setOrders((prev) =>
+                prev.map((order) =>
+                    order.id === selectedOrderForUpdate.id ? { ...order, status: selectedNewStatus } : order,
+                ),
+            );
+
+            // Cập nhật orderDetail nếu đang xem order này
+            if (orderDetail && orderDetail.id === selectedOrderForUpdate.id) {
+                setOrderDetail({ ...orderDetail, status: selectedNewStatus });
+            }
+
+            alert('Cập nhật trạng thái thành công!');
+        } else {
+            alert(`Lỗi: ${result.error}`);
+        }
+
+        setStatusUpdateLoading(false);
+        setShowStatusModal(false);
+        setSelectedOrderForUpdate(null);
+        setSelectedNewStatus('');
     };
 
     // Cancel order function
@@ -650,16 +883,8 @@ const OrderHistory = ({ token, enabled }) => {
     const [hoveredOrder, setHoveredOrder] = useState(null);
     const [hoveredCancel, setHoveredCancel] = useState(null);
     const [hoveredPagination, setHoveredPagination] = useState(null);
-    const [hoveredOrderId, setHoveredOrderId] = useState(null);
+    const [hoveredUpdateButton, setHoveredUpdateButton] = useState(null);
     const [searchFocused, setSearchFocused] = useState(false);
-
-    // Handle order tracking
-    const handleOrderTracking = (shippingCode, e) => {
-        e.stopPropagation();
-        if (shippingCode) {
-            window.open(`https://donhang.ghn.vn/?order_code=${shippingCode}`, '_blank');
-        }
-    };
 
     // Reset to first page when changing tabs or search
     useEffect(() => {
@@ -753,7 +978,7 @@ const OrderHistory = ({ token, enabled }) => {
                                         }}
                                     >
                                         {tab.label}
-                                        <span style={styles.tabBadge}>{counts[tab.key] || 0}</span>
+                                        <span style={styles.tabBadge}>{statusCounts[tab.key] || 0}</span>
                                     </button>
                                 ))}
                             </nav>
@@ -799,6 +1024,24 @@ const OrderHistory = ({ token, enabled }) => {
                                                     >
                                                         <StatusIcon style={{ width: '16px', height: '16px' }} />
                                                         <span>{status.label}</span>
+                                                        {/* Button cập nhật trạng thái */}
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleStatusUpdate(order);
+                                                            }}
+                                                            onMouseEnter={() => setHoveredUpdateButton(order.id)}
+                                                            onMouseLeave={() => setHoveredUpdateButton(null)}
+                                                            style={{
+                                                                ...styles.updateStatusButton,
+                                                                ...(hoveredUpdateButton === order.id
+                                                                    ? styles.updateStatusButtonHover
+                                                                    : {}),
+                                                            }}
+                                                            title="Cập nhật trạng thái"
+                                                        >
+                                                            <Edit3 style={{ width: '12px', height: '12px' }} />
+                                                        </button>
                                                     </div>
                                                     {order.shipping_code && (
                                                         <span style={styles.shippingCode}>
@@ -927,6 +1170,8 @@ const OrderHistory = ({ token, enabled }) => {
                                                                     <span style={styles.infoValue}>
                                                                         {orderDetail.payment === 'cod'
                                                                             ? 'Thanh toán khi nhận hàng'
+                                                                            : orderDetail.payment === 'credit_card'
+                                                                            ? 'Thẻ tín dụng'
                                                                             : orderDetail.payment}
                                                                     </span>
                                                                 </div>
@@ -1029,12 +1274,18 @@ const OrderHistory = ({ token, enabled }) => {
                                                                         <h4 style={styles.itemTitle}>
                                                                             {item.book?.title}
                                                                         </h4>
-                                                                        {/* <p style={styles.itemMeta}>
-                                                                            Tác giả: {item.book?.author}
+                                                                        <p style={styles.itemMeta}>
+                                                                            Tác giả:{' '}
+                                                                            {item.book?.author?.name ||
+                                                                                item.book?.author ||
+                                                                                'Không rõ'}
                                                                         </p>
                                                                         <p style={styles.itemMeta}>
-                                                                            Thể loại: {item.book?.category}
-                                                                        </p> */}
+                                                                            Thể loại:{' '}
+                                                                            {item.book?.category?.name ||
+                                                                                item.book?.category ||
+                                                                                'Không rõ'}
+                                                                        </p>
                                                                         <p style={styles.itemMeta}>
                                                                             ID sách: {item.book?.id}
                                                                         </p>
@@ -1155,6 +1406,87 @@ const OrderHistory = ({ token, enabled }) => {
                         </div>
                     )}
                 </div>
+
+                {/* Status Update Modal */}
+                {showStatusModal && selectedOrderForUpdate && (
+                    <div style={styles.modalOverlay}>
+                        <div style={styles.modal}>
+                            <div style={styles.modalHeader}>
+                                <h3 style={styles.modalTitle}>
+                                    Cập nhật trạng thái đơn hàng #{selectedOrderForUpdate.id}
+                                </h3>
+                                <p style={styles.modalSubtitle}>
+                                    Trạng thái hiện tại: {statusConfig[selectedOrderForUpdate.status]?.label}
+                                </p>
+                            </div>
+
+                            <div style={styles.statusGrid}>
+                                {Object.entries(statusConfig).map(([key, config]) => {
+                                    const StatusIcon = config.icon;
+                                    return (
+                                        <div
+                                            key={key}
+                                            onClick={() => setSelectedNewStatus(key)}
+                                            onMouseEnter={() => setHoveredStatus(key)}
+                                            onMouseLeave={() => setHoveredStatus(null)}
+                                            style={{
+                                                ...styles.statusOption,
+                                                ...(selectedNewStatus === key ? styles.statusOptionActive : {}),
+                                                ...(hoveredStatus === key && selectedNewStatus !== key
+                                                    ? styles.statusOptionHover
+                                                    : {}),
+                                                borderColor: selectedNewStatus === key ? config.color : '#e5e7eb',
+                                                backgroundColor: selectedNewStatus === key ? config.bgColor : 'white',
+                                            }}
+                                        >
+                                            <StatusIcon
+                                                style={{
+                                                    width: '16px',
+                                                    height: '16px',
+                                                    color: selectedNewStatus === key ? config.color : '#6b7280',
+                                                }}
+                                            />
+                                            <span
+                                                style={{
+                                                    color: selectedNewStatus === key ? config.color : '#374151',
+                                                    fontWeight: selectedNewStatus === key ? '500' : '400',
+                                                }}
+                                            >
+                                                {config.label}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div style={styles.modalActions}>
+                                <button
+                                    onClick={() => {
+                                        setShowStatusModal(false);
+                                        setSelectedOrderForUpdate(null);
+                                        setSelectedNewStatus('');
+                                    }}
+                                    style={styles.modalButton}
+                                >
+                                    Hủy
+                                </button>
+                                <button
+                                    onClick={confirmStatusUpdate}
+                                    disabled={!selectedNewStatus || statusUpdateLoading}
+                                    style={{
+                                        ...styles.modalButton,
+                                        ...styles.modalButtonSave,
+                                        ...(!selectedNewStatus || statusUpdateLoading
+                                            ? styles.modalButtonDisabled
+                                            : {}),
+                                    }}
+                                >
+                                    {statusUpdateLoading ? 'Đang cập nhật...' : 'Cập nhật'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     );

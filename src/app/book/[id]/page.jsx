@@ -47,7 +47,7 @@ import {
 } from 'antd';
 import { marked } from 'marked';
 import { useParams, useRouter } from 'next/navigation';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import ReactImageMagnify from 'react-image-magnify';
 import { toast } from 'react-toastify';
 
@@ -505,6 +505,7 @@ const BookDetailPage = () => {
     const [quantity, setQuantity] = useState(1);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [mainImage, setMainImage] = useState(null);
+    const [userPicked, setUserPicked] = useState(false); // <- tránh ảnh con overwrite ảnh cover
     const [activeTab, setActiveTab] = useState('1');
     const [showAllChapters, setShowAllChapters] = useState(false);
     const [showFullDescription, setShowFullDescription] = useState(false);
@@ -542,13 +543,29 @@ const BookDetailPage = () => {
         }
     }, [book?.stock, quantity]);
 
-    // Set main image when images load
-    useEffect(() => {
-        if (images.length > 0 && !mainImage) {
-            const main = images.find((img) => img.is_main === 1);
-            setMainImage(main?.image_url || images[0]?.image_url);
+    // ===== FIX: Ưu tiên cover_image, không để ảnh con "đè" khi init =====
+    // Gộp cover_image vào đầu gallery nếu chưa có
+    const galleryImages = useMemo(() => {
+        const arr = Array.isArray(images) ? [...images] : [];
+        if (book?.cover_image && !arr.some((x) => x?.image_url === book.cover_image)) {
+            arr.unshift({ image_url: book.cover_image, is_main: 1, __isCover: true });
         }
-    }, [images, mainImage]);
+        return arr;
+    }, [images, book?.cover_image]);
+
+    // Set mainImage 1 lần theo ưu tiên: cover_image -> is_main -> ảnh đầu
+    useEffect(() => {
+        if (!book) return;
+        if (userPicked) return; // user đã chọn thì không overwrite nữa
+
+        const preferred =
+            book?.cover_image ||
+            galleryImages.find((img) => img.is_main === 1)?.image_url ||
+            galleryImages[0]?.image_url ||
+            null;
+
+        setMainImage(preferred);
+    }, [book?.cover_image, galleryImages, userPicked, book]);
 
     // Event handlers
     const handleStarFilterChange = (starLevel) => {
@@ -976,7 +993,7 @@ const BookDetailPage = () => {
             return <Spin />;
         }
 
-        if (!images || images.length === 0) {
+        if (!galleryImages || galleryImages.length === 0) {
             return (
                 <div style={{ textAlign: 'center', padding: '40px' }}>
                     {/* Fallback frame so cover is always fully shown */}
@@ -1023,10 +1040,10 @@ const BookDetailPage = () => {
                                 smallImage: {
                                     alt: book?.title,
                                     isFluidWidth: true,
-                                    src: mainImage || book?.cover_image,
+                                    src: mainImage || book?.cover_image || galleryImages[0]?.image_url,
                                 },
                                 largeImage: {
-                                    src: mainImage || book?.cover_image,
+                                    src: mainImage || book?.cover_image || galleryImages[0]?.image_url,
                                     width: 1200,
                                     height: 1800,
                                 },
@@ -1037,33 +1054,40 @@ const BookDetailPage = () => {
                     </div>
                 </div>
 
-                {images.length > 1 && (
+                {galleryImages.length > 1 && (
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        {images.map((img, index) => (
-                            <div
-                                key={index}
-                                style={{
-                                    width: THUMB_W,
-                                    height: THUMB_H,
-                                    cursor: 'pointer',
-                                    border: mainImage === img.image_url ? '2px solid #1890ff' : '1px solid #d9d9d9',
-                                    borderRadius: '6px',
-                                    overflow: 'hidden',
-                                    background: '#fff',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
-                                onClick={() => setMainImage(img.image_url)}
-                            >
-                                <img
-                                    src={img.image_url}
-                                    alt={`${book?.title} - ${index + 1}`}
-                                    style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                                    onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
-                                />
-                            </div>
-                        ))}
+                        {galleryImages.map((img, index) => {
+                            const isActive = (mainImage || '') === img.image_url;
+                            return (
+                                <div
+                                    key={`${img.image_url}-${index}`}
+                                    style={{
+                                        width: THUMB_W,
+                                        height: THUMB_H,
+                                        cursor: 'pointer',
+                                        border: isActive ? '2px solid #1890ff' : '1px solid #d9d9d9',
+                                        borderRadius: '6px',
+                                        overflow: 'hidden',
+                                        background: '#fff',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                    onClick={() => {
+                                        setMainImage(img.image_url);
+                                        setUserPicked(true);
+                                    }}
+                                    title={img.__isCover ? 'Ảnh bìa' : `Ảnh ${index + 1}`}
+                                >
+                                    <img
+                                        src={img.image_url}
+                                        alt={`${book?.title} - ${index + 1}`}
+                                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                                        onError={(e) => (e.currentTarget.style.visibility = 'hidden')}
+                                    />
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </div>

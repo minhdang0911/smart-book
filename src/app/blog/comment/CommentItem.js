@@ -2,13 +2,12 @@
 
 import { DeleteOutlined, EditOutlined, MoreOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { toast } from 'react-toastify';
 import { formatTime } from '../../utils/timeUtils';
 import ReactionButton from './ReactionButton';
 import ReplyItem from './ReplyItem';
 import UserAvatar from './UserAvatar';
 
-const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId }) => {
+const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, currentUserId }) => {
     const [replies, setReplies] = useState([]);
     const [showReplies, setShowReplies] = useState(false);
     const [loadingReplies, setLoadingReplies] = useState(false);
@@ -136,11 +135,11 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
 
                 setIsEditing(false);
             } else {
-                toast.error('Có lỗi xảy ra khi cập nhật bình luận');
+                alert(data.message || 'Có lỗi xảy ra khi cập nhật bình luận');
             }
         } catch (err) {
             console.error('Lỗi khi cập nhật bình luận:', err);
-            toast.error('Có lỗi xảy ra khi cập nhật bình luận');
+            alert('Lỗi kết nối server!');
         } finally {
             setIsSaving(false);
         }
@@ -227,11 +226,11 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                     setShowReplies(true);
                 }
             } else {
-                toast.error(data.message || 'Có lỗi xảy ra khi gửi phản hồi');
+                alert(data.message || 'Có lỗi xảy ra khi gửi phản hồi');
             }
         } catch (err) {
             console.error('Lỗi khi gửi phản hồi:', err);
-            toast.error('Vui lòng đăng nhập để bình luận!');
+            alert('Lỗi kết nối server!');
         } finally {
             setIsSubmittingReply(false);
         }
@@ -459,7 +458,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                                     onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
                                     onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
                                 >
-                                    &quot;&quot;
+                                    ""
                                 </button>
                                 <button
                                     style={{
@@ -831,7 +830,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                                             onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
                                             onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
                                         >
-                                            &quot;&quot;
+                                            ""
                                         </button>
                                         <button
                                             style={{

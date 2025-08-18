@@ -10,15 +10,7 @@ import {
     List,
     Loader,
     Menu,
-    Pause,
-    Play,
     RotateCcw,
-    Settings,
-    SkipBack,
-    SkipForward,
-    Square,
-    Volume2,
-    VolumeX,
     X,
     ZoomIn,
     ZoomOut,
@@ -34,152 +26,15 @@ const PDFFlipbook = () => {
     const [zoom, setZoom] = useState(1);
     const [pdfPages, setPdfPages] = useState([]);
     const [htmlContent, setHtmlContent] = useState('');
-    const [contentType, setContentType] = useState('text'); // 'pdf' | 'text'
+    const [contentType, setContentType] = useState('text'); // 'pdf' or 'text'
     const [pdfDoc, setPdfDoc] = useState(null);
     const [bookId, setBookId] = useState(null);
     const [chapterId, setChapterId] = useState(null);
-    const [pdfCache, setPdfCache] = useState({});
+    const [pdfCache, setPdfCache] = useState({}); // Cache cho PDF pages
     const [showChapterModal, setShowChapterModal] = useState(false);
     const [allChapters, setAllChapters] = useState([]);
     const [loadingChapters, setLoadingChapters] = useState(false);
     const flipBookRef = useRef();
-
-    // Text-to-Speech states
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isPaused, setIsPaused] = useState(false);
-    const [voices, setVoices] = useState([]);
-    const [selectedVoice, setSelectedVoice] = useState(null);
-    const [rate, setRate] = useState(1);
-    const [pitch, setPitch] = useState(1);
-    const [volume, setVolume] = useState(0.8);
-    const [showTTSSettings, setShowTTSSettings] = useState(false);
-    const [currentPosition, setCurrentPosition] = useState(0);
-    const [totalChunks, setTotalChunks] = useState(0);
-
-    const utteranceRef = useRef(null);
-    const textChunks = useRef([]);
-    const currentChunkIndex = useRef(0);
-
-    // Enhanced responsive detection
-    const [deviceType, setDeviceType] = useState('desktop');
-    const [screenSize, setScreenSize] = useState({ width: 0, height: 0 });
-
-    useEffect(() => {
-        const checkDeviceType = () => {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-
-            setScreenSize({ width, height });
-
-            if (width <= 480) {
-                setDeviceType('mobile-small');
-            } else if (width <= 768) {
-                setDeviceType('mobile');
-            } else if (width <= 1024) {
-                setDeviceType('tablet');
-            } else if (width <= 1200) {
-                setDeviceType('desktop-small');
-            } else {
-                setDeviceType('desktop');
-            }
-        };
-
-        checkDeviceType();
-        window.addEventListener('resize', checkDeviceType);
-        return () => window.removeEventListener('resize', checkDeviceType);
-    }, []);
-
-    // Load voices for Text-to-Speech
-    useEffect(() => {
-        const loadVoices = () => {
-            const systemVoices = speechSynthesis.getVoices();
-
-            // Tạo các giọng Việt Nam custom
-            const customVietnameseVoices = [
-                {
-                    name: 'Vietnamese (Vietnam) - Linh',
-                    lang: 'vi-VN',
-                    voiceURI: 'custom-vietnamese-linh',
-                    localService: false,
-                    default: false,
-                    isCustom: true,
-                },
-                {
-                    name: 'Vietnamese (Vietnam) - Mai',
-                    lang: 'vi-VN',
-                    voiceURI: 'custom-vietnamese-mai',
-                    localService: false,
-                    default: false,
-                    isCustom: true,
-                },
-                {
-                    name: 'Vietnamese (Vietnam) - An',
-                    lang: 'vi-VN',
-                    voiceURI: 'custom-vietnamese-an',
-                    localService: false,
-                    default: false,
-                    isCustom: true,
-                },
-            ];
-
-            // Kết hợp giọng custom + giọng hệ thống
-            const allVoices = [...customVietnameseVoices, ...systemVoices];
-            setVoices(allVoices);
-
-            // Tìm giọng tiếng Việt theo thứ tự ưu tiên (bao gồm custom)
-            const vietnameseVoicePreferences = [
-                // Custom Vietnamese voices (ưu tiên đầu tiên)
-                (voice) => voice.isCustom && voice.lang.includes('vi-VN'),
-
-                // Giọng hệ thống iOS/macOS
-                (voice) => voice.name.includes('Linh') && voice.lang.includes('vi'),
-                (voice) => voice.name.includes('Mai') && voice.lang.includes('vi'),
-
-                // Android
-                (voice) => voice.name.includes('Vietnamese') && voice.lang.includes('vi-VN'),
-
-                // Windows
-                (voice) => voice.name.includes('An') && voice.lang.includes('vi-VN'),
-                (voice) => voice.name.includes('Vietnamese') && voice.lang.includes('vi'),
-
-                // Bất kỳ giọng tiếng Việt nào
-                (voice) => voice.lang.includes('vi-VN'),
-                (voice) => voice.lang.includes('vi'),
-
-                // Fallback sang tiếng Anh
-                (voice) => voice.lang.includes('en-US'),
-            ];
-
-            let selectedVoice = null;
-            for (const preference of vietnameseVoicePreferences) {
-                selectedVoice = allVoices.find(preference);
-                if (selectedVoice) {
-                    console.log('Selected voice:', selectedVoice.name, selectedVoice.lang);
-                    break;
-                }
-            }
-
-            setSelectedVoice(selectedVoice || allVoices[0]);
-
-            // Log voices for debugging
-            console.log('All voices loaded:', allVoices.length);
-            console.log('Custom Vietnamese voices:', customVietnameseVoices);
-            const realVietnameseVoices = systemVoices.filter(
-                (voice) => voice.lang.includes('vi') || voice.name.toLowerCase().includes('vietnamese'),
-            );
-            console.log('System Vietnamese voices:', realVietnameseVoices);
-        };
-
-        loadVoices();
-        speechSynthesis.addEventListener('voiceschanged', loadVoices);
-
-        return () => {
-            speechSynthesis.removeEventListener('voiceschanged', loadVoices);
-            if (utteranceRef.current) {
-                speechSynthesis.cancel();
-            }
-        };
-    }, []);
 
     // Load PDF.js and get data from localStorage
     useEffect(() => {
@@ -213,189 +68,6 @@ const PDFFlipbook = () => {
         };
         loadPDFJS();
     }, []);
-
-    // Text-to-Speech functions
-    const cleanContent = (htmlContent) => {
-        const div = document.createElement('div');
-        div.innerHTML = htmlContent;
-        return div.textContent || div.innerText || '';
-    };
-
-    const splitTextIntoChunks = (text, maxLength = 200) => {
-        const sentences = text.match(/[^\.!?]+[\.!?]+/g) || [text];
-        const chunks = [];
-        let currentChunk = '';
-
-        sentences.forEach((sentence) => {
-            if ((currentChunk + sentence).length <= maxLength) {
-                currentChunk += sentence;
-            } else {
-                if (currentChunk) chunks.push(currentChunk.trim());
-                currentChunk = sentence;
-            }
-        });
-
-        if (currentChunk) chunks.push(currentChunk.trim());
-        return chunks;
-    };
-    const speakChunk = () => {
-        if (currentChunkIndex.current >= textChunks.current.length) {
-            setIsPlaying(false);
-            setIsPaused(false);
-            setCurrentPosition(0);
-            currentChunkIndex.current = 0;
-            return;
-        }
-
-        const chunk = textChunks.current[currentChunkIndex.current];
-        utteranceRef.current = new SpeechSynthesisUtterance(chunk);
-
-        if (selectedVoice) {
-            if (selectedVoice.isCustom) {
-                // Đối với giọng custom Việt Nam, tìm giọng fallback tốt nhất
-                const fallbackVoice = findBestSystemVoice();
-                if (fallbackVoice) {
-                    utteranceRef.current.voice = fallbackVoice;
-                }
-
-                // Cài đặt tham số để giọng nghe "Việt Nam" hơn
-                utteranceRef.current.rate = rate * 0.85; // Chậm hơn để rõ ràng
-                utteranceRef.current.pitch = pitch + 0.15; // Cao hơn một chút
-                utteranceRef.current.lang = 'vi-VN'; // Luôn dùng vi-VN cho custom voices
-            } else {
-                // Giọng hệ thống bình thường
-                utteranceRef.current.voice = selectedVoice;
-                utteranceRef.current.rate = rate;
-                utteranceRef.current.pitch = pitch;
-                utteranceRef.current.lang = selectedVoice.lang || 'vi-VN';
-            }
-        }
-
-        utteranceRef.current.volume = volume;
-
-        utteranceRef.current.onend = () => {
-            currentChunkIndex.current++;
-            setCurrentPosition(currentChunkIndex.current);
-            speakChunk();
-        };
-
-        utteranceRef.current.onerror = (event) => {
-            console.error('Speech synthesis error:', event);
-            setIsPlaying(false);
-            setIsPaused(false);
-        };
-
-        speechSynthesis.speak(utteranceRef.current);
-    };
-
-    const VoiceInfo = ({ selectedVoice }) => {
-        if (!selectedVoice) return null;
-
-        const isVietnamese = selectedVoice.lang.includes('vi') || selectedVoice.isCustom;
-        const isCustom = selectedVoice.isCustom;
-
-        return (
-            <div
-                style={{
-                    padding: '8px 12px',
-                    backgroundColor: isVietnamese ? '#dcfce7' : '#fef3c7',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    color: isVietnamese ? '#166534' : '#92400e',
-                    border: `1px solid ${isVietnamese ? '#bbf7d0' : '#fde68a'}`,
-                    marginTop: '8px',
-                }}
-            >
-                <strong>Giọng đọc:</strong> {selectedVoice.name} ({selectedVoice.lang})
-                {isCustom && (
-                    <div style={{ marginTop: '4px', color: '#166534', fontWeight: '500' }}>
-                        ✅ Giọng Việt Nam tùy chỉnh - Đã tối ưu cho tiếng Việt
-                    </div>
-                )}
-                {!isVietnamese && !isCustom && (
-                    <div style={{ marginTop: '4px', fontStyle: 'italic' }}>
-                        ⚠️ Không tìm thấy giọng tiếng Việt. Hãy chọn "Vietnamese (Vietnam)" trong danh sách trên.
-                    </div>
-                )}
-            </div>
-        );
-    };
-
-    const findBestSystemVoice = () => {
-        const systemVoices = speechSynthesis.getVoices();
-
-        // Tìm giọng tiếng Việt hệ thống trước
-        const vietnameseVoice = systemVoices.find(
-            (voice) => voice.lang.includes('vi') || voice.name.toLowerCase().includes('vietnamese'),
-        );
-
-        if (vietnameseVoice) {
-            return vietnameseVoice;
-        }
-
-        // Nếu không có, tìm giọng tiếng Anh tốt
-        const englishVoice = systemVoices.find(
-            (voice) => voice.lang.includes('en-US') && !voice.name.toLowerCase().includes('microsoft'),
-        );
-
-        return englishVoice || systemVoices[0];
-    };
-
-    const startSpeaking = () => {
-        if (!htmlContent) return;
-
-        const cleanText = cleanContent(htmlContent);
-        textChunks.current = splitTextIntoChunks(cleanText);
-        setTotalChunks(textChunks.current.length);
-        currentChunkIndex.current = 0;
-        setCurrentPosition(0);
-        setIsPlaying(true);
-        setIsPaused(false);
-
-        speakChunk();
-    };
-
-    const pauseSpeaking = () => {
-        speechSynthesis.pause();
-        setIsPaused(true);
-        setIsPlaying(false);
-    };
-
-    const resumeSpeaking = () => {
-        speechSynthesis.resume();
-        setIsPaused(false);
-        setIsPlaying(true);
-    };
-
-    const stopSpeaking = () => {
-        speechSynthesis.cancel();
-        setIsPlaying(false);
-        setIsPaused(false);
-        setCurrentPosition(0);
-        currentChunkIndex.current = 0;
-    };
-
-    const skipForward = () => {
-        if (currentChunkIndex.current < textChunks.current.length - 1) {
-            speechSynthesis.cancel();
-            currentChunkIndex.current++;
-            setCurrentPosition(currentChunkIndex.current);
-            if (isPlaying) {
-                speakChunk();
-            }
-        }
-    };
-
-    const skipBackward = () => {
-        if (currentChunkIndex.current > 0) {
-            speechSynthesis.cancel();
-            currentChunkIndex.current--;
-            setCurrentPosition(currentChunkIndex.current);
-            if (isPlaying) {
-                speakChunk();
-            }
-        }
-    };
 
     // Fetch chapter data
     const fetchChapterData = async (currentBookId, currentChapterId) => {
@@ -434,10 +106,10 @@ const PDFFlipbook = () => {
     // Load HTML content for text-based chapters
     const loadHTMLContent = (content) => {
         setHtmlContent(content);
-        setNumPages(1);
+        setNumPages(1); // HTML content is treated as a single page
         setLoading(false);
-        // Reset TTS + đưa flipbook về trang đầu nếu có
-        stopSpeaking();
+
+        // Reset flipbook to first page
         setTimeout(() => {
             if (flipBookRef.current && flipBookRef.current.pageFlip) {
                 flipBookRef.current.pageFlip().flip(0);
@@ -445,7 +117,7 @@ const PDFFlipbook = () => {
         }, 100);
     };
 
-    // Load PDF with PDF.js and caching - Ensure odd first/last pages
+    // Load PDF with PDF.js and caching
     const loadPDF = async (pdfUrl, chapterIdForCache) => {
         try {
             // Check cache first
@@ -455,6 +127,13 @@ const PDFFlipbook = () => {
                 setPdfPages(pdfCache[cacheKey].pages);
                 setNumPages(pdfCache[cacheKey].numPages);
                 setLoading(false);
+
+                // Force flipbook to reset về trang đầu sau khi load
+                setTimeout(() => {
+                    if (flipBookRef.current && flipBookRef.current.pageFlip) {
+                        flipBookRef.current.pageFlip().flip(0);
+                    }
+                }, 100);
                 return;
             }
 
@@ -462,53 +141,41 @@ const PDFFlipbook = () => {
             const loadingTask = window.pdfjsLib.getDocument(pdfUrl);
             const pdf = await loadingTask.promise;
             setPdfDoc(pdf);
-
-            const originalNumPages = pdf.numPages;
+            setNumPages(pdf.numPages);
 
             // Render all pages as images
             const pages = [];
-
-            for (let i = 1; i <= originalNumPages; i++) {
+            for (let i = 1; i <= pdf.numPages; i++) {
                 const pageImage = await renderPageToImage(pdf, i);
                 pages.push({
                     pageNumber: i,
                     imageUrl: pageImage,
                     width: 600,
                     height: 800,
-                    isBlank: false,
                 });
-            }
-
-            // Ensure odd number of pages for proper book layout
-            // If even number of pages, add a blank page at the end
-            if (originalNumPages % 2 === 0) {
-                pages.push({
-                    pageNumber: originalNumPages + 1,
-                    imageUrl: null,
-                    width: 600,
-                    height: 800,
-                    isBlank: true,
-                });
-                setNumPages(originalNumPages + 1);
-            } else {
-                setNumPages(originalNumPages);
             }
 
             setPdfPages(pages);
-            console.log('PDF Pages loaded:', pages.length, '(Original:', originalNumPages, ')');
+            console.log('PDF Pages loaded:', pages.length);
 
             // Cache the pages
             setPdfCache((prev) => ({
                 ...prev,
                 [cacheKey]: {
                     pages,
-                    numPages: pages.length,
-                    originalNumPages,
+                    numPages: pdf.numPages,
                     timestamp: Date.now(),
                 },
             }));
 
             setLoading(false);
+
+            // Force flipbook to start at page 0 after loading
+            setTimeout(() => {
+                if (flipBookRef.current && flipBookRef.current.pageFlip) {
+                    flipBookRef.current.pageFlip().flip(0);
+                }
+            }, 100);
         } catch (error) {
             console.error('Error loading PDF:', error);
             setLoading(false);
@@ -519,7 +186,7 @@ const PDFFlipbook = () => {
     const renderPageToImage = async (pdf, pageNumber) => {
         try {
             const page = await pdf.getPage(pageNumber);
-            const scale = deviceType.includes('mobile') ? 1.5 : 2; // Lower scale for mobile
+            const scale = 2; // Higher quality
             const viewport = page.getViewport({ scale });
 
             const canvas = document.createElement('canvas');
@@ -533,7 +200,7 @@ const PDFFlipbook = () => {
             };
 
             await page.render(renderContext).promise;
-            return canvas.toDataURL('image/jpeg', deviceType.includes('mobile') ? 0.7 : 0.8);
+            return canvas.toDataURL('image/jpeg', 0.8);
         } catch (error) {
             console.error(`Error rendering page ${pageNumber}:`, error);
             return null;
@@ -570,7 +237,6 @@ const PDFFlipbook = () => {
     const navigateToChapter = async (chapterId) => {
         setShowChapterModal(false);
         setLoading(true);
-        stopSpeaking(); // Stop TTS when navigating
 
         try {
             const response = await fetch(
@@ -602,7 +268,6 @@ const PDFFlipbook = () => {
             setLoading(false);
         }
     };
-
     const nextPage = () => {
         if (flipBookRef.current && flipBookRef.current.pageFlip) {
             flipBookRef.current.pageFlip().flipNext();
@@ -619,111 +284,32 @@ const PDFFlipbook = () => {
         if (contentType === 'text') return; // No pagination for text content
 
         const targetPDFPage = Math.max(1, Math.min(pageNum, numPages));
-
-        // For flipbook navigation:
-        // Page 1 -> flipbook index 0 (single page)
-        // Page 2 -> flipbook index 1 (left side of spread)
-        // Page 3 -> flipbook index 1 (right side of spread)
-        // Page 4 -> flipbook index 2 (left side of spread)
-        // etc.
-        let flipBookPageIndex;
-        if (targetPDFPage === 1) {
-            flipBookPageIndex = 0; // First page is always single
-        } else {
-            flipBookPageIndex = Math.floor((targetPDFPage - 1) / 2) + (targetPDFPage % 2 === 0 ? 0 : 1);
-        }
-
+        const flipBookPageIndex = targetPDFPage - 1;
         if (flipBookRef.current && flipBookRef.current.pageFlip) {
             flipBookRef.current.pageFlip().flip(flipBookPageIndex);
         }
     };
 
-    // Handle page flip events with proper book layout
+    // Handle page flip events
     const onFlip = (e) => {
         if (contentType === 'text') return;
 
         const flipBookPageIndex = e.data;
-
-        // Convert flipbook index back to actual page number
         let actualPDFPage;
-        if (flipBookPageIndex === 0) {
-            actualPDFPage = 1; // First page
+
+        if (flipBookPageIndex <= 1) {
+            actualPDFPage = 0;
         } else {
-            // For spreads: each flipbook page after 0 represents 2 PDF pages
-            actualPDFPage = (flipBookPageIndex - 1) * 2 + 2;
+            actualPDFPage = flipBookPageIndex - 1;
         }
 
-        setCurrentPage(Math.min(actualPDFPage - 1, numPages - 1)); // Convert to 0-based for state
+        setCurrentPage(Math.min(actualPDFPage, numPages - 1));
     };
 
-    const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 3));
-    const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.5));
-    const resetZoom = () => setZoom(1);
-
-    // Enhanced responsive dimensions
-    const getFlipbookDimensions = () => {
-        const { width: screenWidth, height: screenHeight } = screenSize;
-
-        // Tính toán kích thước dựa trên screen và device type
-        let width, height;
-
-        switch (deviceType) {
-            case 'mobile-small':
-                width = Math.min(screenWidth - 20, 320);
-                height = Math.min(screenHeight - 160, 420);
-                break;
-            case 'mobile':
-                width = Math.min(screenWidth - 30, 380);
-                height = Math.min(screenHeight - 180, 480);
-                break;
-            case 'tablet':
-                width = Math.min(screenWidth - 60, 500);
-                height = Math.min(screenHeight - 200, 650);
-                break;
-            case 'desktop-small':
-                width = Math.min(screenWidth - 100, 600);
-                height = Math.min(screenHeight - 220, 750);
-                break;
-            default: // desktop
-                width = Math.min(screenWidth - 200, 800);
-                height = Math.min(screenHeight - 250, 900);
-        }
-
-        // Đảm bảo tỷ lệ khung hình phù hợp
-        const aspectRatio = 3 / 4; // 3:4 ratio for book pages
-        if (width / height > aspectRatio) {
-            width = height * aspectRatio;
-        } else {
-            height = width / aspectRatio;
-        }
-
-        return { width, height };
-    };
-
-    const dimensions = getFlipbookDimensions();
-    const isMobile = deviceType.includes('mobile');
-    const isTablet = deviceType === 'tablet';
-
-    if (loading) {
-        return (
-            <div style={styles.loadingContainer}>
-                <div style={styles.loadingContent}>
-                    <Loader style={styles.loadingIcon} />
-                    <p style={styles.loadingText}>
-                        {contentType === 'pdf' ? 'Đang tải PDF...' : 'Đang tải nội dung...'}
-                    </p>
-                    <div style={styles.progressContainer}>
-                        <div style={styles.progressBar}></div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-    // Điều hướng về chương trước
+    // Navigation functions for chapters
     const goToPreviousChapter = async () => {
         if (chapterData?.previous) {
             setLoading(true);
-            stopSpeaking(); // dừng TTS khi chuyển chương
             try {
                 const response = await fetch(
                     `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
@@ -732,11 +318,11 @@ const PDFFlipbook = () => {
                 setChapterData(data);
                 setCurrentPage(0);
 
-                // Cập nhật localStorage
+                // Update localStorage
                 localStorage.setItem('currentBookId', data.chapter.book_id.toString());
                 localStorage.setItem('currentChapterId', data.chapter.id.toString());
 
-                // Tải nội dung theo loại
+                // Load content based on type
                 if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
                     setContentType('pdf');
                     await loadPDF(data.chapter.pdf_url, data.chapter.id);
@@ -756,11 +342,9 @@ const PDFFlipbook = () => {
         }
     };
 
-    // Điều hướng sang chương tiếp
     const goToNextChapter = async () => {
         if (chapterData?.next) {
             setLoading(true);
-            stopSpeaking(); // dừng TTS khi chuyển chương
             try {
                 const response = await fetch(
                     `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
@@ -769,11 +353,11 @@ const PDFFlipbook = () => {
                 setChapterData(data);
                 setCurrentPage(0);
 
-                // Cập nhật localStorage
+                // Update localStorage
                 localStorage.setItem('currentBookId', data.chapter.book_id.toString());
                 localStorage.setItem('currentChapterId', data.chapter.id.toString());
 
-                // Tải nội dung theo loại
+                // Load content based on type
                 if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
                     setContentType('pdf');
                     await loadPDF(data.chapter.pdf_url, data.chapter.id);
@@ -793,18 +377,36 @@ const PDFFlipbook = () => {
         }
     };
 
+    const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 3));
+    const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.5));
+    const resetZoom = () => setZoom(1);
+
+    if (loading) {
+        return (
+            <div style={styles.loadingContainer}>
+                <div style={styles.loadingContent}>
+                    <Loader style={styles.loadingIcon} />
+                    <p style={styles.loadingText}>
+                        {contentType === 'pdf' ? 'Đang tải PDF...' : 'Đang tải nội dung...'}
+                    </p>
+                    <div style={styles.progressContainer}>
+                        <div style={styles.progressBar}></div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div style={styles.container}>
             {/* Header */}
-            <div style={{ ...styles.header, ...(isMobile ? styles.headerMobile : {}) }}>
+            <div style={styles.header}>
                 <div style={styles.headerLeft}>
                     <div style={styles.bookInfo}>
-                        <Book style={{ ...styles.bookIcon, ...(isMobile ? styles.iconMobile : {}) }} />
+                        <Book style={styles.bookIcon} />
                         <div>
-                            <h1 style={{ ...styles.bookTitle, ...(isMobile ? styles.titleMobile : {}) }}>
-                                {chapterData?.chapter?.book?.title}
-                            </h1>
-                            <p style={{ ...styles.chapterTitle, ...(isMobile ? styles.subtitleMobile : {}) }}>
+                            <h1 style={styles.bookTitle}>{chapterData?.chapter?.book?.title}</h1>
+                            <p style={styles.chapterTitle}>
                                 Chương {chapterData?.chapter?.title}
                                 <span style={styles.contentType}>({contentType === 'pdf' ? 'PDF' : 'Văn bản'})</span>
                             </p>
@@ -814,26 +416,24 @@ const PDFFlipbook = () => {
 
                 {/* Controls */}
                 <div style={styles.headerRight}>
-                    {!isMobile && (
-                        <div style={styles.zoomControls}>
-                            <button onClick={zoomOut} style={styles.controlButton} title="Thu nhỏ">
-                                <ZoomOut style={styles.controlIcon} />
-                            </button>
-                            <span style={styles.zoomDisplay}>{Math.round(zoom * 100)}%</span>
-                            <button onClick={zoomIn} style={styles.controlButton} title="Phóng to">
-                                <ZoomIn style={styles.controlIcon} />
-                            </button>
-                            <button onClick={resetZoom} style={styles.controlButton} title="Reset">
-                                <RotateCcw style={styles.controlIcon} />
-                            </button>
-                        </div>
-                    )}
+                    <div style={styles.zoomControls}>
+                        <button onClick={zoomOut} style={styles.controlButton} title="Thu nhỏ">
+                            <ZoomOut style={styles.controlIcon} />
+                        </button>
+                        <span style={styles.zoomDisplay}>{Math.round(zoom * 100)}%</span>
+                        <button onClick={zoomIn} style={styles.controlButton} title="Phóng to">
+                            <ZoomIn style={styles.controlIcon} />
+                        </button>
+                        <button onClick={resetZoom} style={styles.controlButton} title="Reset">
+                            <RotateCcw style={styles.controlIcon} />
+                        </button>
+                    </div>
 
                     <button style={styles.headerButton} title="Trang chủ">
                         <Home style={styles.controlIcon} />
                     </button>
                     <button
-                        style={{ ...styles.chapterListButton, ...(isMobile ? styles.buttonMobile : {}) }}
+                        style={styles.chapterListButton}
                         title="Danh sách chương"
                         onClick={() => {
                             setShowChapterModal(true);
@@ -841,186 +441,13 @@ const PDFFlipbook = () => {
                         }}
                     >
                         <List style={styles.controlIcon} />
-                        {!isMobile && <span style={styles.buttonText}>Danh sách chương</span>}
+                        <span style={styles.buttonText}>Danh sách chương</span>
                     </button>
                     <button style={styles.headerButton} title="Menu">
                         <Menu style={styles.controlIcon} />
                     </button>
                 </div>
             </div>
-
-            {/* Text-to-Speech Controls - chỉ hiện với content type text */}
-            {contentType === 'text' && htmlContent && (
-                <div style={{ ...styles.ttsContainer, ...(isMobile ? styles.ttsContainerMobile : {}) }}>
-                    <div style={styles.ttsControls}>
-                        <div style={styles.ttsMainControls}>
-                            <button
-                                onClick={skipBackward}
-                                disabled={currentPosition <= 0}
-                                style={{
-                                    ...styles.ttsButton,
-                                    ...(currentPosition <= 0 ? styles.ttsButtonDisabled : {}),
-                                }}
-                                title="Lùi lại"
-                            >
-                                <SkipBack style={styles.ttsIcon} />
-                            </button>
-
-                            {!isPlaying && !isPaused && (
-                                <button
-                                    onClick={startSpeaking}
-                                    style={{ ...styles.ttsButton, ...styles.ttsPlayButton }}
-                                    title="Phát"
-                                >
-                                    <Play style={styles.ttsIcon} />
-                                </button>
-                            )}
-
-                            {isPlaying && (
-                                <button
-                                    onClick={pauseSpeaking}
-                                    style={{ ...styles.ttsButton, ...styles.ttsPauseButton }}
-                                    title="Tạm dừng"
-                                >
-                                    <Pause style={styles.ttsIcon} />
-                                </button>
-                            )}
-
-                            {isPaused && (
-                                <button
-                                    onClick={resumeSpeaking}
-                                    style={{ ...styles.ttsButton, ...styles.ttsPlayButton }}
-                                    title="Tiếp tục"
-                                >
-                                    <Play style={styles.ttsIcon} />
-                                </button>
-                            )}
-
-                            <button
-                                onClick={stopSpeaking}
-                                disabled={!isPlaying && !isPaused}
-                                style={{
-                                    ...styles.ttsButton,
-                                    ...styles.ttsStopButton,
-                                    ...(!isPlaying && !isPaused ? styles.ttsButtonDisabled : {}),
-                                }}
-                                title="Dừng"
-                            >
-                                <Square style={styles.ttsIcon} />
-                            </button>
-
-                            <button
-                                onClick={skipForward}
-                                disabled={currentPosition >= totalChunks - 1}
-                                style={{
-                                    ...styles.ttsButton,
-                                    ...(currentPosition >= totalChunks - 1 ? styles.ttsButtonDisabled : {}),
-                                }}
-                                title="Tiến lên"
-                            >
-                                <SkipForward style={styles.ttsIcon} />
-                            </button>
-                        </div>
-
-                        {!isMobile && (
-                            <div style={styles.ttsProgress}>
-                                <span style={styles.ttsProgressText}>
-                                    {totalChunks > 0 ? `${currentPosition + 1}/${totalChunks}` : '0/0'}
-                                </span>
-                                <div style={styles.ttsProgressBar}>
-                                    <div
-                                        style={{
-                                            ...styles.ttsProgressFill,
-                                            width:
-                                                totalChunks > 0
-                                                    ? `${((currentPosition + 1) / totalChunks) * 100}%`
-                                                    : '0%',
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
-
-                        <div style={styles.ttsSettings}>
-                            <button
-                                onClick={() => setShowTTSSettings(!showTTSSettings)}
-                                style={styles.ttsButton}
-                                title="Cài đặt"
-                            >
-                                <Settings style={styles.ttsIcon} />
-                            </button>
-
-                            {volume > 0 ? (
-                                <Volume2 style={styles.ttsVolumeIcon} />
-                            ) : (
-                                <VolumeX style={styles.ttsVolumeIcon} />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* TTS Settings Panel */}
-                    {showTTSSettings && (
-                        <div style={styles.ttsSettingsPanel}>
-                            <div style={styles.ttsSettingRow}>
-                                <label style={styles.ttsLabel}>Giọng nói:</label>
-                                <select
-                                    value={selectedVoice?.name || ''}
-                                    onChange={(e) => {
-                                        const voice = voices.find((v) => v.name === e.target.value);
-                                        setSelectedVoice(voice);
-                                    }}
-                                    style={styles.ttsSelect}
-                                >
-                                    {voices.map((voice) => (
-                                        <option key={voice.name} value={voice.name}>
-                                            {voice.name} ({voice.lang})
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div style={styles.ttsSettingRow}>
-                                <label style={styles.ttsLabel}>Tốc độ: {rate.toFixed(1)}x</label>
-                                <input
-                                    type="range"
-                                    min="0.5"
-                                    max="2"
-                                    step="0.1"
-                                    value={rate}
-                                    onChange={(e) => setRate(parseFloat(e.target.value))}
-                                    style={styles.ttsSlider}
-                                />
-                            </div>
-
-                            <div style={styles.ttsSettingRow}>
-                                <label style={styles.ttsLabel}>Âm lượng: {Math.round(volume * 100)}%</label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="1"
-                                    step="0.1"
-                                    value={volume}
-                                    onChange={(e) => setVolume(parseFloat(e.target.value))}
-                                    style={styles.ttsSlider}
-                                />
-                            </div>
-
-                            <div style={styles.ttsSettingRow}>
-                                <label style={styles.ttsLabel}>Cao độ: {pitch.toFixed(1)}</label>
-                                <input
-                                    type="range"
-                                    min="0.5"
-                                    max="2"
-                                    step="0.1"
-                                    value={pitch}
-                                    onChange={(e) => setPitch(parseFloat(e.target.value))}
-                                    style={styles.ttsSlider}
-                                />
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
 
             {/* Main Content */}
             <div style={styles.mainContent}>
@@ -1030,8 +457,8 @@ const PDFFlipbook = () => {
                 </div>
 
                 <div style={styles.contentWrapper}>
-                    {/* Navigation Buttons - only show for PDF and desktop */}
-                    {contentType === 'pdf' && !isMobile && (
+                    {/* Navigation Buttons - only show for PDF */}
+                    {contentType === 'pdf' && (
                         <>
                             <button
                                 onClick={prevPage}
@@ -1063,128 +490,72 @@ const PDFFlipbook = () => {
                     <div
                         style={{
                             ...styles.flipbookWrapper,
-                            transform: `scale(${isMobile ? 1 : zoom})`,
+                            transform: `scale(${zoom})`,
                         }}
                     >
                         {contentType === 'pdf' && pdfPages.length > 0 && (
                             <HTMLFlipBook
                                 ref={flipBookRef}
-                                width={dimensions.width}
-                                height={dimensions.height}
+                                width={700}
+                                height={900}
                                 size="fixed"
-                                minWidth={isMobile ? 250 : 400}
-                                maxWidth={isMobile ? 400 : 1200}
-                                minHeight={isMobile ? 350 : 500}
-                                maxHeight={isMobile ? 600 : 1400}
+                                minWidth={500}
+                                maxWidth={1200}
+                                minHeight={600}
+                                maxHeight={1400}
                                 maxShadowOpacity={0.5}
-                                showCover={false}
+                                showCover={true}
                                 mobileScrollSupport={false}
                                 onFlip={onFlip}
                                 className="flipbook"
                                 startPage={0}
-                                drawShadow={!isMobile}
-                                flippingTime={isMobile ? 600 : 800}
-                                usePortrait={isMobile}
+                                drawShadow={true}
+                                flippingTime={800}
+                                usePortrait={false}
                                 startZIndex={0}
                                 autoSize={false}
                                 clickEventForward={true}
-                                useMouseEvents={!isMobile}
-                                swipeDistance={isMobile ? 20 : 30}
-                                showPageCorners={!isMobile}
+                                useMouseEvents={true}
+                                swipeDistance={30}
+                                showPageCorners={true}
                                 disableFlipByClick={false}
                             >
-                                {/* First page - always single (odd) */}
-                                <div key="page-1" style={styles.page}>
-                                    <div style={styles.pdfPageContent}>
-                                        {pdfPages[0] && !pdfPages[0].isBlank ? (
-                                            <>
-                                                <img
-                                                    src={pdfPages[0].imageUrl}
-                                                    alt={`Trang ${pdfPages[0].pageNumber}`}
-                                                    style={styles.pageImage}
-                                                    loading="lazy"
-                                                />
-                                                <div style={styles.pageNumber}>{pdfPages[0].pageNumber}</div>
-                                            </>
-                                        ) : (
-                                            <div style={styles.blankPageContent}>
-                                                <p style={styles.blankText}>Trang trắng</p>
-                                            </div>
-                                        )}
+                                {/* Cover Page */}
+                                <div style={styles.page}>
+                                    <div style={styles.coverPage}>
+                                        <Book style={styles.coverIcon} />
+                                        <h1 style={styles.coverTitle}>{chapterData?.chapter?.book?.title}</h1>
+                                        <p style={styles.coverChapter}>Chương {chapterData?.chapter?.title}</p>
+                                        <p style={styles.coverAuthor}>{chapterData?.chapter?.book?.author?.name}</p>
                                     </div>
                                 </div>
 
-                                {/* Generate paired pages (spreads) */}
-                                {(() => {
-                                    const spreads = [];
-                                    for (let i = 1; i < pdfPages.length; i += 2) {
-                                        const leftPage = pdfPages[i];
-                                        const rightPage = pdfPages[i + 1];
+                                {/* Blank page sau cover để tạo spread đúng */}
+                                <div style={styles.page}>
+                                    <div style={styles.blankPage}>
+                                        <p style={styles.blankText}>Trang trắng</p>
+                                    </div>
+                                </div>
 
-                                        spreads.push(
-                                            // Left page of spread
-                                            <div key={`page-${leftPage?.pageNumber || i + 1}`} style={styles.page}>
-                                                <div style={styles.pdfPageContent}>
-                                                    {leftPage && !leftPage.isBlank ? (
-                                                        <>
-                                                            <img
-                                                                src={leftPage.imageUrl}
-                                                                alt={`Trang ${leftPage.pageNumber}`}
-                                                                style={styles.pageImage}
-                                                                loading="lazy"
-                                                            />
-                                                            <div style={styles.pageNumber}>{leftPage.pageNumber}</div>
-                                                        </>
-                                                    ) : (
-                                                        <div style={styles.blankPageContent}>
-                                                            <p style={styles.blankText}>Trang trắng</p>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>,
-                                        );
-
-                                        // Right page of spread (if exists)
-                                        if (rightPage) {
-                                            spreads.push(
-                                                <div key={`page-${rightPage?.pageNumber || i + 2}`} style={styles.page}>
-                                                    <div style={styles.pdfPageContent}>
-                                                        {!rightPage.isBlank ? (
-                                                            <>
-                                                                <img
-                                                                    src={rightPage.imageUrl}
-                                                                    alt={`Trang ${rightPage.pageNumber}`}
-                                                                    style={styles.pageImage}
-                                                                    loading="lazy"
-                                                                />
-                                                                <div style={styles.pageNumber}>
-                                                                    {rightPage.pageNumber}
-                                                                </div>
-                                                            </>
-                                                        ) : (
-                                                            <div style={styles.blankPageContent}>
-                                                                <p style={styles.blankText}>Trang trắng</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>,
-                                            );
-                                        }
-                                    }
-                                    return spreads;
-                                })()}
+                                {/* PDF Pages */}
+                                {pdfPages.map((page, index) => (
+                                    <div key={page.pageNumber} style={styles.page}>
+                                        <div style={styles.pdfPageContent}>
+                                            <img
+                                                src={page.imageUrl}
+                                                alt={`Trang ${page.pageNumber}`}
+                                                style={styles.pageImage}
+                                                loading="lazy"
+                                            />
+                                            <div style={styles.pageNumber}>{page.pageNumber}</div>
+                                        </div>
+                                    </div>
+                                ))}
                             </HTMLFlipBook>
                         )}
 
                         {contentType === 'text' && htmlContent && (
-                            <div
-                                style={{
-                                    ...styles.textContentContainer,
-                                    ...(isMobile ? styles.textContentMobile : {}),
-                                    width: dimensions.width,
-                                    height: dimensions.height,
-                                }}
-                            >
+                            <div style={styles.textContentContainer}>
                                 <div style={styles.textPage}>
                                     <div style={styles.textHeader}>
                                         <FileText style={styles.textIcon} />
@@ -1199,17 +570,17 @@ const PDFFlipbook = () => {
             </div>
 
             {/* Footer */}
-            <div style={{ ...styles.footer, ...(isMobile ? styles.footerMobile : {}) }}>
+            <div style={styles.footer}>
                 <div style={styles.footerContent}>
                     <div style={styles.footerInfo}>
                         <span style={styles.authorName}>{chapterData?.chapter?.book?.author?.name}</span>
-                        {!isMobile && <span style={styles.separator}>•</span>}
-                        {!isMobile && <span>{chapterData?.chapter?.book?.title}</span>}
+                        <span style={styles.separator}>•</span>
+                        <span>{chapterData?.chapter?.book?.title}</span>
                     </div>
 
                     {/* Page Navigation - only for PDF */}
                     {contentType === 'pdf' && (
-                        <div style={{ ...styles.pageNavigation, ...(isMobile ? styles.pageNavigationMobile : {}) }}>
+                        <div style={styles.pageNavigation}>
                             <div style={styles.pageInputGroup}>
                                 <span style={styles.pageLabel}>Trang:</span>
                                 <div style={styles.pageInputContainer}>
@@ -1226,88 +597,47 @@ const PDFFlipbook = () => {
                             </div>
 
                             {/* Progress Bar */}
-                            {!isMobile && (
-                                <div style={styles.progressGroup}>
-                                    <span style={styles.pageLabel}>Tiến độ:</span>
-                                    <div style={styles.progressBarContainer}>
-                                        <div
-                                            style={{
-                                                ...styles.progressBarFill,
-                                                width: `${((currentPage + 1) / numPages) * 100}%`,
-                                            }}
-                                        />
-                                    </div>
-                                    <span style={styles.pageLabel}>
-                                        {Math.round(((currentPage + 1) / numPages) * 100)}%
-                                    </span>
+                            <div style={styles.progressGroup}>
+                                <span style={styles.pageLabel}>Tiến độ:</span>
+                                <div style={styles.progressBarContainer}>
+                                    <div
+                                        style={{
+                                            ...styles.progressBarFill,
+                                            width: `${((currentPage + 1) / numPages) * 100}%`,
+                                        }}
+                                    />
                                 </div>
-                            )}
+                                <span style={styles.pageLabel}>
+                                    {Math.round(((currentPage + 1) / numPages) * 100)}%
+                                </span>
+                            </div>
                         </div>
                     )}
 
                     {/* Chapter Navigation */}
-                    <div style={{ ...styles.chapterNavigation, ...(isMobile ? styles.chapterNavigationMobile : {}) }}>
+                    <div style={styles.chapterNavigation}>
                         {chapterData?.previous && (
-                            <button
-                                style={{ ...styles.chapterButton, ...(isMobile ? styles.chapterButtonMobile : {}) }}
-                                onClick={goToPreviousChapter}
-                                disabled={loading}
-                            >
-                                ← {isMobile ? 'Trước' : 'Chương trước'}
+                            <button style={styles.chapterButton} onClick={goToPreviousChapter} disabled={loading}>
+                                ← Chương trước
                             </button>
                         )}
                         {chapterData?.next && (
                             <button
-                                style={{
-                                    ...styles.chapterButton,
-                                    ...styles.nextChapterButton,
-                                    ...(isMobile ? styles.chapterButtonMobile : {}),
-                                }}
+                                style={{ ...styles.chapterButton, ...styles.nextChapterButton }}
                                 onClick={goToNextChapter}
                                 disabled={loading}
                             >
-                                {isMobile ? 'Tiếp' : 'Chương tiếp'} →
+                                Chương tiếp →
                             </button>
                         )}
                     </div>
-
-                    {/* Mobile navigation buttons for PDF */}
-                    {isMobile && contentType === 'pdf' && (
-                        <div style={styles.mobileNavButtons}>
-                            <button
-                                onClick={prevPage}
-                                disabled={currentPage <= 0}
-                                style={{
-                                    ...styles.mobileNavButton,
-                                    ...(currentPage <= 0 ? styles.disabledButton : {}),
-                                }}
-                            >
-                                <ChevronLeft style={styles.controlIcon} />
-                                Trang trước
-                            </button>
-                            <button
-                                onClick={nextPage}
-                                disabled={currentPage >= numPages - 1}
-                                style={{
-                                    ...styles.mobileNavButton,
-                                    ...(currentPage >= numPages - 1 ? styles.disabledButton : {}),
-                                }}
-                            >
-                                Trang tiếp
-                                <ChevronRight style={styles.controlIcon} />
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
 
             {/* Chapter Modal */}
             {showChapterModal && (
                 <div style={styles.modalOverlay} onClick={() => setShowChapterModal(false)}>
-                    <div
-                        style={{ ...styles.modalContent, ...(isMobile ? styles.modalContentMobile : {}) }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
+                    <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                         <div style={styles.modalHeader}>
                             <div style={styles.modalTitle}>
                                 <List style={styles.modalIcon} />
@@ -1334,7 +664,6 @@ const PDFFlipbook = () => {
                                                 ...(chapter.id === chapterData?.chapter?.id
                                                     ? styles.currentChapterItem
                                                     : {}),
-                                                ...(isMobile ? styles.chapterItemMobile : {}),
                                             }}
                                             onClick={() => navigateToChapter(chapter.id)}
                                         >
@@ -1442,135 +771,9 @@ const styles = {
         display: 'flex',
         flexDirection: 'column',
         fontFamily: 'system-ui, -apple-system, sans-serif',
-        overflow: 'hidden',
     },
 
-    // Text-to-Speech Container
-    ttsContainer: {
-        background: 'rgba(0, 0, 0, 0.8)',
-        backdropFilter: 'blur(8px)',
-        padding: '12px 16px',
-        borderBottom: '1px solid #374151',
-        flexShrink: 0,
-    },
-    ttsContainerMobile: {
-        padding: '8px 12px',
-    },
-    ttsControls: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '16px',
-        maxWidth: '1280px',
-        margin: '0 auto',
-    },
-    ttsMainControls: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    ttsButton: {
-        padding: '8px',
-        backgroundColor: '#374151',
-        border: 'none',
-        borderRadius: '6px',
-        color: 'white',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    ttsPlayButton: {
-        backgroundColor: '#059669',
-    },
-    ttsPauseButton: {
-        backgroundColor: '#d97706',
-    },
-    ttsStopButton: {
-        backgroundColor: '#dc2626',
-    },
-    ttsButtonDisabled: {
-        opacity: 0.5,
-        cursor: 'not-allowed',
-    },
-    ttsIcon: {
-        width: '16px',
-        height: '16px',
-    },
-    ttsProgress: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        flex: 1,
-        maxWidth: '200px',
-    },
-    ttsProgressText: {
-        fontSize: '12px',
-        color: '#d1d5db',
-        minWidth: '40px',
-    },
-    ttsProgressBar: {
-        flex: 1,
-        height: '4px',
-        backgroundColor: '#374151',
-        borderRadius: '2px',
-        overflow: 'hidden',
-    },
-    ttsProgressFill: {
-        height: '100%',
-        background: 'linear-gradient(to right, #059669, #10b981)',
-        borderRadius: '2px',
-        transition: 'width 0.3s ease',
-    },
-    ttsSettings: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    ttsVolumeIcon: {
-        width: '16px',
-        height: '16px',
-        color: '#9ca3af',
-    },
-    ttsSettingsPanel: {
-        marginTop: '12px',
-        padding: '16px',
-        backgroundColor: '#374151',
-        borderRadius: '8px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-    },
-    ttsSettingRow: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
-    ttsLabel: {
-        fontSize: '12px',
-        color: '#d1d5db',
-        minWidth: '80px',
-    },
-    ttsSelect: {
-        flex: 1,
-        padding: '4px 8px',
-        backgroundColor: '#1f2937',
-        color: 'white',
-        border: '1px solid #4b5563',
-        borderRadius: '4px',
-        fontSize: '12px',
-    },
-    ttsSlider: {
-        flex: 1,
-        appearance: 'none',
-        height: '4px',
-        backgroundColor: '#1f2937',
-        borderRadius: '2px',
-        outline: 'none',
-    },
-
-    // Enhanced Header styles với responsive
+    // Header styles
     header: {
         background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(8px)',
@@ -1580,60 +783,31 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: '1px solid #374151',
-        flexShrink: 0,
-        minHeight: '64px',
-    },
-    headerMobile: {
-        padding: '8px 12px',
-        minHeight: '56px',
     },
     headerLeft: {
         display: 'flex',
         alignItems: 'center',
         gap: '16px',
-        flex: 1,
-        minWidth: 0,
     },
     bookInfo: {
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        minWidth: 0,
-        overflow: 'hidden',
     },
     bookIcon: {
         width: '24px',
         height: '24px',
         color: '#60a5fa',
-        flexShrink: 0,
-    },
-    iconMobile: {
-        width: '18px',
-        height: '18px',
     },
     bookTitle: {
         fontSize: '18px',
         fontWeight: 'bold',
         margin: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        lineHeight: '1.2',
-    },
-    titleMobile: {
-        fontSize: '14px',
     },
     chapterTitle: {
         fontSize: '14px',
         color: '#d1d5db',
         margin: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
-        lineHeight: '1.2',
-    },
-    subtitleMobile: {
-        fontSize: '11px',
     },
     contentType: {
         fontSize: '12px',
@@ -1643,8 +817,7 @@ const styles = {
     headerRight: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        flexShrink: 0,
+        gap: '12px',
     },
     zoomControls: {
         display: 'flex',
@@ -1655,25 +828,22 @@ const styles = {
         padding: '4px',
     },
     controlButton: {
-        padding: '6px',
+        padding: '8px',
         backgroundColor: 'transparent',
         border: 'none',
         borderRadius: '4px',
         color: 'white',
         cursor: 'pointer',
         transition: 'background-color 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     controlIcon: {
         width: '16px',
         height: '16px',
     },
     zoomDisplay: {
-        fontSize: '12px',
-        padding: '4px 8px',
-        minWidth: '50px',
+        fontSize: '14px',
+        padding: '4px 12px',
+        minWidth: '60px',
         textAlign: 'center',
         color: 'white',
     },
@@ -1681,22 +851,19 @@ const styles = {
         padding: '8px',
         backgroundColor: '#374151',
         border: 'none',
-        borderRadius: '6px',
+        borderRadius: '4px',
         color: 'white',
         cursor: 'pointer',
         transition: 'background-color 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     chapterListButton: {
         display: 'flex',
         alignItems: 'center',
-        gap: '6px',
-        padding: '8px 12px',
+        gap: '8px',
+        padding: '10px 16px',
         backgroundColor: '#2563eb',
         border: 'none',
-        borderRadius: '6px',
+        borderRadius: '8px',
         color: 'white',
         cursor: 'pointer',
         fontSize: '14px',
@@ -1704,26 +871,20 @@ const styles = {
         transition: 'all 0.2s ease',
         boxShadow: '0 2px 4px rgba(37, 99, 235, 0.3)',
     },
-    buttonMobile: {
-        padding: '6px 8px',
-        fontSize: '12px',
-        gap: '4px',
-    },
     buttonText: {
-        fontSize: '13px',
+        fontSize: '14px',
         fontWeight: '500',
     },
 
-    // Enhanced Main content styles
+    // Main content styles
     mainContent: {
         flex: 1,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '10px',
+        padding: '32px',
         position: 'relative',
         overflow: 'hidden',
-        minHeight: 0,
     },
     backgroundPattern: {
         position: 'absolute',
@@ -1750,32 +911,28 @@ const styles = {
         top: '50%',
         transform: 'translateY(-50%)',
         zIndex: 20,
-        padding: '12px',
+        padding: '16px',
         background: 'linear-gradient(to right, #2563eb, #1d4ed8)',
         color: 'white',
         border: 'none',
         borderRadius: '50%',
         cursor: 'pointer',
-        boxShadow: '0 8px 20px rgba(0,0,0,0.3)',
+        boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
         transition: 'all 0.3s ease',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     prevButton: {
-        left: '-60px',
+        left: '-80px',
     },
     nextButton: {
-        right: '-60px',
+        right: '-80px',
     },
     disabledButton: {
         opacity: 0.3,
         cursor: 'not-allowed',
-        transform: 'translateY(-50%) scale(0.9)',
     },
     navIcon: {
-        width: '20px',
-        height: '20px',
+        width: '24px',
+        height: '24px',
     },
     flipbookWrapper: {
         transformOrigin: 'center',
@@ -1783,58 +940,52 @@ const styles = {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        maxWidth: '100%',
-        maxHeight: '100%',
     },
 
-    // Enhanced Text content styles
+    // Text content styles
     textContentContainer: {
+        width: '800px',
+        height: '900px',
+        maxWidth: '90vw',
+        maxHeight: '80vh',
         background: 'white',
-        borderRadius: '8px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+        borderRadius: '12px',
+        boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        maxWidth: '100%',
-        maxHeight: '100%',
-    },
-    textContentMobile: {
-        borderRadius: '6px',
-        boxShadow: '0 5px 15px rgba(0, 0, 0, 0.2)',
     },
     textPage: {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        overflow: 'hidden',
     },
     textHeader: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        padding: '16px 20px 12px',
-        borderBottom: '1px solid #f3f4f6',
+        gap: '12px',
+        padding: '24px 32px 16px',
+        borderBottom: '2px solid #f3f4f6',
         background: 'linear-gradient(135deg, #f8fafc, #f1f5f9)',
-        flexShrink: 0,
     },
     textIcon: {
-        width: '20px',
-        height: '20px',
+        width: '24px',
+        height: '24px',
         color: '#2563eb',
     },
     textTitle: {
-        fontSize: '18px',
+        fontSize: '24px',
         fontWeight: 'bold',
         color: '#1f2937',
         margin: 0,
     },
     textContent: {
         flex: 1,
-        padding: '20px',
+        padding: '32px',
         overflow: 'auto',
-        fontSize: '15px',
-        lineHeight: '1.6',
+        fontSize: '16px',
+        lineHeight: '1.8',
         color: '#374151',
         backgroundColor: 'white',
     },
@@ -1844,65 +995,89 @@ const styles = {
         background: 'white',
         display: 'flex',
         flexDirection: 'column',
-        border: '1px solid #e5e7eb',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        overflow: 'hidden',
-        borderRadius: '4px',
+        border: '1px solid #ddd',
+        boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
     },
-
-    // Enhanced PDF Page Content
+    coverPage: {
+        flex: 1,
+        background: 'linear-gradient(135deg, #1e3a8a, #7c3aed)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'white',
+        padding: '32px',
+        borderRadius: '8px',
+    },
+    coverIcon: {
+        width: '64px',
+        height: '64px',
+        marginBottom: '16px',
+        color: '#93c5fd',
+    },
+    coverTitle: {
+        fontSize: '30px',
+        fontWeight: 'bold',
+        marginBottom: '8px',
+        textAlign: 'center',
+        margin: 0,
+    },
+    coverChapter: {
+        fontSize: '20px',
+        marginBottom: '16px',
+        margin: 0,
+    },
+    coverAuthor: {
+        fontSize: '18px',
+        color: '#d1d5db',
+        margin: 0,
+    },
     pdfPageContent: {
         flex: 1,
         position: 'relative',
         overflow: 'hidden',
         padding: 0,
         backgroundColor: 'white',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     pageImage: {
         width: '100%',
         height: '100%',
         objectFit: 'contain',
-        display: 'block',
     },
     pageNumber: {
         position: 'absolute',
-        bottom: '10px',
-        right: '10px',
+        bottom: '20px',
+        right: '20px',
         background: 'rgba(0, 0, 0, 0.7)',
         color: 'white',
-        padding: '3px 6px',
-        borderRadius: '8px',
-        fontSize: '11px',
-        fontWeight: '500',
+        padding: '4px 8px',
+        borderRadius: '12px',
+        fontSize: '12px',
+        fontWeight: 500,
         zIndex: 10,
-        userSelect: 'none',
     },
-    blankPageContent: {
+    blankPage: {
+        flex: 1,
+        backgroundColor: '#f8f9fa',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        height: '100%',
-        color: '#9ca3af',
+        borderRadius: '8px',
     },
     blankText: {
+        color: '#6c757d',
         fontSize: '14px',
         fontStyle: 'italic',
+        margin: 0,
     },
 
-    // Enhanced Footer styles với responsive
+    // Footer styles
     footer: {
         background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(8px)',
         color: 'white',
-        padding: '12px 16px',
+        padding: '16px',
         borderTop: '1px solid #374151',
-        flexShrink: 0,
-    },
-    footerMobile: {
-        padding: '8px 12px',
     },
     footerContent: {
         display: 'flex',
@@ -1910,141 +1085,89 @@ const styles = {
         justifyContent: 'space-between',
         maxWidth: '1280px',
         margin: '0 auto',
-        gap: '16px',
+        gap: '24px',
         flexWrap: 'wrap',
     },
     footerInfo: {
-        fontSize: '13px',
+        fontSize: '14px',
         color: '#d1d5db',
-        flex: 1,
-        minWidth: 0,
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
     },
     authorName: {
-        fontWeight: '500',
+        fontWeight: 500,
     },
     separator: {
-        margin: '0 6px',
+        margin: '0 8px',
     },
     pageNavigation: {
         display: 'flex',
         alignItems: 'center',
-        gap: '16px',
-        flexShrink: 0,
-    },
-    pageNavigationMobile: {
-        gap: '8px',
-        order: 3,
-        width: '100%',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
+        gap: '24px',
     },
     pageInputGroup: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: '12px',
     },
     pageLabel: {
-        fontSize: '12px',
+        fontSize: '14px',
         color: '#9ca3af',
-        whiteSpace: 'nowrap',
     },
     pageInputContainer: {
         display: 'flex',
         alignItems: 'center',
-        gap: '6px',
+        gap: '8px',
         backgroundColor: '#374151',
-        borderRadius: '6px',
-        padding: '3px',
+        borderRadius: '8px',
+        padding: '4px',
     },
     pageInput: {
-        width: '50px',
-        padding: '4px 6px',
+        width: '64px',
+        padding: '4px 8px',
         backgroundColor: 'transparent',
         color: 'white',
         border: 'none',
         textAlign: 'center',
-        fontSize: '12px',
-        borderRadius: '3px',
-        outline: 'none',
+        fontSize: '14px',
+        borderRadius: '4px',
     },
     progressGroup: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: '12px',
     },
     progressBarContainer: {
-        width: '120px',
-        height: '6px',
+        width: '160px',
+        height: '8px',
         backgroundColor: '#374151',
-        borderRadius: '3px',
+        borderRadius: '4px',
         overflow: 'hidden',
     },
     progressBarFill: {
         height: '100%',
         background: 'linear-gradient(to right, #3b82f6, #2563eb)',
-        borderRadius: '3px',
+        borderRadius: '4px',
         transition: 'width 0.5s ease',
     },
     chapterNavigation: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-    },
-    chapterNavigationMobile: {
-        order: 2,
-        width: '100%',
-        justifyContent: 'space-between',
+        gap: '12px',
     },
     chapterButton: {
-        padding: '6px 12px',
+        padding: '8px 16px',
         backgroundColor: '#374151',
         color: 'white',
         border: 'none',
-        borderRadius: '6px',
-        fontSize: '12px',
+        borderRadius: '8px',
+        fontSize: '14px',
         cursor: 'pointer',
         transition: 'background-color 0.2s',
-        whiteSpace: 'nowrap',
-    },
-    chapterButtonMobile: {
-        padding: '8px 12px',
-        fontSize: '11px',
     },
     nextChapterButton: {
         background: 'linear-gradient(to right, #2563eb, #1d4ed8)',
     },
 
-    // Enhanced Mobile navigation buttons
-    mobileNavButtons: {
-        display: 'flex',
-        gap: '8px',
-        width: '100%',
-        justifyContent: 'space-between',
-        order: 4,
-        marginTop: '6px',
-    },
-    mobileNavButton: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        padding: '10px 16px',
-        backgroundColor: '#2563eb',
-        color: 'white',
-        border: 'none',
-        borderRadius: '6px',
-        fontSize: '12px',
-        fontWeight: '500',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        flex: 1,
-        justifyContent: 'center',
-        minHeight: '40px',
-    },
-
-    // Enhanced Modal styles với responsive
+    // Modal styles
     modalOverlay: {
         position: 'fixed',
         inset: 0,
@@ -2054,56 +1177,47 @@ const styles = {
         justifyContent: 'center',
         zIndex: 1000,
         backdropFilter: 'blur(4px)',
-        padding: '16px',
     },
     modalContent: {
         backgroundColor: 'white',
-        borderRadius: '10px',
+        borderRadius: '12px',
         width: '90vw',
-        maxWidth: '700px',
+        maxWidth: '800px',
         maxHeight: '80vh',
         display: 'flex',
         flexDirection: 'column',
-        boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
-    },
-    modalContentMobile: {
-        width: '95vw',
-        maxHeight: '85vh',
-        borderRadius: '8px',
+        boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
     },
     modalHeader: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px 20px',
+        padding: '20px 24px',
         borderBottom: '1px solid #e5e7eb',
         backgroundColor: '#f8fafc',
-        borderRadius: '10px 10px 0 0',
+        borderRadius: '12px 12px 0 0',
     },
     modalTitle: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
-        fontSize: '16px',
+        gap: '12px',
+        fontSize: '18px',
         fontWeight: '600',
         color: '#1f2937',
     },
     modalIcon: {
-        width: '18px',
-        height: '18px',
+        width: '20px',
+        height: '20px',
         color: '#2563eb',
     },
     closeButton: {
-        padding: '6px',
+        padding: '8px',
         backgroundColor: 'transparent',
         border: 'none',
-        borderRadius: '4px',
+        borderRadius: '6px',
         cursor: 'pointer',
         color: '#6b7280',
         transition: 'all 0.2s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
     modalBody: {
         flex: 1,
@@ -2115,135 +1229,123 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '8px',
-        padding: '40px',
+        gap: '12px',
+        padding: '48px',
         color: '#6b7280',
     },
     loadingSpinner: {
-        width: '18px',
-        height: '18px',
+        width: '20px',
+        height: '20px',
         animation: 'spin 1s linear infinite',
     },
     chaptersList: {
         flex: 1,
         overflow: 'auto',
-        padding: '6px',
+        padding: '8px',
     },
     chapterItem: {
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'space-between',
-        padding: '12px',
-        margin: '4px',
+        padding: '16px',
+        margin: '8px',
         backgroundColor: '#f9fafb',
-        borderRadius: '6px',
+        borderRadius: '8px',
         cursor: 'pointer',
         transition: 'all 0.2s',
         border: '1px solid #e5e7eb',
     },
-    chapterItemMobile: {
-        padding: '10px',
-        margin: '3px',
-    },
     currentChapterItem: {
         backgroundColor: '#eff6ff',
         borderColor: '#2563eb',
-        boxShadow: '0 1px 3px rgba(37, 99, 235, 0.1)',
+        boxShadow: '0 2px 4px rgba(37, 99, 235, 0.1)',
     },
     chapterInfo: {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
-        minWidth: 0,
+        gap: '8px',
     },
     chapterHeader: {
         display: 'flex',
         alignItems: 'flex-start',
-        gap: '8px',
+        gap: '12px',
     },
     chapterIcon: {
-        padding: '6px',
+        padding: '8px',
         backgroundColor: '#e5e7eb',
-        borderRadius: '4px',
+        borderRadius: '6px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        flexShrink: 0,
     },
     chapterTypeIcon: {
-        width: '14px',
-        height: '14px',
+        width: '16px',
+        height: '16px',
         color: '#6b7280',
     },
     chapterTitle: {
         flex: 1,
-        minWidth: 0,
     },
     chapterName: {
-        fontSize: '14px',
+        fontSize: '16px',
         fontWeight: '600',
         color: '#1f2937',
-        margin: '0 0 3px 0',
-        lineHeight: '1.3',
-        overflow: 'hidden',
-        textOverflow: 'ellipsis',
-        whiteSpace: 'nowrap',
+        margin: '0 0 4px 0',
     },
     chapterMeta: {
         display: 'flex',
         alignItems: 'center',
-        gap: '8px',
+        gap: '12px',
         flexWrap: 'wrap',
     },
     chapterOrder: {
-        fontSize: '10px',
+        fontSize: '12px',
         color: '#6b7280',
         backgroundColor: '#e5e7eb',
-        padding: '2px 4px',
-        borderRadius: '3px',
+        padding: '2px 6px',
+        borderRadius: '4px',
         fontWeight: '500',
     },
     chapterType: {
-        fontSize: '10px',
+        fontSize: '12px',
         color: '#059669',
         backgroundColor: '#d1fae5',
-        padding: '2px 4px',
-        borderRadius: '3px',
+        padding: '2px 6px',
+        borderRadius: '4px',
         fontWeight: '500',
     },
     wordCount: {
         display: 'flex',
         alignItems: 'center',
-        gap: '3px',
-        fontSize: '10px',
+        gap: '4px',
+        fontSize: '12px',
         color: '#6b7280',
     },
     clockIcon: {
-        width: '10px',
-        height: '10px',
+        width: '12px',
+        height: '12px',
     },
     chapterPreview: {
-        marginTop: '6px',
+        marginTop: '8px',
     },
     previewText: {
-        fontSize: '12px',
+        fontSize: '14px',
         color: '#6b7280',
-        lineHeight: '1.4',
+        lineHeight: '1.5',
         display: '-webkit-box',
-        WebkitLineClamp: 2,
+        WebkitLineClamp: 3,
         WebkitBoxOrient: 'vertical',
         overflow: 'hidden',
     },
     currentBadge: {
-        padding: '3px 6px',
+        padding: '4px 8px',
         backgroundColor: '#2563eb',
         color: 'white',
-        borderRadius: '8px',
-        fontSize: '10px',
+        borderRadius: '12px',
+        fontSize: '12px',
         fontWeight: '500',
         alignSelf: 'flex-start',
-        flexShrink: 0,
     },
 };
 
