@@ -1,46 +1,40 @@
 import { toast } from 'react-toastify';
 
-export const apiAddToCart = async (bookId, quantity, price = null) => {
-    const token = localStorage?.getItem('token');
-
+export const apiAddToCart = async (bookId, quantity) => {
     try {
-        const body = {
-            book_id: bookId,
-            quantity: Number(quantity) || 1,
-        };
-
-        // Chỉ thêm price vào body nếu có giá trị hợp lệ > 0
-        if (price !== null && Number(price) > 0) {
-            body.price = Number(price);
-        }
-
+        const token = localStorage.getItem('token');
         const response = await fetch('https://smartbook.io.vn/api/cart/add', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify(body),
+            body: JSON.stringify({
+                book_id: bookId,
+                quantity: quantity,
+            }),
         });
 
         const data = await response.json();
 
-        if (data?.success === true) {
-            toast.success('Thêm vào giỏ hàng thành công');
-        } else {
-            toast.error(data?.message || 'Thêm vào giỏ hàng thất bại');
+        if (!response.ok || data.success === false) {
+            toast.error(data.message || `HTTP error! status: ${response.status}`);
+            return {
+                success: false,
+                error: data.message || `HTTP error! status: ${response.status}`,
+            };
         }
 
         return {
-            status: !!data?.success,
-            message: data?.message,
-            data: data?.data,
+            success: true,
+            data,
         };
     } catch (error) {
-        console.error('Error adding to cart:', error);
+        console.error('Lỗi khi thêm vào giỏ hàng:', error);
+        toast.error(error.message || 'Có lỗi xảy ra khi thêm vào giỏ hàng');
         return {
-            status: false,
-            message: 'Lỗi kết nối mạng',
+            success: false,
+            error: error.message,
         };
     }
 };

@@ -85,7 +85,7 @@ const Header = () => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
-                const response = await fetch('https://smartbook.io.vn/api/cart/count', {
+                const response = await fetch('http://localhost:8000/api/cart/count', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json',
