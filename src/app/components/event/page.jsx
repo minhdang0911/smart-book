@@ -82,7 +82,7 @@ const OnlinePromotion = () => {
                 bookId: book.id,
                 quantity: qty,
                 price: finalPrice,
-                addToCart: apiAddToCart, // Đảm bảo signature đúng: (token, bookId, quantity, price)
+                addToCart: apiAddToCart, // (bookId, quantity, price) — token đọc từ localStorage trong apiAddToCart
                 setIsAddingToCart,
                 router,
             });
@@ -198,8 +198,6 @@ const OnlinePromotion = () => {
     const hasDiscount = (price, discountPrice) => {
         const p = toNum(price);
         const dp = toNum(discountPrice);
-
-        // Có giảm giá khi: giá gốc > 0, giá giảm > 0 và giá giảm < giá gốc
         return p > 0 && dp > 0 && dp < p;
     };
 
@@ -215,21 +213,11 @@ const OnlinePromotion = () => {
         return hasDiscount(price, discountPrice) ? toNum(discountPrice) : toNum(price);
     };
 
-    // FIX: Giá chính xác để thêm vào giỏ hàng
+    // Giá chính xác để thêm vào giỏ hàng
     const getFinalPriceForCart = (price, discountPrice) => {
         const originalPrice = parseFloat(price) || 0;
         const discountedPrice = parseFloat(discountPrice) || 0;
 
-        console.log('getFinalPriceForCart debug:', {
-            price,
-            discountPrice,
-            originalPrice,
-            discountedPrice,
-            hasValidDiscount: discountedPrice > 0 && discountedPrice < originalPrice,
-        });
-
-        // Nếu có discount_price và nó nhỏ hơn price thì dùng discount_price
-        // Ngược lại dùng price
         if (discountedPrice > 0 && discountedPrice < originalPrice) {
             return discountedPrice;
         }

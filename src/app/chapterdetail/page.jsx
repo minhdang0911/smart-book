@@ -34,7 +34,7 @@ const PDFFlipbook = () => {
     const [zoom, setZoom] = useState(1);
     const [pdfPages, setPdfPages] = useState([]);
     const [htmlContent, setHtmlContent] = useState('');
-    const [contentType, setContentType] = useState('text');
+    const [contentType, setContentType] = useState('text'); // 'pdf' | 'text'
     const [pdfDoc, setPdfDoc] = useState(null);
     const [bookId, setBookId] = useState(null);
     const [chapterId, setChapterId] = useState(null);
@@ -302,8 +302,13 @@ const PDFFlipbook = () => {
         setHtmlContent(content);
         setNumPages(1);
         setLoading(false);
-        // Reset TTS state when content changes
+        // Reset TTS + đưa flipbook về trang đầu nếu có
         stopSpeaking();
+        setTimeout(() => {
+            if (flipBookRef.current && flipBookRef.current.pageFlip) {
+                flipBookRef.current.pageFlip().flip(0);
+            }
+        }, 100);
     };
 
     // Load PDF with PDF.js and caching - Ensure odd first/last pages
@@ -517,79 +522,6 @@ const PDFFlipbook = () => {
         setCurrentPage(Math.min(actualPDFPage - 1, numPages - 1)); // Convert to 0-based for state
     };
 
-    // Navigation functions for chapters
-    const goToPreviousChapter = async () => {
-        if (chapterData?.previous) {
-            setLoading(true);
-            stopSpeaking(); // Stop TTS when navigating
-            try {
-                const response = await fetch(
-                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
-                );
-                const data = await response.json();
-                setChapterData(data);
-                setCurrentPage(0);
-
-                // Update localStorage
-                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-                localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-                // Load content based on type
-                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                    setContentType('pdf');
-                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
-                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                    setContentType('text');
-                    loadHTMLContent(data.chapter.content);
-                }
-
-                // Reset flipbook
-                if (flipBookRef.current) {
-                    flipBookRef.current.flip(0);
-                }
-            } catch (error) {
-                console.error('Error loading previous chapter:', error);
-                setLoading(false);
-            }
-        }
-    };
-
-    const goToNextChapter = async () => {
-        if (chapterData?.next) {
-            setLoading(true);
-            stopSpeaking(); // Stop TTS when navigating
-            try {
-                const response = await fetch(
-                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
-                );
-                const data = await response.json();
-                setChapterData(data);
-                setCurrentPage(0);
-
-                // Update localStorage
-                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-                localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-                // Load content based on type
-                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                    setContentType('pdf');
-                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
-                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                    setContentType('text');
-                    loadHTMLContent(data.chapter.content);
-                }
-
-                // Reset flipbook
-                if (flipBookRef.current) {
-                    flipBookRef.current.flip(0);
-                }
-            } catch (error) {
-                console.error('Error loading next chapter:', error);
-                setLoading(false);
-            }
-        }
-    };
-
     const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 3));
     const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.5));
     const resetZoom = () => setZoom(1);
@@ -653,6 +585,79 @@ const PDFFlipbook = () => {
             </div>
         );
     }
+    // Điều hướng về chương trước
+    const goToPreviousChapter = async () => {
+        if (chapterData?.previous) {
+            setLoading(true);
+            stopSpeaking(); // dừng TTS khi chuyển chương
+            try {
+                const response = await fetch(
+                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
+                );
+                const data = await response.json();
+                setChapterData(data);
+                setCurrentPage(0);
+
+                // Cập nhật localStorage
+                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+                localStorage.setItem('currentChapterId', data.chapter.id.toString());
+
+                // Tải nội dung theo loại
+                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                    setContentType('pdf');
+                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
+                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+                    setContentType('text');
+                    loadHTMLContent(data.chapter.content);
+                }
+
+                // Reset flipbook
+                if (flipBookRef.current) {
+                    flipBookRef.current.flip(0);
+                }
+            } catch (error) {
+                console.error('Error loading previous chapter:', error);
+                setLoading(false);
+            }
+        }
+    };
+
+    // Điều hướng sang chương tiếp
+    const goToNextChapter = async () => {
+        if (chapterData?.next) {
+            setLoading(true);
+            stopSpeaking(); // dừng TTS khi chuyển chương
+            try {
+                const response = await fetch(
+                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
+                );
+                const data = await response.json();
+                setChapterData(data);
+                setCurrentPage(0);
+
+                // Cập nhật localStorage
+                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+                localStorage.setItem('currentChapterId', data.chapter.id.toString());
+
+                // Tải nội dung theo loại
+                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                    setContentType('pdf');
+                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
+                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+                    setContentType('text');
+                    loadHTMLContent(data.chapter.content);
+                }
+
+                // Reset flipbook
+                if (flipBookRef.current) {
+                    flipBookRef.current.flip(0);
+                }
+            } catch (error) {
+                console.error('Error loading next chapter:', error);
+                setLoading(false);
+            }
+        }
+    };
 
     return (
         <div style={styles.container}>
@@ -1700,7 +1705,7 @@ const styles = {
         backgroundColor: 'white',
     },
 
-    // Enhanced Page styles (for PDF)
+    // Page styles (for PDF)
     page: {
         background: 'white',
         display: 'flex',
