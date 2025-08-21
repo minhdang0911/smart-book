@@ -1,5 +1,12 @@
 'use client';
-import { DeleteOutlined, MinusOutlined, PlusOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import {
+    CopyOutlined,
+    DeleteOutlined,
+    MinusOutlined,
+    PlusOutlined,
+    ShoppingCartOutlined,
+    UserAddOutlined,
+} from '@ant-design/icons';
 import {
     Button,
     Card,
@@ -16,6 +23,7 @@ import {
     Space,
     Spin,
     Typography,
+    message,
 } from 'antd';
 import { useRouter } from 'next/navigation';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -291,10 +299,132 @@ const Cart = () => {
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [checkingCoupon, setCheckingCoupon] = useState(false);
 
+    // ✅ New state for group cart modal
+    const [groupCartModalVisible, setGroupCartModalVisible] = useState(false);
+    const [creatingGroupCart, setCreatingGroupCart] = useState(false);
+    const [groupCartData, setGroupCartData] = useState(null);
+
     // Ensure selectedItems is always an array
     const safeSelectedItems = useMemo(() => {
         return Array.isArray(selectedItems) ? selectedItems : [];
     }, [selectedItems]);
+
+    // ✅ API để tạo giỏ hàng nhóm
+    const createGroupCart = async () => {
+        try {
+            setCreatingGroupCart(true);
+
+            // Get authentication token from localStorage, cookies, or context
+            const authToken =
+                localStorage.getItem('auth_token') ||
+                localStorage.getItem('access_token') ||
+                localStorage.getItem('token');
+
+            if (!authToken) {
+                throw new Error('Vui lòng đăng nhập để tạo giỏ hàng nhóm');
+            }
+
+            const headers = {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${authToken}`,
+            };
+
+            // Alternative: if using Laravel Sanctum with cookies
+            // const headers = {
+            //     'Content-Type': 'application/json',
+            //     'Accept': 'application/json',
+            //     'X-Requested-With': 'XMLHttpRequest',
+            // };
+
+            const response = await fetch('http://localhost:8000/api/group-orders', {
+                method: 'POST',
+                headers: headers,
+                credentials: 'include', // Include cookies for session-based auth
+                body: JSON.stringify({
+                    // Add any required fields here if needed
+                }),
+            });
+
+            console.log('Response status:', response.status);
+
+            // Handle authentication errors
+            if (response.status === 401) {
+                // Clear invalid token
+                localStorage.removeItem('auth_token');
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('token');
+                throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+            }
+
+            if (!response.ok) {
+                let errorMessage = 'Không thể tạo giỏ hàng nhóm';
+                try {
+                    const errorData = await response.json();
+                    errorMessage = errorData.message || errorMessage;
+                } catch {
+                    const errorText = await response.text();
+                    errorMessage = errorText || errorMessage;
+                }
+                throw new Error(`${errorMessage} (${response.status})`);
+            }
+
+            const data = await response.json();
+            console.log('Group cart created successfully:', data);
+
+            if (data.join_url && data.group) {
+                setGroupCartData(data);
+                setGroupCartModalVisible(true);
+                toast.success('Tạo giỏ hàng nhóm thành công!');
+                return data;
+            } else {
+                throw new Error('Dữ liệu trả về không hợp lệ');
+            }
+        } catch (error) {
+            console.error('Error creating group cart:', error);
+
+            // Handle specific error types
+            if (error.message.includes('đăng nhập')) {
+                toast.error(error.message);
+                // Optionally redirect to login page
+                // router.push('/login');
+            } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+                toast.error('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
+            } else {
+                toast.error(error.message || 'Có lỗi xảy ra khi tạo giỏ hàng nhóm');
+            }
+            return null;
+        } finally {
+            setCreatingGroupCart(false);
+        }
+    };
+
+    // ✅ Handle copy join URL
+    const handleCopyJoinUrl = () => {
+        if (groupCartData?.join_url) {
+            navigator.clipboard
+                .writeText(groupCartData.join_url)
+                .then(() => {
+                    message.success('Đã copy đường link!');
+                })
+                .catch(() => {
+                    message.error('Không thể copy đường link');
+                });
+        }
+    };
+
+    // ✅ Updated: Handle redirect to group cart page with token storage
+    const handleGoToGroupCart = () => {
+        setGroupCartModalVisible(false);
+
+        // Store the group token in localStorage
+        if (groupCartData?.group?.join_token) {
+            localStorage.setItem('group_cart_token', groupCartData.group.join_token);
+            console.log('Stored group token:', groupCartData.group.join_token);
+        }
+
+        router.push('/cart_group');
+    };
 
     // API để kiểm tra mã giảm giá
     const checkCoupon = async (couponCode) => {
@@ -740,7 +870,10 @@ const Cart = () => {
                 <Col xs={24} lg={16}>
                     <Card className="cart-items-card">
                         <div className="cart-controls">
-                            <div className="cart-select-all">
+                            <div
+                                className="cart-select-all"
+                                style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+                            >
                                 <Checkbox
                                     onChange={(e) => handleSelectAll(e.target.checked)}
                                     checked={isAllSelected}
@@ -748,6 +881,27 @@ const Cart = () => {
                                 >
                                     Chọn tất cả ({safeSelectedItems.length}/{cartData.items.length})
                                 </Checkbox>
+
+                                <Button
+                                    type="text"
+                                    icon={<UserAddOutlined />}
+                                    loading={creatingGroupCart}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+                                    className="btn-create-group"
+                                    onClick={createGroupCart}
+                                >
+                                    Tạo giỏ hàng nhóm
+                                </Button>
+                                <Button
+                                    type="text"
+                                    icon={<UserAddOutlined />}
+                                    loading={creatingGroupCart}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+                                    className="btn-create-cart-group"
+                                    onClick={() => router.push('/cart_group')}
+                                >
+                                    đi đến giỏ hàng nhóm
+                                </Button>
                             </div>
 
                             {safeSelectedItems.length > 0 && (
@@ -767,17 +921,6 @@ const Cart = () => {
                                 </div>
                             )}
                         </div>
-
-                        {/* <div className="cart-header-row desktop-only">
-                            <div className="cart-header-labels">
-                                <span className="col-product">Sản phẩm</span>
-                                <span className="col-category">Phân loại</span>
-                                <span className="col-price">Đơn giá</span>
-                                <span className="col-quantity">Số lượng</span>
-                                <span className="col-total">Thành tiền</span>
-                                <span className="col-actions">Thao tác</span>
-                            </div>
-                        </div> */}
 
                         <Divider />
 
@@ -883,6 +1026,7 @@ const Cart = () => {
                 </Col>
             </Row>
 
+            {/* Voucher Modal */}
             <Modal
                 title="Nhập mã giảm giá"
                 open={voucherModalVisible}
@@ -898,6 +1042,98 @@ const Cart = () => {
                     onChange={(e) => setVoucherCode(e.target.value)}
                     onPressEnter={handleApplyCoupon}
                 />
+            </Modal>
+
+            {/* ✅ Group Cart Modal */}
+            <Modal
+                title={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <UserAddOutlined style={{ color: '#1890ff' }} />
+                        <span>Tạo giỏ hàng nhóm thành công!</span>
+                    </div>
+                }
+                open={groupCartModalVisible}
+                onCancel={() => setGroupCartModalVisible(false)}
+                footer={[
+                    <Button key="copy" icon={<CopyOutlined />} onClick={handleCopyJoinUrl}>
+                        Copy Link
+                    </Button>,
+                    <Button key="close" onClick={() => setGroupCartModalVisible(false)}>
+                        Đóng
+                    </Button>,
+                    <Button key="goto" type="primary" onClick={handleGoToGroupCart}>
+                        Đi đến giỏ hàng nhóm
+                    </Button>,
+                ]}
+                width={600}
+            >
+                {groupCartData && (
+                    <div style={{ padding: '16px 0' }}>
+                        <div style={{ marginBottom: '20px' }}>
+                            <Text strong style={{ fontSize: '16px', color: '#52c41a' }}>
+                                Giỏ hàng nhóm đã được tạo thành công!
+                            </Text>
+                            <p style={{ marginTop: '8px', color: '#666' }}>
+                                Chia sẻ đường link dưới đây để mời bạn bè cùng mua hàng:
+                            </p>
+                        </div>
+
+                        <div style={{ marginBottom: '20px' }}>
+                            <Text strong>Đường link tham gia:</Text>
+                            <Input.TextArea
+                                value={groupCartData.join_url}
+                                readOnly
+                                rows={2}
+                                style={{
+                                    marginTop: '8px',
+                                    backgroundColor: '#f6ffed',
+                                    border: '1px solid #b7eb8f',
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ backgroundColor: '#f0f8ff', padding: '12px', borderRadius: '6px' }}>
+                            <Text strong>Thông tin giỏ hàng nhóm:</Text>
+                            <div style={{ marginTop: '8px', lineHeight: '1.6' }}>
+                                <p>
+                                    <Text type="secondary">ID nhóm:</Text> <Text code>#{groupCartData.group.id}</Text>
+                                </p>
+                                <p>
+                                    <Text type="secondary">Mã tham gia:</Text>{' '}
+                                    <Text code>{groupCartData.group.join_token}</Text>
+                                </p>
+                                <p>
+                                    <Text type="secondary">Cho phép khách:</Text>{' '}
+                                    <Text>{groupCartData.group.allow_guest ? 'Có' : 'Không'}</Text>
+                                </p>
+                                <p>
+                                    <Text type="secondary">Quy tắc vận chuyển:</Text>{' '}
+                                    <Text>{groupCartData.group.shipping_rule === 'equal' ? 'Chia đều' : 'Khác'}</Text>
+                                </p>
+                                <p>
+                                    <Text type="secondary">Hết hạn:</Text>{' '}
+                                    <Text>{new Date(groupCartData.group.expires_at).toLocaleString('vi-VN')}</Text>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div
+                            style={{
+                                marginTop: '16px',
+                                padding: '12px',
+                                backgroundColor: '#fff7e6',
+                                borderRadius: '6px',
+                                border: '1px solid #ffd666',
+                            }}
+                        >
+                            <Text style={{ fontSize: '14px', color: '#d46b08' }}>
+                                💡 <strong>Lưu ý:</strong> Đường link này sẽ hết hạn sau{' '}
+                                {Math.ceil((new Date(groupCartData.group.expires_at) - new Date()) / (1000 * 60 * 60))}{' '}
+                                giờ. Hãy chia sẻ với bạn bè để cùng nhau mua hàng!
+                            </Text>
+                        </div>
+                    </div>
+                )}
             </Modal>
         </div>
     );

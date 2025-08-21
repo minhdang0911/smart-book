@@ -1,6 +1,35 @@
-import { Button, Col, InputNumber, Modal, Row, Typography } from 'antd';
+import { UsergroupAddOutlined } from '@ant-design/icons';
+import { Button, Col, InputNumber, Modal, Row, Tooltip, Typography, message } from 'antd';
 
 const { Title, Text, Paragraph } = Typography;
+
+// API function để thêm vào giỏ hàng nhóm
+const apiAddToGroupCart = async (groupOrderId, bookId, quantity) => {
+    const groupToken = localStorage.getItem('group_cart_token');
+
+    if (!groupToken) {
+        throw new Error('Không tìm thấy token giỏ hàng nhóm');
+    }
+
+    const response = await fetch(`http://localhost:8000/api/group-orders/${groupOrderId}/items`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${groupToken}`,
+        },
+        body: JSON.stringify({
+            book_id: bookId,
+            quantity: quantity,
+        }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Lỗi khi thêm vào giỏ hàng nhóm');
+    }
+
+    return await response.json();
+};
 
 const QuickViewModal = ({
     visible,
@@ -11,7 +40,10 @@ const QuickViewModal = ({
     handleAddToCart,
     toggleFavorite,
     isFavorite,
-    isAddingToCart = false, // Thêm prop này với default value
+    isAddingToCart = false,
+    isCartGroup = false, // Thêm prop này
+    groupOrderId = null, // Thêm prop này
+    setIsAddingToCart, // Thêm prop này để control loading state
 }) => {
     if (!book) return null;
 
@@ -19,6 +51,28 @@ const QuickViewModal = ({
         book.discount_price && book.discount_price < book.price
             ? Math.round(((book.price - book.discount_price) / book.price) * 100)
             : 0;
+
+    // Function xử lý thêm vào giỏ hàng nhóm
+    const handleAddToGroupCart = async (book, qty) => {
+        if (!groupOrderId) {
+            message.error('Không tìm thấy thông tin nhóm mua hàng');
+            return;
+        }
+
+        try {
+            setIsAddingToCart && setIsAddingToCart(true);
+
+            const response = await apiAddToGroupCart(groupOrderId, book.id, qty);
+
+            message.success(`Đã thêm "${book.title}" vào giỏ hàng nhóm thành công!`);
+            console.log('Group cart response:', response);
+        } catch (error) {
+            console.error('Error adding to group cart:', error);
+            message.error(error.message || 'Lỗi khi thêm vào giỏ hàng nhóm');
+        } finally {
+            setIsAddingToCart && setIsAddingToCart(false);
+        }
+    };
 
     return (
         <Modal open={visible} onCancel={onClose} footer={null} centered width={960} className="quick-view-modal">
@@ -56,16 +110,17 @@ const QuickViewModal = ({
                         )}
                     </div>
 
-                    <Paragraph type="secondary" style={{ fontSize: 15, marginBottom: 24 }}>
-                        {book.description || 'Không có mô tả'}
-                    </Paragraph>
+                    <Paragraph
+                        type="secondary"
+                        style={{ fontSize: 15, marginBottom: 24 }}
+                        dangerouslySetInnerHTML={{
+                            __html: book.description || 'Không có mô tả',
+                        }}
+                    />
 
                     <div style={{ display: 'flex', gap: 16, marginBottom: 24 }}>
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 24 }}>
-                            <Button
-                                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                disabled={isAddingToCart} // Disable khi đang loading
-                            >
+                            <Button onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={isAddingToCart}>
                                 -
                             </Button>
                             <InputNumber
@@ -73,22 +128,35 @@ const QuickViewModal = ({
                                 value={quantity}
                                 onChange={(value) => setQuantity(value)}
                                 style={{ width: 80 }}
-                                disabled={isAddingToCart} // Disable khi đang loading
+                                disabled={isAddingToCart}
                             />
-                            <Button
-                                onClick={() => setQuantity(quantity + 1)}
-                                disabled={isAddingToCart} // Disable khi đang loading
-                            >
+                            <Button onClick={() => setQuantity(quantity + 1)} disabled={isAddingToCart}>
                                 +
                             </Button>
                             <Button
                                 type="primary"
                                 danger
-                                loading={isAddingToCart} // Thêm loading state
+                                loading={isAddingToCart}
                                 onClick={() => handleAddToCart(book, quantity)}
                             >
                                 {isAddingToCart ? 'Đang thêm...' : 'Thêm Vào Giỏ Hàng'}
                             </Button>
+
+                            {/* Button thêm vào giỏ hàng nhóm - chỉ hiển thị khi isCartGroup = true */}
+                            {isCartGroup && (
+                                <Tooltip title="Thêm vào giỏ hàng nhóm">
+                                    <Button
+                                        type="primary"
+                                        icon={<UsergroupAddOutlined />}
+                                        loading={isAddingToCart}
+                                        onClick={() => handleAddToGroupCart(book, quantity)}
+                                        style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                                        disabled={isAddingToCart}
+                                    >
+                                        Nhóm
+                                    </Button>
+                                </Tooltip>
+                            )}
                         </div>
                     </div>
                 </Col>

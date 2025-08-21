@@ -1,12 +1,79 @@
 'use client';
 
-import { ArrowUpOutlined, AudioOutlined, BookOutlined, TeamOutlined, TrophyOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, AudioOutlined, BookOutlined, TeamOutlined, TrophyOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import { Modal, Input, Button, Spin } from 'antd';
 import { Card, Col, Row, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 
 const { Title, Paragraph, Text } = Typography;
 
 export default function SmartBookLanding() {
+    const [qaVisible, setQaVisible] = useState(false);
+    const [question, setQuestion] = useState('');
+    const [answer, setAnswer] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    // Danh sách FAQ mẫu
+    const faqList = [
+        {
+            q: 'SmartBook là gì',
+            a: 'SmartBook là nền tảng giúp bạn tìm kiếm, đọc và quản lý sách mọi lúc, mọi nơi.'
+        },
+        {
+            q: 'mua sách',
+            a: 'Bạn có thể tìm kiếm sách, thêm vào giỏ hàng và thanh toán trực tuyến hoặc nhận sách giấy tại nhà.'
+        },
+        {
+            q: 'sách nói',
+            a: 'SmartBook cung cấp cả sách giấy, eBook và AudioBook.'
+        },
+        {
+            q: 'đọc sách trên điện thoại',
+            a: 'Bạn có thể đọc sách trên mọi thiết bị: điện thoại, máy tính bảng, laptop.'
+        },
+        {
+            q: 'tạo tài khoản',
+            a: 'Bạn có thể đăng ký tài khoản miễn phí để lưu trữ sách yêu thích và theo dõi lịch sử đọc.'
+        },
+        {
+            q: 'sách có bản quyền không',
+            a: 'Tất cả sách trên SmartBook đều được mua bản quyền hợp pháp từ nhà xuất bản và tác giả.'
+        },
+        {
+            q: 'cách thanh toán',
+            a: 'Chúng tôi hỗ trợ nhiều phương thức thanh toán như thẻ tín dụng, chuyển khoản ngân hàng, ví điện tử.'
+        },
+        {
+            q: 'chính sách hoàn trả',
+            a: 'Bạn có thể hoàn trả sách trong vòng 7 ngày nếu không hài lòng với chất lượng sản phẩm.'
+        },
+        {
+            q: 'cách tìm sách',
+            a: 'Bạn có thể tìm sách theo tên, tác giả, thể loại hoặc từ khóa trong thanh tìm kiếm của ứng dụng.'
+        },
+        {
+            q: 'có cập nhật sách mới không',
+            a: 'Thư viện SmartBook được cập nhật liên tục mỗi tuần với nhiều đầu sách mới, đa dạng thể loại.'
+        },
+    ];
+
+    const handleQaOpen = () => setQaVisible(true);
+    const handleQaClose = () => {
+        setQaVisible(false);
+        setQuestion('');
+        setAnswer('');
+    };
+    const handleAsk = () => {
+        if (!question.trim()) return;
+        setLoading(true);
+        setTimeout(() => {
+            // Tìm câu trả lời gần đúng nhất
+            const qLower = question.toLowerCase();
+            const found = faqList.find(faq => qLower.includes(faq.q.toLowerCase()));
+            setAnswer(found ? found.a : 'Không tìm thấy câu trả lời phù hợp.');
+            setLoading(false);
+        }, 600);
+    };
     const [scrollTop, setScrollTop] = useState(false);
 
     useEffect(() => {
@@ -74,7 +141,7 @@ export default function SmartBookLanding() {
     ];
 
     return (
-        <div style={{ background: '#ffffff' }}>
+        <div style={{ background: '#569bd0ff' }}>
             <style>
                 {`
           body {
@@ -403,24 +470,49 @@ export default function SmartBookLanding() {
         `}
             </style>
 
-            {/* Social Icons */}
+            {/* Social Icons + Q&A Icon */}
             <div className="social-icons">
-                <a href="#" className="social-icon teal">
-                    📚
-                </a>
-                <a href="#" className="social-icon orange">
-                    🧡
-                </a>
-                <a href="#" className="social-icon yellow">
-                    💛
-                </a>
-                <a href="#" className="social-icon blue">
-                    💙
-                </a>
-                <a href="#" className="social-icon purple">
-                    💜
-                </a>
+                <a href="#" className="social-icon teal">📚</a>
+                <a href="#" className="social-icon orange">🧡</a>
+                <a href="#" className="social-icon yellow">�</a>
+                <a href="#" className="social-icon blue">💙</a>
+                <a href="#" className="social-icon purple">💜</a>
+                {/* Icon hỏi đáp AI */}
+                <div style={{ position: 'fixed', bottom: -50, right: 10, zIndex: 1000 }}>
+                    <Button
+                        type="primary"
+                        shape="circle"
+                        icon={<QuestionCircleOutlined style={{ fontSize: 28 }} />}
+                        size="large"
+                        style={{ boxShadow: '0 2px 8px #27ae6044', background: '#27ae60', border: 'none' }}
+                        onClick={handleQaOpen}
+                        title="Hỏi đáp AI"
+                    />
+                </div>
             </div>
+
+            {/* Modal hỏi đáp AI */}
+            <Modal
+                open={qaVisible}
+                onCancel={handleQaClose}
+                footer={null}
+                centered
+                title={<span style={{ color: '#27ae60' }}>Hỏi đáp SmartBook</span>}
+            >
+                <Input.TextArea
+                    value={question}
+                    onChange={e => setQuestion(e.target.value)}
+                    placeholder="Nhập câu hỏi của bạn..."
+                    autoSize={{ minRows: 2, maxRows: 4 }}
+                    style={{ marginBottom: 12 }}
+                />
+                <Button type="primary" onClick={handleAsk} loading={loading} block>
+                    Gửi câu hỏi
+                </Button>
+                <div style={{ marginTop: 18, minHeight: 40 }}>
+                    {loading ? <Spin /> : answer && <div><b>Trả lời:</b> {answer}</div>}
+                </div>
+            </Modal>
 
             {/* Scroll to top */}
             {scrollTop && (
@@ -489,7 +581,7 @@ export default function SmartBookLanding() {
                                 </Title>
                                 <Paragraph
                                     style={{
-                                        fontSize: '22px',
+                                        fontSize: '20px',
                                         color: 'rgba(255,255,255,0.8)',
                                         fontStyle: 'italic',
                                         marginBottom: '40px',
@@ -523,7 +615,7 @@ export default function SmartBookLanding() {
                                     <BookOutlined />
                                 </div>
                                 <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Giải thiểu
+                                    Giới thiệu
                                 </Title>
                             </Card>
                         </Col>

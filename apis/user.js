@@ -87,7 +87,7 @@ export const apiResetPassword = async ({ email, token, password, password_confir
     }
 };
 
-const BASE_URL = 'https://smartbook.io.vn/api';
+const BASE_URL = 'http://localhost:8000/api';
 
 export const apiSearchBooks = async (params = {}) => {
     try {
