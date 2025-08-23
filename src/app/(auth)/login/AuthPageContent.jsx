@@ -69,8 +69,7 @@ const GoogleCallback = () => {
     }
 
     return null;
-};
-
+}
 const handleGoogleLogin = () => {
     localStorage.setItem('redirect_after_login', '/');
     const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';

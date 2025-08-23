@@ -66,8 +66,8 @@ export function BookStoreClient({ initialBooks }) {
         { title: 'Sách Nổi Bật', key: 'featured', icon: '📚' },
         { title: 'Sách Được Yêu Thích Nhất', key: 'topRated', icon: '⭐' },
         { title: 'Sách Được Xem Nhiều Nhất', key: 'mostViewed', icon: '🔥' },
-        { title: 'EBooks Mới Nhất', key: 'ebooks', icon: '💻' },
-        { title: 'Sách Giấy Mới Nhất', key: 'paperBooks', icon: '📖' },
+        { title: 'Sách Giấy Mới Nhất', key: 'ebooks', icon: '💻' },
+        { title: 'Sách Đọc Miễn Phí Mới Nhất', key: 'paperBooks', icon: '📖' },
     ];
 
     return (
