@@ -8,72 +8,25 @@ import { useEffect, useState } from 'react';
 const { Title, Paragraph, Text } = Typography;
 
 export default function SmartBookLanding() {
-    const [qaVisible, setQaVisible] = useState(false);
-    const [question, setQuestion] = useState('');
-    const [answer, setAnswer] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    // Danh sách FAQ mẫu
+    // Danh sách câu hỏi thường gặp
     const faqList = [
         {
-            q: 'SmartBook là gì',
-            a: 'SmartBook là nền tảng giúp bạn tìm kiếm, đọc và quản lý sách mọi lúc, mọi nơi.'
+            question: 'SmartBook là gì?',
+            answer: 'SmartBook là nền tảng giúp bạn tìm kiếm, đọc và quản lý sách mọi lúc, mọi nơi.'
         },
         {
-            q: 'mua sách',
-            a: 'Bạn có thể tìm kiếm sách, thêm vào giỏ hàng và thanh toán trực tuyến hoặc nhận sách giấy tại nhà.'
+            question: 'Làm sao để mua sách trên SmartBook?',
+            answer: 'Bạn có thể tìm kiếm sách, thêm vào giỏ hàng và thanh toán trực tuyến hoặc nhận sách giấy tại nhà.'
         },
         {
-            q: 'sách nói',
-            a: 'SmartBook cung cấp cả sách giấy, eBook và AudioBook.'
+            question: 'SmartBook có hỗ trợ sách nói (AudioBook) không?',
+            answer: 'Có, SmartBook cung cấp cả sách giấy, eBook và AudioBook.'
         },
         {
-            q: 'đọc sách trên điện thoại',
-            a: 'Bạn có thể đọc sách trên mọi thiết bị: điện thoại, máy tính bảng, laptop.'
-        },
-        {
-            q: 'tạo tài khoản',
-            a: 'Bạn có thể đăng ký tài khoản miễn phí để lưu trữ sách yêu thích và theo dõi lịch sử đọc.'
-        },
-        {
-            q: 'sách có bản quyền không',
-            a: 'Tất cả sách trên SmartBook đều được mua bản quyền hợp pháp từ nhà xuất bản và tác giả.'
-        },
-        {
-            q: 'cách thanh toán',
-            a: 'Chúng tôi hỗ trợ nhiều phương thức thanh toán như thẻ tín dụng, chuyển khoản ngân hàng, ví điện tử.'
-        },
-        {
-            q: 'chính sách hoàn trả',
-            a: 'Bạn có thể hoàn trả sách trong vòng 7 ngày nếu không hài lòng với chất lượng sản phẩm.'
-        },
-        {
-            q: 'cách tìm sách',
-            a: 'Bạn có thể tìm sách theo tên, tác giả, thể loại hoặc từ khóa trong thanh tìm kiếm của ứng dụng.'
-        },
-        {
-            q: 'có cập nhật sách mới không',
-            a: 'Thư viện SmartBook được cập nhật liên tục mỗi tuần với nhiều đầu sách mới, đa dạng thể loại.'
+            question: 'Tôi có thể đọc sách trên điện thoại không?',
+            answer: 'Bạn có thể đọc sách trên mọi thiết bị: điện thoại, máy tính bảng, laptop.'
         },
     ];
-
-    const handleQaOpen = () => setQaVisible(true);
-    const handleQaClose = () => {
-        setQaVisible(false);
-        setQuestion('');
-        setAnswer('');
-    };
-    const handleAsk = () => {
-        if (!question.trim()) return;
-        setLoading(true);
-        setTimeout(() => {
-            // Tìm câu trả lời gần đúng nhất
-            const qLower = question.toLowerCase();
-            const found = faqList.find(faq => qLower.includes(faq.q.toLowerCase()));
-            setAnswer(found ? found.a : 'Không tìm thấy câu trả lời phù hợp.');
-            setLoading(false);
-        }, 600);
-    };
     const [scrollTop, setScrollTop] = useState(false);
 
     useEffect(() => {
@@ -141,7 +94,7 @@ export default function SmartBookLanding() {
     ];
 
     return (
-        <div style={{ background: '#569bd0ff' }}>
+    <div style={{ background: ' center/cover no-repeat', minHeight: '100vh', position: 'relative' }}>
             <style>
                 {`
           body {
@@ -149,11 +102,11 @@ export default function SmartBookLanding() {
           }
           
           .hero-section {
-            background: linear-gradient(135deg, #2C5F2D 0%, #1E4A29 50%, #0F2E18 100%);
+            background: Dark Green(135deg, #2C5F2D 0%, #1E4A29 50%, #0F2E18 100%);
             min-height: 100vh;
             position: relative;
             overflow: hidden;
-            padding: 60px 0;
+            padding: -10px 0;
             color: white;
           }
           
@@ -161,9 +114,9 @@ export default function SmartBookLanding() {
             position: absolute;
             top: 60px;
             right: 80px;
-            width: 120px;
+                <div style={{ background: 'url(/banner.png) center/cover no-repeat', minHeight: '100vh' }}>
             height: 120px;
-            background: linear-gradient(45deg, #FFA500, #FF8C00);
+            background: Dark Green(45deg, #FFA500, #FF8C00);
             border-radius: 50%;
             box-shadow: 0 0 50px rgba(255, 165, 0, 0.6);
             animation: sunGlow 4s ease-in-out infinite;
@@ -470,140 +423,8 @@ export default function SmartBookLanding() {
         `}
             </style>
 
-            {/* Social Icons + Q&A Icon */}
-            <div className="social-icons">
-                <a href="#" className="social-icon teal">📚</a>
-                <a href="#" className="social-icon orange">🧡</a>
-                <a href="#" className="social-icon yellow">�</a>
-                <a href="#" className="social-icon blue">💙</a>
-                <a href="#" className="social-icon purple">💜</a>
-                {/* Icon hỏi đáp AI */}
-                <div style={{ position: 'fixed', bottom: -50, right: 10, zIndex: 1000 }}>
-                    <Button
-                        type="primary"
-                        shape="circle"
-                        icon={<QuestionCircleOutlined style={{ fontSize: 28 }} />}
-                        size="large"
-                        style={{ boxShadow: '0 2px 8px #27ae6044', background: '#27ae60', border: 'none' }}
-                        onClick={handleQaOpen}
-                        title="Hỏi đáp AI"
-                    />
-                </div>
-            </div>
-
-            {/* Modal hỏi đáp AI */}
-            <Modal
-                open={qaVisible}
-                onCancel={handleQaClose}
-                footer={null}
-                centered
-                title={<span style={{ color: '#27ae60' }}>Hỏi đáp SmartBook</span>}
-            >
-                <Input.TextArea
-                    value={question}
-                    onChange={e => setQuestion(e.target.value)}
-                    placeholder="Nhập câu hỏi của bạn..."
-                    autoSize={{ minRows: 2, maxRows: 4 }}
-                    style={{ marginBottom: 12 }}
-                />
-                <Button type="primary" onClick={handleAsk} loading={loading} block>
-                    Gửi câu hỏi
-                </Button>
-                <div style={{ marginTop: 18, minHeight: 40 }}>
-                    {loading ? <Spin /> : answer && <div><b>Trả lời:</b> {answer}</div>}
-                </div>
-            </Modal>
-
-            {/* Scroll to top */}
-            {scrollTop && (
-                <div className="scroll-top" onClick={handleScrollToTop}>
-                    <ArrowUpOutlined />
-                </div>
-            )}
-
             {/* Hero Section */}
-            {/* <section className="hero-section">
-                <div className="hero-sun"></div>
-
-                {/* Tree */}
-                <div className="hero-tree">
-                    <div className="tree-trunk"></div>
-                    <div className="tree-crown"></div>
-                    <div className="tree-leaves">
-                        {[...Array(25)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="leaf"
-                                style={{
-                                    left: `${30 + Math.random() * 200}px`,
-                                    top: `${20 + Math.random() * 160}px`,
-                                    animationDelay: `${i * 0.15}s`,
-                                }}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                {/* Character sitting */}
-                <div className="character-sitting"></div>
-
-                {/* Floating icons */}
-                <div className="floating-icons">
-                    <div className="icon-float" style={{ left: '-20px', animationDelay: '0s' }}>
-                        📖
-                    </div>
-                    <div className="icon-float" style={{ left: '70px', top: '30px', animationDelay: '1.5s' }}>
-                        🎧
-                    </div>
-                    <div className="icon-float" style={{ left: '140px', top: '15px', animationDelay: '3s' }}>
-                        💬
-                    </div>
-                </div>
-
-                <div
-                    style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 5 }}
-                >
-                    <Row gutter={[48, 48]} align="middle" style={{ minHeight: '90vh' }}>
-                        <Col xs={24} lg={12}>
-                            <div style={{ textAlign: 'left', paddingLeft: '12%' }}>
-                                <Title
-                                    level={1}
-                                    style={{
-                                        fontSize: '4rem',
-                                        color: 'rgba(255,255,255,0.95)',
-                                        marginBottom: '20px',
-                                        fontWeight: 'bold',
-                                        lineHeight: 1.2,
-                                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-                                    }}
-                                >
-                                    SmartBook 4.0 - Ebook & Audiobook
-                                </Title>
-                                <Paragraph
-                                    style={{
-                                        fontSize: '20px',
-                                        color: 'rgba(255,255,255,0.8)',
-                                        fontStyle: 'italic',
-                                        marginBottom: '40px',
-                                        textShadow: '1px 1px 2px rgba(0,0,0,0.3)',
-                                    }}
-                                >
-                                    Nghệ có đọc sách mới lúc nào cũng nơi
-                                </Paragraph>
-                            </div>
-                        </Col>
-
-                        <Col xs={24} lg={12}>
-                            <div className="book-showcase">
-                                <div className="book-item book-1"></div>
-                                <div className="book-item book-2"></div>
-                                <div className="book-item book-3"></div>
-                                <div className="book-item book-4"></div>
-                            </div>
-                        </Col>
-                    </Row>
-                </div>
-            {/* </section> */} 
+            <img src="/banner.png" alt="Banner" style={{ width: '100%', height: '800px', display: 'block' }} />
 
             {/* Features Section */}
             <section className="features-section">
@@ -746,6 +567,20 @@ export default function SmartBookLanding() {
                     </div>
                 </div>
             </section>
+        {/* Bảng gợi ý câu hỏi thường gặp - cuối trang */}
+        <div style={{ maxWidth: 650, margin: '32px auto', background: '#fff', borderRadius: 18, boxShadow: '0 2px 16px #b2dfdb22', padding: 32 }}>
+            <h2 style={{ color: '#27ae60', marginBottom: 24, textAlign: 'center', fontWeight: 700 }}>Câu hỏi thường gặp</h2>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <tbody>
+                    {faqList.map((faq, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #e8f5e9' }}>
+                            <td style={{ padding: '16px 12px', fontWeight: 600, color: '#219150', width: '45%' }}>{faq.question}</td>
+                            <td style={{ padding: '16px 12px', color: '#333' }}>{faq.answer}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
+    </div>
     );
 }

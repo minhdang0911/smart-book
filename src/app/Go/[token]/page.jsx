@@ -19,7 +19,7 @@ export default function Page({ params }) {
         let cancelled = false;
 
         const joinGroup = async () => {
-            const joinUrl = `http://localhost:8000/api/group-orders/${token}/join`;
+            const joinUrl = `https://smartbook.io.vn/api/group-orders/${token}/join`;
 
             try {
                 const authToken =

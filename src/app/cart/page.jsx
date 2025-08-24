@@ -337,7 +337,7 @@ const Cart = () => {
             //     'X-Requested-With': 'XMLHttpRequest',
             // };
 
-            const response = await fetch('http://localhost:8000/api/group-orders', {
+            const response = await fetch('http://localhost:/api/group-orders', {
                 method: 'POST',
                 headers: headers,
                 credentials: 'include', // Include cookies for session-based auth
