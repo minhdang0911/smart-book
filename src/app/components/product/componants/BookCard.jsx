@@ -18,7 +18,7 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
         throw new Error('Không tìm thấy token giỏ hàng nhóm');
     }
     const token = localStorage.getItem('token');
-    const response = await fetch(`https://smartbook.io.vn/api/group-orders/${groupToken}/items`, {
+    const response = await fetch(`http://localhost:8000/api/group-orders/${groupToken}/items`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

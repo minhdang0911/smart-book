@@ -912,11 +912,11 @@ const Header = () => {
                 icon: <UserOutlined />,
                 label: <span onClick={() => router.push('/profile')}>Thông tin cá nhân</span>,
             },
-            {
-                key: 'notifications',
-                icon: <BellOutlined />,
-                label: <span onClick={() => router.push('/notifications')}>Thông báo</span>,
-            },
+            // {
+            //     key: 'notifications',
+            //     icon: <BellOutlined />,
+            //     label: <span onClick={() => router.push('/notifications')}>Thông báo</span>,
+            // },
             {
                 type: 'divider',
             },
@@ -1046,14 +1046,14 @@ const Header = () => {
                                         </Tooltip>
                                     </Badge>
 
-                                    <Badge count={3} size="small" className="notification-badge">
+                                    {/* <Badge count={3} size="small" className="notification-badge">
                                         <Button
                                             type="text"
                                             icon={<BellOutlined />}
                                             className="notification-btn"
                                             onClick={() => router.push('/notifications')}
                                         />
-                                    </Badge>
+                                    </Badge> */}
 
                                     <Dropdown menu={userMenu} placement="bottomRight" trigger={['click']}>
                                         <div className="user-profile">

@@ -337,7 +337,7 @@ const Cart = () => {
             //     'X-Requested-With': 'XMLHttpRequest',
             // };
 
-            const response = await fetch('http://localhost:/api/group-orders', {
+            const response = await fetch('http://localhost:8000/api/group-orders', {
                 method: 'POST',
                 headers: headers,
                 credentials: 'include', // Include cookies for session-based auth
@@ -430,7 +430,7 @@ const Cart = () => {
     const checkCoupon = async (couponCode) => {
         try {
             setCheckingCoupon(true);
-            const response = await fetch('https://smartbook.io.vn/api/coupons/check', {
+            const response = await fetch('http://localhost:8000/api/coupons/check', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
