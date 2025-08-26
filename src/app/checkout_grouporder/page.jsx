@@ -24,7 +24,7 @@ import {
     Typography,
 } from 'antd';
 import axios from 'axios';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { apiGetDistricts, apiGetProvinces, apiGetShippingFee, apiGetWardsByDistrict } from '../../../apis/ghtk';
@@ -34,12 +34,10 @@ import './CheckoutPage.css';
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-const GroupCheckoutPageContent = () => {
+const GroupCheckoutPageContent = ({ urlToken }) => {
     const [form] = Form.useForm();
     const [paymentMethod, setPaymentMethod] = useState('cod');
     const router = useRouter();
-
-    const searchParams = useSearchParams();
 
     // Group order states
     const [groupOrderData, setGroupOrderData] = useState(null);
@@ -63,10 +61,10 @@ const GroupCheckoutPageContent = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    // Get group order token from URL
+    // Get group order token (ưu tiên từ urlToken)
     useEffect(() => {
         try {
-            const token = localStorage.getItem('group_cart_token');
+            const token = urlToken || localStorage.getItem('group_cart_token');
             if (token) {
                 setGroupToken(token);
                 fetchGroupOrderData(token);
@@ -80,7 +78,7 @@ const GroupCheckoutPageContent = () => {
         } finally {
             setLoading(false);
         }
-    }, [searchParams, router]);
+    }, [urlToken, router]);
 
     // Fetch group order data
     const fetchGroupOrderData = async (token) => {
@@ -533,7 +531,6 @@ const GroupCheckoutPageContent = () => {
     // Get all items from group order
     const getAllGroupItems = () => {
         if (!groupOrderData || !groupOrderData.by_member) return [];
-
         const allItems = [];
         Object.values(groupOrderData.by_member).forEach((member) => {
             if (member.items) {
@@ -547,14 +544,7 @@ const GroupCheckoutPageContent = () => {
 
     if (loading) {
         return (
-            <div
-                style={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    minHeight: '400px',
-                }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
                 <Spin size="large" />
             </div>
         );
