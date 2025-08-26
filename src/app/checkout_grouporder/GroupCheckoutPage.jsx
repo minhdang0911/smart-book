@@ -1,8 +1,8 @@
 import { Spin } from 'antd';
 import { Suspense } from 'react';
-import GroupCheckoutPageContent from './GroupCheckoutPageContent';
+import GroupCheckoutWrapper from './GroupCheckoutWrapper';
 
-const GroupCheckoutPage = () => {
+export default function GroupCheckoutPage() {
     return (
         <Suspense
             fallback={
@@ -18,9 +18,7 @@ const GroupCheckoutPage = () => {
                 </div>
             }
         >
-            <GroupCheckoutPageContent />
+            <GroupCheckoutWrapper />
         </Suspense>
     );
-};
-
-export default GroupCheckoutPage;
+}

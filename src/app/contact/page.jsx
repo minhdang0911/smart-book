@@ -1,376 +1,268 @@
-"use client"
-import React, { useState, useEffect } from 'react';
-import { Input, Button, Row, Col, Typography, Card, Space, message } from 'antd';
-import { MenuOutlined, LoadingOutlined } from '@ant-design/icons';
+'use client';
 
-const { Title, Text, Paragraph } = Typography;
-const { TextArea } = Input;
+import { LoadingOutlined } from '@ant-design/icons';
+import { Button, Card, Col, Form, Input, Row, Space, Typography, message } from 'antd';
+import { gsap } from 'gsap';
+import { useEffect, useRef, useState } from 'react';
+import banner from '../assets/img/banner.png';
 
-const ContactPage = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
-  });
-  const [loading, setLoading] = useState(false);
+const { Title, Paragraph, Text, Link } = Typography;
 
-  // EmailJS configuration - Replace with your actual values
-  const EMAIL_SERVICE_ID = 'service_lg81eri';
-  const EMAIL_TEMPLATE_ID = 'template_2cxd19m';
-  const EMAIL_PUBLIC_KEY = '54mEZG14u54_ru90Y';
+export default function ContactPage() {
+    // EmailJS
+    const EMAIL_SERVICE_ID = 'service_lg81eri';
+    const EMAIL_TEMPLATE_ID = 'template_2cxd19m';
+    const EMAIL_PUBLIC_KEY = '54mEZG14u54_ru90Y';
 
-  useEffect(() => {
-    // Load EmailJS script
-    const script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
-    script.async = true;
-    script.onload = () => {
-      // Initialize EmailJS
-      if (window.emailjs) {
-        window.emailjs.init(EMAIL_PUBLIC_KEY);
-      }
-    };
-    document.head.appendChild(script);
+    // Refs
+    const heroRef = useRef(null);
+    const formCardRef = useRef(null);
+    const infoCardRef = useRef(null);
+    const scrollDotRef = useRef(null);
+    const mapRef = useRef(null);
+    const leafletMapRef = useRef(null);
 
-    return () => {
-      document.head.removeChild(script);
-    };
-  }, [EMAIL_PUBLIC_KEY]);
+    // Form
+    const [form] = Form.useForm();
+    const [loading, setLoading] = useState(false);
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+    // load EmailJS
+    useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+        script.async = true;
+        script.onload = () => window.emailjs?.init(EMAIL_PUBLIC_KEY);
+        document.head.appendChild(script);
+        return () => document.head.removeChild(script);
+    }, []);
 
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      message.error('Xin hãy cho chúng tôi biết tên quý danh của bạn');
-      return false;
-    }
-    if (!formData.email.trim()) {
-      message.error('Xin hãy để lại địa chỉ email để chúng tôi có thể liên hệ');
-      return false;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      message.error('Xin hãy nhập một địa chỉ email hợp lệ');
-      return false;
-    }
-    if (!formData.subject.trim()) {
-      message.error('Xin hãy cho chúng tôi biết chủ đề bạn muốn trao đổi');
-      return false;
-    }
-    if (!formData.message.trim()) {
-      message.error('Xin hãy chia sẻ những suy nghĩ của bạn với chúng tôi');
-      return false;
-    }
-    return true;
-  };
+    // Leaflet map
+    useEffect(() => {
+        const COORDS = { lat: 10.8532, lng: 106.6278 };
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        document.head.appendChild(link);
 
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
+        const script = document.createElement('script');
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.async = true;
+        script.onload = () => {
+            if (!mapRef.current || !window.L) return;
+            const L = window.L;
+            const map = L.map(mapRef.current).setView([COORDS.lat, COORDS.lng], 16);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap',
+            }).addTo(map);
+            L.marker([COORDS.lat, COORDS.lng])
+                .addTo(map)
+                .bindPopup('<b>SmartBook</b><br/>QTSC9 (Toà T)<br/>P.Tân Chánh Hiệp, Q.12')
+                .openPopup();
+            leafletMapRef.current = map;
+        };
+        document.body.appendChild(script);
 
-    setLoading(true);
+        return () => {
+            try {
+                leafletMapRef.current?.remove();
+            } catch {}
+            document.head.removeChild(link);
+            document.body.removeChild(script);
+        };
+    }, []);
 
-    try {
-      if (!window.emailjs) {
-        throw new Error('Hệ thống email chưa sẵn sàng');
-      }
-
-      const templateParams = {
-        from_name: formData.name,
-        from_email: formData.email,
-        subject: formData.subject,
-        message: formData.message,
-        to_name: 'Tháp Thiên Niên Kỷ San Francisco',
-      };
-
-      const result = await window.emailjs.send(
-        EMAIL_SERVICE_ID,
-        EMAIL_TEMPLATE_ID,
-        templateParams
-      );
-
-      if (result.status === 200) {
-        message.success('Thư của bạn đã được gửi đi như cánh chim bay xa! Chúng tôi sẽ phản hồi sớm nhất có thể.');
-        // Reset form
-        setFormData({
-          name: '',
-          email: '',
-          subject: '',
-          message: ''
+    // GSAP
+    useEffect(() => {
+        if (heroRef.current) gsap.from(heroRef.current, { autoAlpha: 0, y: 20, duration: 0.7, ease: 'power2.out' });
+        gsap.from([formCardRef.current, infoCardRef.current], {
+            autoAlpha: 0,
+            y: 30,
+            duration: 0.7,
+            ease: 'power2.out',
+            stagger: 0.12,
+            delay: 0.15,
         });
-      } else {
-        throw new Error('Gửi thư thất bại');
-      }
-    } catch (error) {
-      console.error('EmailJS Error:', error);
-      message.error('Có chút trục trặc trong quá trình gửi thư. Xin hãy thử lại sau một chút nhé.');
-    } finally {
-      setLoading(false);
-    }
-  };
+        if (scrollDotRef.current) {
+            gsap.timeline({ repeat: -1 })
+                .fromTo(scrollDotRef.current, { y: 0, autoAlpha: 0.4 }, { y: 16, autoAlpha: 1, duration: 0.8 })
+                .to(scrollDotRef.current, { y: 0, autoAlpha: 0.4, duration: 0.8 });
+        }
+    }, []);
 
-  const headerStyle = {
-    position: 'relative',
-    height: '100vh',
-    maxWidth:'100%',
-    background: 'linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.6)), url("https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80")',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundRepeat: 'no-repeat',
-    backgroundAttachment: 'fixed',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: 'white',
-    textAlign: 'center',
-    margin: 0,
-    padding: 0
-  };
+    // Submit
+    const onFinish = async (values) => {
+        setLoading(true);
+        try {
+            if (!window.emailjs) throw new Error('EmailJS not ready');
+            const templateParams = {
+                from_name: values.name,
+                from_email: values.email,
+                subject: values.subject,
+                message: values.message,
+                to_name: 'SmartBook',
+            };
+            const result = await window.emailjs.send(EMAIL_SERVICE_ID, EMAIL_TEMPLATE_ID, templateParams);
+            if (result.status === 200) {
+                message.success('Đã gửi! Team sẽ phản hồi sớm nhất.');
+                form.resetFields();
+            } else throw new Error('Send failed');
+        } catch (err) {
+            console.error(err);
+            message.error('Gửi thất bại. Thử lại nha bro.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-  const navStyle = {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    padding: '20px 40px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    zIndex: 10
-  };
+    const onFinishFailed = ({ errorFields }) => form.scrollToField(errorFields?.[0]?.name || []);
 
-  const logoStyle = {
-    color: 'white',
-    fontSize: '14px',
-    fontWeight: '300',
-    letterSpacing: '2px'
-  };
+    // Banner style: dùng ảnh import
+    const heroBg = `linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.55)), url("${
+        banner?.src || banner
+    }") center/cover no-repeat`;
 
-  const contentStyle = {
-    padding: '80px 20px',
-    backgroundColor: '#f8f9fa'
-  };
-
-  return (
-    <div style={{ margin: 0, padding: 0, width: '100%' }}>
-      <div style={headerStyle}>
-        <div style={navStyle}>
-          <div style={logoStyle}>
-            <div style={{ fontWeight: 'bold' }}>THÁP THIÊN NIÊN KỶ</div>
-            <div style={{ fontSize: '12px', marginTop: '2px' }}>SAN FRANCISCO</div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-            <Button type="text" style={{ color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}>
-              ĐĂNG NHẬP CƯ DÂN
-            </Button>
-            <MenuOutlined style={{ color: 'white', fontSize: '20px' }} />
-          </div>
-        </div>
-        <div style={{ maxWidth: '600px', padding: '0 20px' }}>
-          <Title level={1} style={{ color: 'white', fontSize: '64px', fontWeight: '300', margin: 0, letterSpacing: '4px' }}>
-            LIÊN HỆ
-          </Title>
-          <Paragraph style={{ color: 'white', fontSize: '16px', marginTop: '30px', lineHeight: '1.6' }}>
-            Hành trình khám phá Tháp Thiên Niên Kỷ San Francisco của bạn bắt đầu từ đây. 
-            Chúng tôi rất vinh dự được chia sẻ những điều kỳ diệu về tòa tháp độc đáo và 
-            ngoạn mục này cùng bạn.
-          </Paragraph>
-        </div>
-        <div style={{ position: 'absolute', bottom: '30px', left: '50%', transform: 'translateX(-50%)' }}>
-          <div style={{ width: '2px', height: '40px', backgroundColor: 'white', opacity: 0.7 }}></div>
-        </div>
-      </div>
-      <div style={contentStyle}>
-        <div style={{ maxWidth: '80%', margin: '0 auto' }}>
-          {/* Notice */}
-          <div style={{ textAlign: 'center', marginBottom: '60px' }}>
-            <Text style={{ fontSize: '16px', color: '#666', lineHeight: '1.6' }}>
-              Đối với các yêu cầu thuê và mua bán, xin hãy liên hệ với một nhà môi giới địa phương<br />
-              để được hỗ trợ, vì hiện tại không còn đội ngũ bán hàng/cho thuê tại chỗ ở Tháp Thiên Niên Kỷ San Francisco.
-            </Text>
-          </div>
-          <Row gutter={[60, 40]}>
-            <Col xs={24} lg={14}>
-              <Card style={{ 
-                border: 'none', 
-                boxShadow: '0 8px 32px rgba(91, 179, 204, 0.15)',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8fffe 100%)'
-              }}>
-                <Title level={3} style={{ 
-                  color: '#2c5aa0', 
-                  marginBottom: '30px', 
-                  fontWeight: '400',
-                  textAlign: 'center'
-                }}>
-                  GỬI THÔNG ĐIỆP ĐẾN CHÚNG TÔI
-                </Title>
-                
-                <div>
-                  <Input 
-                    placeholder="Tên quý danh của bạn*" 
-                    value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
-                    style={{ 
-                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
-                      border: '2px solid rgba(91, 179, 204, 0.2)',
-                      borderRadius: '8px',
-                      padding: '15px',
-                      marginBottom: '20px',
-                      fontSize: '15px',
-                      transition: 'all 0.3s ease'
-                    }} 
-                    size="large"
-                    disabled={loading}
-                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
-                  />
-
-                  <Input 
-                    placeholder="Địa chỉ email của bạn*" 
-                    value={formData.email}
-                    onChange={(e) => handleInputChange('email', e.target.value)}
-                    style={{ 
-                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
-                      border: '2px solid rgba(91, 179, 204, 0.2)',
-                      borderRadius: '8px',
-                      padding: '15px',
-                      marginBottom: '20px',
-                      fontSize: '15px',
-                      transition: 'all 0.3s ease'
-                    }} 
-                    size="large"
-                    disabled={loading}
-                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
-                  />
-
-                  <Input 
-                    placeholder="Chủ đề bạn muốn trao đổi*" 
-                    value={formData.subject}
-                    onChange={(e) => handleInputChange('subject', e.target.value)}
-                    style={{ 
-                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
-                      border: '2px solid rgba(91, 179, 204, 0.2)',
-                      borderRadius: '8px',
-                      padding: '15px',
-                      marginBottom: '20px',
-                      fontSize: '15px',
-                      transition: 'all 0.3s ease'
-                    }} 
-                    size="large"
-                    disabled={loading}
-                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
-                  />
-
-                  <Input.TextArea 
-                    placeholder="Chia sẻ những suy nghĩ của bạn với chúng tôi*" 
-                    value={formData.message}
-                    onChange={(e) => handleInputChange('message', e.target.value)}
-                    rows={6}
-                    style={{ 
-                      backgroundColor: 'rgba(91, 179, 204, 0.05)', 
-                      border: '2px solid rgba(91, 179, 204, 0.2)',
-                      borderRadius: '8px',
-                      padding: '15px',
-                      marginBottom: '30px',
-                      fontSize: '15px',
-                      transition: 'all 0.3s ease'
+    return (
+        <div style={{ width: '100%', margin: 0, padding: 0 }}>
+            <div style={{ width: '100%', overflow: 'hidden', position: 'relative' }}>
+                <img
+                    src={banner.src}
+                    alt="Banner"
+                    style={{
+                        width: '100%',
+                        height: '80%',
+                        display: 'block',
                     }}
-                    disabled={loading}
-                    onFocus={(e) => e.target.style.borderColor = '#5cb3cc'}
-                    onBlur={(e) => e.target.style.borderColor = 'rgba(91, 179, 204, 0.2)'}
-                  />
+                />
+                <div
+                    style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        color: '#fff',
+                        textAlign: 'center',
+                    }}
+                ></div>
+            </div>
 
-                  <div style={{ textAlign: 'center' }}>
-                    <Button 
-                      type="primary" 
-                      onClick={handleSubmit}
-                      loading={loading}
-                      disabled={loading}
-                      style={{
-                        background: loading ? 'linear-gradient(135deg, #ccc 0%, #aaa 100%)' : 'linear-gradient(135deg, #5cb3cc 0%, #4a9fb8 100%)',
-                        border: 'none',
-                        borderRadius: '25px',
-                        padding: '15px 50px',
-                        height: 'auto',
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        letterSpacing: '1px',
-                        boxShadow: loading ? 'none' : '0 4px 15px rgba(91, 179, 204, 0.4)',
-                        transition: 'all 0.3s ease'
-                      }}
-                      size="large"
-                      icon={loading ? <LoadingOutlined /> : null}
-                    >
-                      {loading ? 'ĐANG GỬI...' : 'GỬI THÔNG ĐIỆP'}
-                    </Button>
-                  </div>
+            {/* CONTENT */}
+            <div style={{ background: '#f7f8fa', padding: '48px 0' }}>
+                <div style={{ width: 'min(1120px, 92%)', margin: '0 auto' }}>
+                    <Row gutter={[24, 24]} align="stretch">
+                        {/* FORM */}
+                        <Col xs={24} lg={14}>
+                            <Card ref={formCardRef} bordered className="ant-card-hoverable">
+                                <Title level={3} style={{ marginBottom: 16 }}>
+                                    Gửi thông điệp
+                                </Title>
+
+                                <Form
+                                    form={form}
+                                    layout="vertical"
+                                    onFinish={onFinish}
+                                    onFinishFailed={onFinishFailed}
+                                    validateTrigger={['onBlur', 'onSubmit']}
+                                    disabled={loading}
+                                    scrollToFirstError
+                                >
+                                    <Form.Item
+                                        name="name"
+                                        label="Tên của bạn"
+                                        rules={[
+                                            { required: true, message: 'Xin nhập tên.' },
+                                            { min: 2, message: 'Tên tối thiểu 2 ký tự.' },
+                                        ]}
+                                    >
+                                        <Input placeholder="VD: Nguyễn Văn A" />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="email"
+                                        label="Email"
+                                        rules={[
+                                            { required: true, message: 'Xin nhập email.' },
+                                            { type: 'email', message: 'Email không hợp lệ.' },
+                                        ]}
+                                    >
+                                        <Input placeholder="you@example.com" />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="subject"
+                                        label="Chủ đề"
+                                        rules={[
+                                            { required: true, message: 'Xin nhập chủ đề.' },
+                                            { max: 120, message: 'Chủ đề tối đa 120 ký tự.' },
+                                        ]}
+                                    >
+                                        <Input placeholder="Bạn cần hỗ trợ gì?" />
+                                    </Form.Item>
+
+                                    <Form.Item
+                                        name="message"
+                                        label="Nội dung"
+                                        rules={[
+                                            { required: true, message: 'Xin nhập nội dung.' },
+                                            { min: 10, message: 'Nội dung tối thiểu 10 ký tự.' },
+                                            { max: 200, message: 'Tối đa 200 ký tự.' },
+                                        ]}
+                                    >
+                                        <Input.TextArea
+                                            rows={6}
+                                            placeholder="Mô tả chi tiết để tụi mình hỗ trợ nhanh nhất..."
+                                            maxLength={200}
+                                            showCount={{
+                                                formatter: ({ count, maxLength }) => `${count}/${maxLength}`,
+                                            }}
+                                        />
+                                    </Form.Item>
+
+                                    <Form.Item>
+                                        <Button
+                                            type="primary"
+                                            htmlType="submit"
+                                            loading={loading}
+                                            icon={loading ? <LoadingOutlined /> : null}
+                                        >
+                                            {loading ? 'Đang gửi...' : 'Gửi'}
+                                        </Button>
+                                    </Form.Item>
+                                </Form>
+                            </Card>
+                        </Col>
+
+                        {/* INFO + MAP */}
+                        <Col xs={24} lg={10}>
+                            <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                                <Card ref={infoCardRef}>
+                                    <Title level={4} style={{ marginBottom: 8 }}>
+                                        SmartBook
+                                    </Title>
+                                    <Paragraph type="secondary" style={{ marginBottom: 16 }}>
+                                        Tòa nhà QTSC9 (toà T)
+                                        <br />
+                                        Đường Tô Ký, P.Tân Chánh Hiệp, Q.12
+                                    </Paragraph>
+
+                                    <div style={{ marginBottom: 16 }}>
+                                        <Text strong>Điện thoại: </Text>
+                                        <Link href="tel:+84123456789">+84 123 456 789</Link>
+                                    </div>
+                                    <div>
+                                        <Text strong>Email: </Text>
+                                        <Link href="mailto:info@smartbook.com">info@smartbook.com</Link>
+                                    </div>
+                                </Card>
+
+                                <Card title="Bản đồ" bodyStyle={{ padding: 0 }}>
+                                    <div ref={mapRef} style={{ height: 260, width: '100%', borderRadius: 8 }} />
+                                </Card>
+                            </Space>
+                        </Col>
+                    </Row>
                 </div>
-              </Card>
-            </Col>
-
-            {/* Contact Information */}
-            <Col xs={24} lg={10}>
-              <div style={{ padding: '20px 0' }}>
-                <Paragraph style={{ fontSize: '16px', color: '#666', marginBottom: '40px', lineHeight: '1.6' }}>
-                  Hãy liên hệ trực tiếp với chúng tôi, hoặc điền vào mẫu đơn với những thắc mắc 
-                  và quan tâm của bạn. Chúng tôi luôn sẵn lòng lắng nghe.
-                </Paragraph>
-
-                <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                  {/* Address */}
-                  <div>
-                    <Title level={5} style={{ color: '#999', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px' }}>
-                      ĐỊA CHỈ
-                    </Title>
-                    <Text style={{ fontSize: '16px', color: '#333' }}>301 Mission Street</Text><br />
-                    <Text style={{ fontSize: '16px', color: '#333' }}>San Francisco, CA 94105</Text>
-                  </div>
-
-                  {/* Contact */}
-                  <div>
-                    <Title level={5} style={{ color: '#999', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px' }}>
-                      LIÊN HỆ
-                    </Title>
-                    <div style={{ marginBottom: '8px' }}>
-                      <a href="mailto:management@301mission.com" style={{ color: '#5cb3cc', fontSize: '16px' }}>
-                        management@301mission.com
-                      </a>
-                    </div>
-                    <Text style={{ fontSize: '16px', color: '#333' }}>415.874.4700</Text>
-                  </div>
-
-                  {/* Public Relations */}
-                  <div>
-                    <Title level={5} style={{ color: '#999', fontSize: '12px', letterSpacing: '1px', marginBottom: '8px' }}>
-                      QUAN HỆ CÔNG CHÚNG
-                    </Title>
-                    <div style={{ marginBottom: '8px' }}>
-                      <a href="#" style={{ color: '#5cb3cc', fontSize: '16px' }}>
-                        BerqDavis Public Affairs
-                      </a>
-                    </div>
-                    <Text style={{ fontSize: '16px', color: '#333', display: 'block' }}>Evette Davis</Text>
-                    <a href="mailto:EDavis@bergdavis.com" style={{ color: '#5cb3cc', fontSize: '16px' }}>
-                      EDavis@bergdavis.com
-                    </a>
-                  </div>
-                </Space>
-              </div>
-            </Col>
-          </Row>
+            </div>
         </div>
-      </div>
-
-    
-    </div>
-  );
-};
-
-export default ContactPage;
+    );
+}
