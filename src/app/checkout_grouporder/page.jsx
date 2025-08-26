@@ -24,7 +24,7 @@ import {
     Typography,
 } from 'antd';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { apiGetDistricts, apiGetProvinces, apiGetShippingFee, apiGetWardsByDistrict } from '../../../apis/ghtk';
@@ -38,7 +38,7 @@ const GroupCheckoutPageContent = () => {
     const [form] = Form.useForm();
     const [paymentMethod, setPaymentMethod] = useState('cod');
     const router = useRouter();
-    const { useSearchParams } = require('next/navigation');
+
     const searchParams = useSearchParams();
 
     // Group order states
