@@ -5,7 +5,7 @@ import { Button, Card, Typography, message } from 'antd';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { apiAddToCart } from '../../../../apis/cart'; // 👈 THÊM IMPORT NÀY
+import { apiAddToCart } from '../../../../apis/cart';
 import { apiGetMe } from '../../../../apis/user';
 import { handleAddToCartHelper } from '../../utils/addToCartHandler';
 import './OnlinePromotion.css';
@@ -22,7 +22,6 @@ const OnlinePromotion = () => {
     const [countdown, setCountdown] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
     const [displayedBooks, setDisplayedBooks] = useState([]);
 
-    // state bổ sung
     const [user, setUser] = useState(null);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
 
@@ -73,7 +72,7 @@ const OnlinePromotion = () => {
                 user,
                 bookId: book.id,
                 quantity: qty,
-                addToCart: apiAddToCart, // 👈 giờ đã có
+                addToCart: apiAddToCart,
                 setIsAddingToCart,
                 router,
             });
@@ -181,11 +180,12 @@ const OnlinePromotion = () => {
         }
     };
 
-    const calculateDiscountedPrice = (price, discount) => {
-        const p = Number(price) || 0;
-        const d = Number(discount) || 0;
-        const amount = p * (d / 100);
-        return Math.max(0, p - amount);
+    // helper tính phần trăm giảm giá
+    const getDiscountPercent = (book) => {
+        const p = Number(book.price) || 0;
+        const d = Number(book.discount_price) || 0;
+        if (!p || !d || d >= p) return 0;
+        return Math.round(((p - d) / p) * 100);
     };
 
     const formatPrice = (price) => new Intl.NumberFormat('vi-VN').format(Number(price) || 0) + 'đ';
@@ -272,9 +272,9 @@ const OnlinePromotion = () => {
                                             }}
                                         />
 
-                                        <div className="discount-badge">
-                                            ưu đãi đến {Math.round(Number(book.discount_percent) || 0)}%
-                                        </div>
+                                        {getDiscountPercent(book) > 0 && (
+                                            <div className="discount-badge">Ưu đãi đến {getDiscountPercent(book)}%</div>
+                                        )}
 
                                         <div className="book-actions">
                                             <Button
@@ -289,19 +289,19 @@ const OnlinePromotion = () => {
 
                                     <div className="book-info" onClick={() => router.push(`/book/${book.id}`)}>
                                         <h3 className="book-title">{book.title}</h3>
-                                        {/* <span className="book-author">Số lượng: {book.quantity_limit}</span>
-                                        <span className="book-author">Đã bán: {book.sold_quantity}</span> */}
 
                                         <div className="price-container">
                                             <span className="current-price">
                                                 {formatPrice(
-                                                    calculateDiscountedPrice(book.price, book.discount_percent),
+                                                    book.discount_price > 0 ? book.discount_price : book.price,
                                                 )}
                                             </span>
-                                            <span className="original-price">{formatPrice(book.price)}</span>
-                                            <span className="discount-price">
-                                                -{Number(book.discount_percent) || 0}%
-                                            </span>
+                                            {getDiscountPercent(book) > 0 && (
+                                                <>
+                                                    <span className="original-price">{formatPrice(book.price)}</span>
+                                                    <span className="discount-price">-{getDiscountPercent(book)}%</span>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 </Card>
