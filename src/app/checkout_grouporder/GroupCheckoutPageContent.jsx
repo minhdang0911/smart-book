@@ -325,7 +325,7 @@ const GroupCheckoutPageContent = ({ urlToken }) => {
                     toast.success('Checkout giỏ hàng nhóm thành công!');
 
                     // Redirect to order success or group order page
-                    router.push(`/group-orders/${groupToken}?success=true`);
+                    router.push(`/`);
                 } else {
                     throw new Error(result.message || 'Checkout thất bại');
                 }

@@ -1074,7 +1074,7 @@
 
 /* iPad specific - using mobile layout already defined above */
 .cart-empty {
-    min-height: 360px;
+    min-height: 500px;
     display: flex;
     align-items: center;
     justify-content: center;

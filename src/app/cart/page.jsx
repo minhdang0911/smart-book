@@ -33,6 +33,34 @@ import './Cart.css';
 
 const { Title, Text } = Typography;
 
+/* =========================
+ * NÚT NHÓM TÁI DÙNG
+ * ========================= */
+const GroupCartActions = ({ creatingGroupCart, createGroupCart, router }) => (
+    <Space style={{ marginTop: 16 }}>
+        <Button
+            type="text"
+            icon={<UserAddOutlined />}
+            loading={creatingGroupCart}
+            className="btn-create-group"
+            onClick={createGroupCart}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+        >
+            Tạo giỏ hàng nhóm
+        </Button>
+
+        <Button
+            type="text"
+            icon={<UserAddOutlined />}
+            className="btn-create-cart-group"
+            onClick={() => router.push('/cart_group')}
+            style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
+        >
+            đi đến giỏ hàng nhóm
+        </Button>
+    </Space>
+);
+
 // Tách CartItem thành component riêng để tối ưu re-render
 const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove, isUpdating, appliedCoupon }) => {
     const handleQuantityChange = useCallback(
@@ -68,34 +96,19 @@ const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove,
                 return originalPrice;
             }
 
-            // ✅ Kiểm tra scope: "all" - áp dụng cho toàn bộ sản phẩm
+            // ✅ scope: "all"
             if (appliedCoupon.scope === 'all') {
-                console.log('Coupon scope is "all" - applying to all products');
-
-                // Tính giá sau giảm cho scope "all"
                 if (appliedCoupon.discount_type === 'percent') {
                     const discountAmount = (originalPrice * parseFloat(appliedCoupon.discount_value)) / 100;
-                    const finalPrice = originalPrice - discountAmount;
-                    console.log('Percent discount (scope all):', appliedCoupon.discount_value + '%');
-                    console.log('Discount amount:', discountAmount);
-                    console.log('Final price:', finalPrice);
-                    return finalPrice;
+                    return originalPrice - discountAmount;
                 } else if (appliedCoupon.discount_type === 'fixed') {
-                    const finalPrice = Math.max(0, originalPrice - parseFloat(appliedCoupon.discount_value));
-                    console.log('Fixed discount (scope all):', appliedCoupon.discount_value);
-                    console.log('Final price:', finalPrice);
-                    return finalPrice;
+                    return Math.max(0, originalPrice - parseFloat(appliedCoupon.discount_value));
                 }
             }
 
-            // ✅ Kiểm tra scope: "specific" - chỉ áp dụng cho sản phẩm cụ thể
+            // ✅ scope: "specific"
             if (appliedCoupon.scope === 'specific') {
-                console.log('Coupon scope is "specific" - checking specific products');
-
-                // Kiểm tra xem sản phẩm có áp dụng được mã giảm giá không
                 const isApplicable = appliedCoupon.books.some((book) => {
-                    console.log('Checking book ID:', book.id, 'vs item book ID:', item.book.id);
-                    // Thử cả 2 cách so sánh để đảm bảo
                     return (
                         book.id === item.book.id ||
                         parseInt(book.id) === parseInt(item.book.id) ||
@@ -103,60 +116,30 @@ const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove,
                     );
                 });
 
-                console.log('Is Applicable (specific):', isApplicable);
-                if (!isApplicable) {
-                    console.log('Coupon not applicable for this specific item');
-                    return originalPrice;
-                }
+                if (!isApplicable) return originalPrice;
 
-                // Tính giá sau giảm cho scope "specific"
                 if (appliedCoupon.discount_type === 'percent') {
                     const discountAmount = (originalPrice * parseFloat(appliedCoupon.discount_value)) / 100;
-                    const finalPrice = originalPrice - discountAmount;
-                    console.log('Percent discount (specific):', appliedCoupon.discount_value + '%');
-                    console.log('Discount amount:', discountAmount);
-                    console.log('Final price:', finalPrice);
-                    return finalPrice;
+                    return originalPrice - discountAmount;
                 } else if (appliedCoupon.discount_type === 'fixed') {
-                    const finalPrice = Math.max(0, originalPrice - parseFloat(appliedCoupon.discount_value));
-                    console.log('Fixed discount (specific):', appliedCoupon.discount_value);
-                    console.log('Final price:', finalPrice);
-                    return finalPrice;
+                    return Math.max(0, originalPrice - parseFloat(appliedCoupon.discount_value));
                 }
             }
 
-            console.log('Unknown coupon scope or discount type, returning original price');
             return originalPrice;
         },
         [appliedCoupon, item.book.id],
     );
 
-    // ✅ Sửa logic lấy giá: nếu discount_price là 0.00 thì lấy price
+    // ✅ nếu discount_price = 0 thì lấy price
     const originalPrice = useMemo(() => {
         const discountPrice = parseFloat(item?.book.discount_price) || 0;
         const regularPrice = parseFloat(item?.book.price) || 0;
-
-        // Nếu discount_price là 0 hoặc không tồn tại, dùng price
-        if (discountPrice === 0) {
-            console.log(`Using regular price for item ${item.id}: ${regularPrice}`);
-            return regularPrice;
-        }
-
-        console.log(`Using discount price for item ${item.id}: ${discountPrice}`);
-        return discountPrice;
+        return discountPrice === 0 ? regularPrice : discountPrice;
     }, [item?.book.discount_price, item?.book.price, item.id]);
 
     const discountedPrice = calculateDiscountedPrice(originalPrice);
     const hasDiscount = discountedPrice < originalPrice;
-
-    console.log('=== ITEM RENDER INFO ===');
-    console.log('Item ID:', item.id, 'Book ID:', item.book.id);
-    console.log('Book discount_price:', item?.book.discount_price);
-    console.log('Book price:', item?.book.price);
-    console.log('Original Price (calculated):', originalPrice);
-    console.log('Discounted Price:', discountedPrice);
-    console.log('Has Discount:', hasDiscount);
-    console.log('Applied Coupon in render:', appliedCoupon);
 
     const itemTotal = useMemo(() => {
         return (discountedPrice * item.quantity).toLocaleString('vi-VN');
@@ -278,7 +261,6 @@ const CartItem = memo(({ item, isSelected, onSelect, onUpdateQuantity, onRemove,
         </div>
     );
 });
-
 CartItem.displayName = 'CartItem';
 
 const Cart = () => {
@@ -289,7 +271,7 @@ const Cart = () => {
         setSelectedItems,
         updateItemQuantity,
         removeItems,
-        calculateTotal,
+        calculateTotal, // (đang không dùng nhưng cứ giữ)
         loading,
         updatingItems,
     } = useCart();
@@ -299,7 +281,7 @@ const Cart = () => {
     const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [checkingCoupon, setCheckingCoupon] = useState(false);
 
-    // ✅ New state for group cart modal
+    // ✅ Group cart state
     const [groupCartModalVisible, setGroupCartModalVisible] = useState(false);
     const [creatingGroupCart, setCreatingGroupCart] = useState(false);
     const [groupCartData, setGroupCartData] = useState(null);
@@ -309,20 +291,17 @@ const Cart = () => {
         return Array.isArray(selectedItems) ? selectedItems : [];
     }, [selectedItems]);
 
-    // ✅ API để tạo giỏ hàng nhóm
+    // ✅ API tạo giỏ nhóm
     const createGroupCart = async () => {
         try {
             setCreatingGroupCart(true);
 
-            // Get authentication token from localStorage, cookies, or context
             const authToken =
                 localStorage.getItem('auth_token') ||
                 localStorage.getItem('access_token') ||
                 localStorage.getItem('token');
 
-            if (!authToken) {
-                throw new Error('Vui lòng đăng nhập để tạo giỏ hàng nhóm');
-            }
+            if (!authToken) throw new Error('Vui lòng đăng nhập để tạo giỏ hàng nhóm');
 
             const headers = {
                 'Content-Type': 'application/json',
@@ -330,27 +309,14 @@ const Cart = () => {
                 Authorization: `Bearer ${authToken}`,
             };
 
-            // Alternative: if using Laravel Sanctum with cookies
-            // const headers = {
-            //     'Content-Type': 'application/json',
-            //     'Accept': 'application/json',
-            //     'X-Requested-With': 'XMLHttpRequest',
-            // };
-
             const response = await fetch('http://localhost:8000/api/group-orders', {
                 method: 'POST',
-                headers: headers,
-                credentials: 'include', // Include cookies for session-based auth
-                body: JSON.stringify({
-                    // Add any required fields here if needed
-                }),
+                headers,
+                credentials: 'include',
+                body: JSON.stringify({}),
             });
 
-            console.log('Response status:', response.status);
-
-            // Handle authentication errors
             if (response.status === 401) {
-                // Clear invalid token
                 localStorage.removeItem('auth_token');
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('token');
@@ -360,17 +326,16 @@ const Cart = () => {
             if (!response.ok) {
                 let errorMessage = 'Không thể tạo giỏ hàng nhóm';
                 try {
-                    const errorData = await response.json();
-                    errorMessage = errorData.message || errorMessage;
+                    const err = await response.json();
+                    errorMessage = err.message || errorMessage;
                 } catch {
-                    const errorText = await response.text();
-                    errorMessage = errorText || errorMessage;
+                    const t = await response.text();
+                    errorMessage = t || errorMessage;
                 }
                 throw new Error(`${errorMessage} (${response.status})`);
             }
 
             const data = await response.json();
-            console.log('Group cart created successfully:', data);
 
             if (data.join_url && data.group) {
                 setGroupCartData(data);
@@ -382,12 +347,8 @@ const Cart = () => {
             }
         } catch (error) {
             console.error('Error creating group cart:', error);
-
-            // Handle specific error types
             if (error.message.includes('đăng nhập')) {
                 toast.error(error.message);
-                // Optionally redirect to login page
-                // router.push('/login');
             } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
                 toast.error('Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.');
             } else {
@@ -399,171 +360,83 @@ const Cart = () => {
         }
     };
 
-    // ✅ Handle copy join URL
+    // ✅ copy link
     const handleCopyJoinUrl = () => {
         if (groupCartData?.join_url) {
             navigator.clipboard
                 .writeText(groupCartData.join_url)
-                .then(() => {
-                    message.success('Đã copy đường link!');
-                })
-                .catch(() => {
-                    message.error('Không thể copy đường link');
-                });
+                .then(() => message.success('Đã copy đường link!'))
+                .catch(() => message.error('Không thể copy đường link'));
         }
     };
 
-    // ✅ Updated: Handle redirect to group cart page with token storage
+    // ✅ đi đến trang group cart
     const handleGoToGroupCart = () => {
         setGroupCartModalVisible(false);
-
-        // Store the group token in localStorage
         if (groupCartData?.group?.join_token) {
             localStorage.setItem('group_cart_token', groupCartData.group.join_token);
-            console.log('Stored group token:', groupCartData.group.join_token);
         }
-
         router.push('/cart_group');
     };
 
-    // API để kiểm tra mã giảm giá
+    // API check coupon
     const checkCoupon = async (couponCode) => {
         try {
             setCheckingCoupon(true);
             const response = await fetch('http://localhost:8000/api/coupons/check', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    name: couponCode,
-                }),
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: couponCode }),
             });
 
             const data = await response.json();
 
             if (response.ok && data.coupon) {
                 const coupon = data.coupon;
-
-                // ✅ Nếu scope là 'all' thì đánh dấu toàn bộ sản phẩm được giảm giá
-                if (coupon.scope === 'all') {
-                    coupon.appliesToAll = true;
-                } else {
-                    coupon.appliesToAll = false;
-                }
-
-                return {
-                    success: true,
-                    coupon,
-                    message: data.message,
-                };
+                coupon.appliesToAll = coupon.scope === 'all';
+                return { success: true, coupon, message: data.message };
             } else {
-                return {
-                    success: false,
-                    message: data.message || 'Mã giảm giá không hợp lệ',
-                };
+                return { success: false, message: data.message || 'Mã giảm giá không hợp lệ' };
             }
         } catch (error) {
             console.error('Error checking coupon:', error);
-            return {
-                success: false,
-                message: 'Có lỗi xảy ra khi kiểm tra mã giảm giá',
-            };
+            return { success: false, message: 'Có lỗi xảy ra khi kiểm tra mã giảm giá' };
         } finally {
             setCheckingCoupon(false);
         }
     };
 
     useEffect(() => {
-        console.log('=== AUTO SELECT EFFECT TRIGGERED ===');
-        console.log('Cart data:', cartData);
-        console.log('Cart items:', cartData?.items);
-
-        // Kiểm tra buyNowData từ localStorage
+        // auto-select từ buy now
         const buyNowData = localStorage.getItem('buyNowData');
-        console.log('Buy now data from localStorage:', buyNowData);
-
         if (buyNowData && cartData?.items && cartData.items.length > 0) {
             try {
-                const parsedBuyNowData = JSON.parse(buyNowData);
-                console.log('Parsed buy now data:', parsedBuyNowData);
-
-                // Kiểm tra nếu là "mua ngay" và chưa được xử lý
-                if (parsedBuyNowData.isBuyNow && parsedBuyNowData.bookId && !parsedBuyNowData.processed) {
-                    console.log('Processing buy now auto-select...');
-                    console.log('Looking for book ID:', parsedBuyNowData.bookId);
-
-                    // Tìm item trong cart - kiểm tra cả item.id và item.book.id
-                    let targetItem = cartData.items.find((item) => {
-                        console.log('Checking item:', item);
-                        console.log('Item ID:', item.id, 'Book ID:', item.book?.id);
-
-                        // Thử cả item.id và item.book.id để match với bookId
-                        const itemId = item.id;
-                        const bookId = item.book?.id;
-                        const targetBookId = parsedBuyNowData.bookId;
-
-                        console.log('Comparing:', {
-                            itemId,
-                            bookId,
-                            targetBookId,
-                            itemMatch: itemId == targetBookId,
-                            bookMatch: bookId == targetBookId,
-                        });
-
-                        return itemId == targetBookId || bookId == targetBookId;
-                    });
-
-                    console.log('Target item found:', targetItem);
-
+                const parsed = JSON.parse(buyNowData);
+                if (parsed.isBuyNow && parsed.bookId && !parsed.processed) {
+                    const targetItem = cartData.items.find(
+                        (it) => it.id == parsed.bookId || it.book?.id == parsed.bookId,
+                    );
                     if (targetItem) {
-                        console.log('Auto-selecting item ID:', targetItem.id);
-
-                        // Set selectedItems với item.id (không phải book.id)
                         setSelectedItems([targetItem.id]);
                         localStorage.setItem('selectedCartItems', JSON.stringify([targetItem.id]));
-
-                        // Đánh dấu đã xử lý
-                        const updatedBuyNowData = {
-                            ...parsedBuyNowData,
-                            processed: true,
-                            selectedItemId: targetItem.id, // Lưu lại để debug
-                        };
-                        localStorage.setItem('buyNowData', JSON.stringify(updatedBuyNowData));
-
-                        console.log('Auto-select completed for item:', targetItem.id);
+                        localStorage.setItem(
+                            'buyNowData',
+                            JSON.stringify({ ...parsed, processed: true, selectedItemId: targetItem.id }),
+                        );
                         toast.info(
                             `🎯 Đã tự động chọn "${targetItem.book?.title || targetItem.book?.name}" để đặt hàng!`,
                         );
                     } else {
-                        console.log('Target item not found in cart');
-                        // Có thể item chưa được thêm vào cart, thử lại sau
-                        setTimeout(() => {
-                            console.log('Retrying auto-select...');
-                            window.dispatchEvent(new CustomEvent('retryAutoSelect'));
-                        }, 1000);
+                        setTimeout(() => window.dispatchEvent(new CustomEvent('retryAutoSelect')), 1000);
                     }
-                } else {
-                    console.log('Buy now data not applicable:', {
-                        isBuyNow: parsedBuyNowData.isBuyNow,
-                        hasBookId: !!parsedBuyNowData.bookId,
-                        processed: parsedBuyNowData.processed,
-                    });
                 }
-            } catch (error) {
-                console.error('Error parsing buyNowData:', error);
+            } catch {
                 localStorage.removeItem('buyNowData');
             }
-        } else {
-            console.log('Auto-select conditions not met:', {
-                hasBuyNowData: !!buyNowData,
-                hasCartData: !!cartData,
-                hasItems: !!cartData?.items?.length,
-            });
         }
-    }, [cartData?.items]);
+    }, [cartData?.items, setSelectedItems]);
 
-    // Xử lý áp dụng mã giảm giá
+    // áp dụng mã
     const handleApplyCoupon = async () => {
         if (!voucherCode.trim()) {
             toast.error('Vui lòng nhập mã giảm giá');
@@ -571,24 +444,12 @@ const Cart = () => {
         }
 
         const result = await checkCoupon(voucherCode.trim());
-        console.log('=== COUPON CHECK RESULT ===');
-        console.log('Result:', result);
-
         if (result.success) {
             const coupon = result.coupon;
-            console.log('Coupon details:', coupon);
-            console.log('Coupon scope:', coupon.scope);
-            console.log('Coupon books:', coupon.books);
-            console.log('Cart items:', cartData?.items);
 
-            // ✅ Kiểm tra scope: "all" - áp dụng cho toàn bộ sản phẩm
+            // scope all
             if (coupon.scope === 'all') {
-                console.log('Coupon applies to ALL products');
-
-                // Kiểm tra giá trị đơn hàng tối thiểu
                 const totalValue = calculateSelectedTotalWithCoupon(coupon);
-                console.log('Total value:', totalValue, 'Min order:', coupon.min_order_value);
-
                 if (totalValue < parseFloat(coupon.min_order_value)) {
                     toast.error(
                         `Đơn hàng phải có giá trị tối thiểu ${parseFloat(coupon.min_order_value).toLocaleString(
@@ -597,48 +458,25 @@ const Cart = () => {
                     );
                     return;
                 }
-
-                console.log('Setting applied coupon (scope: all):', coupon);
                 setAppliedCoupon(coupon);
                 toast.success(`${result.message} Áp dụng thành công cho toàn bộ sản phẩm`);
                 setVoucherModalVisible(false);
                 return;
             }
 
-            // ✅ Kiểm tra scope: "specific" - chỉ áp dụng cho sản phẩm cụ thể
+            // scope specific
             if (coupon.scope === 'specific') {
-                console.log('Coupon applies to SPECIFIC products');
-
-                // Kiểm tra xem có sản phẩm nào trong giỏ hàng áp dụng được mã giảm giá không
                 const applicableItems =
-                    cartData?.items?.filter((item) => {
-                        const isApplicable = coupon.books.some((book) => {
-                            console.log(
-                                'Comparing:',
-                                book.id,
-                                'with',
-                                item.book.id,
-                                'Type:',
-                                typeof book.id,
-                                typeof item.book.id,
-                            );
-                            return parseInt(book.id) === parseInt(item.book.id);
-                        });
-                        console.log('Item', item.book.id, 'is applicable:', isApplicable);
-                        return isApplicable;
-                    }) || [];
-
-                console.log('Applicable items:', applicableItems);
+                    cartData?.items?.filter((item) =>
+                        coupon.books.some((book) => parseInt(book.id) === parseInt(item.book.id)),
+                    ) || [];
 
                 if (applicableItems.length === 0) {
                     toast.warning('Mã giảm giá này không áp dụng cho sản phẩm nào trong giỏ hàng');
                     return;
                 }
 
-                // Kiểm tra giá trị đơn hàng tối thiểu
                 const totalValue = calculateSelectedTotalWithCoupon(coupon);
-                console.log('Total value:', totalValue, 'Min order:', coupon.min_order_value);
-
                 if (totalValue < parseFloat(coupon.min_order_value)) {
                     toast.error(
                         `Đơn hàng phải có giá trị tối thiểu ${parseFloat(coupon.min_order_value).toLocaleString(
@@ -648,21 +486,19 @@ const Cart = () => {
                     return;
                 }
 
-                console.log('Setting applied coupon (scope: specific):', coupon);
                 setAppliedCoupon(coupon);
                 toast.success(`${result.message} Áp dụng thành công cho ${applicableItems.length} sản phẩm`);
                 setVoucherModalVisible(false);
                 return;
             }
 
-            // ✅ Trường hợp scope không xác định
             toast.error('Mã giảm giá không hợp lệ - scope không xác định');
         } else {
             toast.error(result.message);
         }
     };
 
-    // Xóa mã giảm giá
+    // bỏ mã
     const handleRemoveCoupon = () => {
         setAppliedCoupon(null);
         setVoucherCode('');
@@ -671,23 +507,13 @@ const Cart = () => {
 
     const handleItemSelect = useCallback(
         (itemId, checked) => {
-            console.log('handleItemSelect called:', itemId, checked);
-            console.log('Current selectedItems:', selectedItems);
-
             const currentSelected = Array.isArray(selectedItems) ? selectedItems : [];
-
             let newSelected;
             if (checked) {
-                if (!currentSelected.includes(itemId)) {
-                    newSelected = [...currentSelected, itemId];
-                } else {
-                    newSelected = currentSelected;
-                }
+                newSelected = currentSelected.includes(itemId) ? currentSelected : [...currentSelected, itemId];
             } else {
                 newSelected = currentSelected.filter((id) => id !== itemId);
             }
-
-            console.log('Setting new selectedItems:', newSelected);
             setSelectedItems(newSelected);
         },
         [selectedItems, setSelectedItems],
@@ -695,14 +521,10 @@ const Cart = () => {
 
     const handleSelectAll = useCallback(
         (checked) => {
-            console.log('handleSelectAll called:', checked);
-
             if (checked && cartData?.items) {
                 const allItemIds = cartData.items.map((item) => item.id);
-                console.log('Selecting all items:', allItemIds);
                 setSelectedItems(allItemIds);
             } else {
-                console.log('Deselecting all items');
                 setSelectedItems([]);
             }
         },
@@ -711,39 +533,27 @@ const Cart = () => {
 
     const handleRemoveSelected = useCallback(() => {
         if (safeSelectedItems.length > 0) {
-            console.log('Removing selected items:', safeSelectedItems);
             removeItems(safeSelectedItems);
             setSelectedItems([]);
         }
     }, [safeSelectedItems, removeItems, setSelectedItems]);
 
     const isAllSelected = useMemo(() => {
-        const result = cartData?.items?.length > 0 && safeSelectedItems.length === cartData.items.length;
-        console.log(
-            'isAllSelected:',
-            result,
-            'selectedItems:',
-            safeSelectedItems.length,
-            'totalItems:',
-            cartData?.items?.length,
-        );
-        return result;
+        return cartData?.items?.length > 0 && safeSelectedItems.length === cartData.items.length;
     }, [cartData?.items?.length, safeSelectedItems.length]);
 
     const isIndeterminate = useMemo(() => {
         return safeSelectedItems.length > 0 && safeSelectedItems.length < (cartData?.items?.length || 0);
     }, [safeSelectedItems.length, cartData?.items?.length]);
 
-    // ✅ Sửa helper function để lấy giá đúng
+    // helper giá
     const getItemPrice = useCallback((item) => {
         const discountPrice = parseFloat(item?.book.discount_price) || 0;
         const regularPrice = parseFloat(item?.book.price) || 0;
-
-        // Nếu discount_price là 0 hoặc không tồn tại, dùng price
         return discountPrice === 0 ? regularPrice : discountPrice;
     }, []);
 
-    // ✅ Sửa tính tổng tiền sau khi áp dụng mã giảm giá
+    // tổng sau giảm
     const calculateSelectedTotalWithCoupon = useCallback(
         (coupon = appliedCoupon) => {
             if (!cartData || !safeSelectedItems.length) return 0;
@@ -751,25 +561,22 @@ const Cart = () => {
             return cartData.items
                 .filter((item) => safeSelectedItems.includes(item.id))
                 .reduce((total, item) => {
-                    const originalPrice = getItemPrice(item); // ✅ Sử dụng helper function
+                    const originalPrice = getItemPrice(item);
                     let finalPrice = originalPrice;
 
-                    // ✅ Áp dụng giảm giá nếu có coupon
                     if (coupon) {
-                        // Scope "all" - áp dụng cho toàn bộ sản phẩm
                         if (coupon.scope === 'all') {
                             if (coupon.discount_type === 'percent') {
-                                const discountAmount = (originalPrice * parseFloat(coupon.discount_value)) / 100;
-                                finalPrice = originalPrice - discountAmount;
+                                finalPrice = originalPrice - (originalPrice * parseFloat(coupon.discount_value)) / 100;
                             } else if (coupon.discount_type === 'fixed') {
                                 finalPrice = Math.max(0, originalPrice - parseFloat(coupon.discount_value));
                             }
-                        }
-                        // Scope "specific" - chỉ áp dụng cho sản phẩm cụ thể
-                        else if (coupon.scope === 'specific' && coupon.books.some((book) => book.id === item.book.id)) {
+                        } else if (
+                            coupon.scope === 'specific' &&
+                            coupon.books.some((book) => book.id === item.book.id)
+                        ) {
                             if (coupon.discount_type === 'percent') {
-                                const discountAmount = (originalPrice * parseFloat(coupon.discount_value)) / 100;
-                                finalPrice = originalPrice - discountAmount;
+                                finalPrice = originalPrice - (originalPrice * parseFloat(coupon.discount_value)) / 100;
                             } else if (coupon.discount_type === 'fixed') {
                                 finalPrice = Math.max(0, originalPrice - parseFloat(coupon.discount_value));
                             }
@@ -782,33 +589,27 @@ const Cart = () => {
         [cartData, safeSelectedItems, appliedCoupon, getItemPrice],
     );
 
-    // ✅ Sửa tính tổng tiền gốc (trước khi giảm giá)
+    // tổng gốc
     const calculateOriginalTotal = useCallback(() => {
         if (!cartData || !safeSelectedItems.length) return 0;
-
         return cartData.items
             .filter((item) => safeSelectedItems.includes(item.id))
-            .reduce((total, item) => {
-                const price = getItemPrice(item); // ✅ Sử dụng helper function
-                return total + price * item.quantity;
-            }, 0);
+            .reduce((total, item) => total + getItemPrice(item) * item.quantity, 0);
     }, [cartData, safeSelectedItems, getItemPrice]);
 
-    const totalAmount = useMemo(() => {
-        return calculateSelectedTotalWithCoupon().toLocaleString('vi-VN');
-    }, [calculateSelectedTotalWithCoupon]);
+    const totalAmount = useMemo(
+        () => calculateSelectedTotalWithCoupon().toLocaleString('vi-VN'),
+        [calculateSelectedTotalWithCoupon],
+    );
+    const originalTotalAmount = useMemo(
+        () => calculateOriginalTotal().toLocaleString('vi-VN'),
+        [calculateOriginalTotal],
+    );
+    const totalDiscount = useMemo(
+        () => calculateOriginalTotal() - calculateSelectedTotalWithCoupon(),
+        [calculateOriginalTotal, calculateSelectedTotalWithCoupon],
+    );
 
-    const originalTotalAmount = useMemo(() => {
-        return calculateOriginalTotal().toLocaleString('vi-VN');
-    }, [calculateOriginalTotal]);
-
-    const totalDiscount = useMemo(() => {
-        const original = calculateOriginalTotal();
-        const discounted = calculateSelectedTotalWithCoupon();
-        return original - discounted;
-    }, [calculateOriginalTotal, calculateSelectedTotalWithCoupon]);
-
-    // Debug effect to monitor selectedItems changes
     React.useEffect(() => {
         console.log('selectedItems changed:', safeSelectedItems);
     }, [safeSelectedItems]);
@@ -821,14 +622,129 @@ const Cart = () => {
         );
     }
 
+    /* =========================
+     * TRẠNG THÁI GIỎ TRỐNG – VẪN HIỆN 2 NÚT NHÓM
+     * ========================= */
     if (!cartData || !cartData.items || cartData.items.length === 0) {
         return (
             <div className="cart-empty">
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Giỏ hàng của bạn đang trống">
-                    <Button type="primary" onClick={() => router.push('/buybooks')}>
+                <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                        <div>
+                            <div>Giỏ hàng của bạn đang trống</div>
+                            <GroupCartActions
+                                creatingGroupCart={creatingGroupCart}
+                                createGroupCart={createGroupCart}
+                                router={router}
+                            />
+                        </div>
+                    }
+                >
+                    <Button
+                        type="primary"
+                        onClick={() => router.push('/search?type=paper&sort=popular&page=1&limit=12')}
+                    >
                         Mua sắm ngay
                     </Button>
                 </Empty>
+
+                {/* Modal nhóm vẫn hoạt động khi trống */}
+                <Modal
+                    title={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <UserAddOutlined style={{ color: '#1890ff' }} />
+                            <span>Tạo giỏ hàng nhóm thành công!</span>
+                        </div>
+                    }
+                    open={groupCartModalVisible}
+                    onCancel={() => setGroupCartModalVisible(false)}
+                    footer={[
+                        <Button key="copy" icon={<CopyOutlined />} onClick={handleCopyJoinUrl}>
+                            Copy Link
+                        </Button>,
+                        <Button key="close" onClick={() => setGroupCartModalVisible(false)}>
+                            Đóng
+                        </Button>,
+                        <Button key="goto" type="primary" onClick={handleGoToGroupCart}>
+                            Đi đến giỏ hàng nhóm
+                        </Button>,
+                    ]}
+                    width={600}
+                >
+                    {groupCartData && (
+                        <div style={{ padding: '16px 0' }}>
+                            <div style={{ marginBottom: '20px' }}>
+                                <Text strong style={{ fontSize: '16px', color: '#52c41a' }}>
+                                    Giỏ hàng nhóm đã được tạo thành công!
+                                </Text>
+                                <p style={{ marginTop: '8px', color: '#666' }}>
+                                    Chia sẻ đường link dưới đây để mời bạn bè cùng mua hàng:
+                                </p>
+                            </div>
+
+                            <div style={{ marginBottom: '20px' }}>
+                                <Text strong>Đường link tham gia:</Text>
+                                <Input.TextArea
+                                    value={groupCartData.join_url}
+                                    readOnly
+                                    rows={2}
+                                    style={{
+                                        marginTop: '8px',
+                                        backgroundColor: '#f6ffed',
+                                        border: '1px solid #b7eb8f',
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ backgroundColor: '#f0f8ff', padding: '12px', borderRadius: '6px' }}>
+                                <Text strong>Thông tin giỏ hàng nhóm:</Text>
+                                <div style={{ marginTop: '8px', lineHeight: '1.6' }}>
+                                    <p>
+                                        <Text type="secondary">ID nhóm:</Text>{' '}
+                                        <Text code>#{groupCartData.group.id}</Text>
+                                    </p>
+                                    <p>
+                                        <Text type="secondary">Mã tham gia:</Text>{' '}
+                                        <Text code>{groupCartData.group.join_token}</Text>
+                                    </p>
+                                    <p>
+                                        <Text type="secondary">Cho phép khách:</Text>{' '}
+                                        <Text>{groupCartData.group.allow_guest ? 'Có' : 'Không'}</Text>
+                                    </p>
+                                    <p>
+                                        <Text type="secondary">Quy tắc vận chuyển:</Text>{' '}
+                                        <Text>
+                                            {groupCartData.group.shipping_rule === 'equal' ? 'Chia đều' : 'Khác'}
+                                        </Text>
+                                    </p>
+                                    <p>
+                                        <Text type="secondary">Hết hạn:</Text>{' '}
+                                        <Text>{new Date(groupCartData.group.expires_at).toLocaleString('vi-VN')}</Text>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div
+                                style={{
+                                    marginTop: '16px',
+                                    padding: '12px',
+                                    backgroundColor: '#fff7e6',
+                                    borderRadius: '6px',
+                                    border: '1px solid #ffd666',
+                                }}
+                            >
+                                <Text style={{ fontSize: '14px', color: '#d46b08' }}>
+                                    💡 <strong>Lưu ý:</strong> Đường link này sẽ hết hạn sau{' '}
+                                    {Math.ceil(
+                                        (new Date(groupCartData.group.expires_at) - new Date()) / (1000 * 60 * 60),
+                                    )}{' '}
+                                    giờ. Hãy chia sẻ với bạn bè để cùng nhau mua hàng!
+                                </Text>
+                            </div>
+                        </div>
+                    )}
+                </Modal>
             </div>
         );
     }
@@ -845,16 +761,12 @@ const Cart = () => {
                       name: appliedCoupon.name,
                       discount_type: appliedCoupon.discount_type,
                       discount_value: appliedCoupon.discount_value,
-                      scope: appliedCoupon.scope, // ✅ Thêm scope vào checkout data
+                      scope: appliedCoupon.scope,
                   }
                 : null,
         };
 
-        // Encode dữ liệu thành URL params
-        const params = new URLSearchParams({
-            data: JSON.stringify(checkoutData),
-        });
-
+        const params = new URLSearchParams({ data: JSON.stringify(checkoutData) });
         router.push(`/payment?${params.toString()}`);
     };
 
@@ -882,26 +794,12 @@ const Cart = () => {
                                     Chọn tất cả ({safeSelectedItems.length}/{cartData.items.length})
                                 </Checkbox>
 
-                                <Button
-                                    type="text"
-                                    icon={<UserAddOutlined />}
-                                    loading={creatingGroupCart}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
-                                    className="btn-create-group"
-                                    onClick={createGroupCart}
-                                >
-                                    Tạo giỏ hàng nhóm
-                                </Button>
-                                <Button
-                                    type="text"
-                                    icon={<UserAddOutlined />}
-                                    loading={creatingGroupCart}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}
-                                    className="btn-create-cart-group"
-                                    onClick={() => router.push('/cart_group')}
-                                >
-                                    đi đến giỏ hàng nhóm
-                                </Button>
+                                {/* hai nút nhóm khi giỏ có item */}
+                                <GroupCartActions
+                                    creatingGroupCart={creatingGroupCart}
+                                    createGroupCart={createGroupCart}
+                                    router={router}
+                                />
                             </div>
 
                             {safeSelectedItems.length > 0 && (
@@ -1084,11 +982,7 @@ const Cart = () => {
                                 value={groupCartData.join_url}
                                 readOnly
                                 rows={2}
-                                style={{
-                                    marginTop: '8px',
-                                    backgroundColor: '#f6ffed',
-                                    border: '1px solid #b7eb8f',
-                                }}
+                                style={{ marginTop: '8px', backgroundColor: '#f6ffed', border: '1px solid #b7eb8f' }}
                             />
                         </div>
 
