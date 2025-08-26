@@ -1,7 +1,7 @@
 'use client';
 
 import { EyeOutlined, HeartFilled, HeartOutlined, ShoppingCartOutlined, UsergroupAddOutlined } from '@ant-design/icons';
-import { Button, Card, message, Tooltip, Typography } from 'antd';
+import { Button, Card, Tooltip, Typography } from 'antd'; // bỏ message
 import { gsap } from 'gsap';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -10,24 +10,28 @@ import { apiGetMe } from '../../../../../apis/user';
 import { handleAddToCartHelper } from '../../../utils/addToCartHandler';
 import { toggleWishlist } from '../../../utils/wishlist';
 
+// 🔔 Toast
+import { toast } from 'react-toastify';
+// nhớ có <ToastContainer /> ở layout nếu chưa
+
 const { Title, Text } = Typography;
 
-// API function để thêm vào giỏ hàng nhóm
+/* =========================
+ * API: thêm vào giỏ hàng nhóm
+ * ========================= */
 const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
     if (!groupToken) {
         throw new Error('Không tìm thấy token giỏ hàng nhóm');
     }
-    const token = localStorage.getItem('token');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+
     const response = await fetch(`http://localhost:8000/api/group-orders/${groupToken}/items`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-            book_id: bookId,
-            quantity: quantity,
-        }),
+        body: JSON.stringify({ book_id: bookId, quantity }),
     });
 
     if (!response.ok) {
@@ -35,13 +39,55 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
         try {
             const errorData = await response.json();
             errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-            // Nếu không parse được JSON, dùng message mặc định
-        }
+        } catch {}
         throw new Error(errorMessage);
     }
 
     return await response.json();
+};
+
+/* =========================
+ * Helper: thêm giỏ hàng nhóm (toast như cart thường)
+ * ========================= */
+const handleAddToGroupCartHelper = async ({
+    user,
+    groupToken,
+    bookId,
+    quantity,
+    addToGroupCart, // fn gọi API (apiAddToGroupCart)
+    setIsAddingToGroupCart = null, // optional
+}) => {
+    try {
+        if (!user || user.length === 0) {
+            toast.error('🔒 Vui lòng đăng nhập để mua sách!');
+            return;
+        }
+        if (!groupToken) {
+            toast.warn('🔗 Vui lòng tham gia nhóm mua chung trước!');
+            return;
+        }
+
+        if (setIsAddingToGroupCart) setIsAddingToGroupCart(true);
+
+        const result = await addToGroupCart(groupToken, bookId, quantity);
+
+        // thành công — giữ style giống cart thường
+        // (bên cart thường: 🎉 Đã thêm sách vào giỏ hàng!)
+        toast.success('🎉 Đã thêm sách vào giỏ hàng nhóm!');
+
+        // Nếu có counter/event riêng cho group cart thì bắn lên
+        if (typeof window !== 'undefined') {
+            if (window.updateGroupCartCount) window.updateGroupCartCount();
+            window.dispatchEvent(new CustomEvent('groupCartUpdated'));
+        }
+
+        return result;
+    } catch (error) {
+        toast.error(`🚨 Lỗi hệ thống: ${error?.response?.data?.message || error?.message || 'Không rõ lỗi'}`);
+        throw error;
+    } finally {
+        if (setIsAddingToGroupCart) setIsAddingToGroupCart(false);
+    }
 };
 
 export function BookCard({
@@ -52,7 +98,7 @@ export function BookCard({
     onQuickView,
     isAddingToCart,
     setIsAddingToCart,
-    isCartGroup = false, // Prop mới để bật/tắt chức năng giỏ hàng nhóm
+    isCartGroup = false, // bật/tắt giỏ hàng nhóm
 }) {
     const cardRef = useRef(null);
     const actionsRef = useRef(null);
@@ -60,7 +106,7 @@ export function BookCard({
     const [currentUser, setCurrentUser] = useState(user);
     const [isAddingToGroupCart, setIsAddingToGroupCart] = useState(false);
 
-    // Lấy thông tin user nếu chưa có và isCartGroup = true
+    // Lấy user nếu chưa có & đang ở chế độ group
     useEffect(() => {
         const fetchUserInfo = async () => {
             if (!currentUser && isCartGroup && typeof window !== 'undefined') {
@@ -75,7 +121,6 @@ export function BookCard({
                 }
             }
         };
-
         fetchUserInfo();
     }, [currentUser, isCartGroup]);
 
@@ -96,55 +141,46 @@ export function BookCard({
 
     // Kiểm tra stock
     const checkStock = (book, requestedQty = 1) => {
-        const stock = parseInt(book.stock) || 0;
+        const stock = parseInt(book?.stock ?? 0, 10);
         if (stock <= 0) {
-            return {
-                canAdd: false,
-                message: 'Sản phẩm đã hết hàng',
-            };
+            return { canAdd: false, code: 'OUT', stock, message: 'Sản phẩm đã hết hàng' };
         }
         if (requestedQty > stock) {
-            return {
-                canAdd: false,
-                message: `Chỉ còn ${stock} sản phẩm trong kho`,
-            };
+            return { canAdd: false, code: 'LIMIT', stock, message: `Chỉ còn ${stock} sản phẩm trong kho` };
         }
-        return {
-            canAdd: true,
-            message: '',
-        };
+        return { canAdd: true, code: 'OK', stock, message: '' };
     };
 
-    // Kiểm tra điều kiện hiển thị buttons
+    // Điều kiện hiển thị
     const isPhysicalBook = book.is_physical === 1 || book.is_physical === true;
-    const isOutOfStock = parseInt(book.stock) <= 0;
+    const isOutOfStock = parseInt(book?.stock ?? 0, 10) <= 0;
 
     const handleToggleWishlist = async (bookId) => {
-        const token = localStorage.getItem('token');
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (!token) {
-            message.warning('Vui lòng đăng nhập để thêm vào danh sách yêu thích');
+            toast.warn('Vui lòng đăng nhập để thêm vào danh sách yêu thích');
             return;
         }
-
-        await toggleWishlist({
-            bookId,
-            token,
-            wishlist,
-            setWishlist,
-        });
+        await toggleWishlist({ bookId, token, wishlist, setWishlist });
+        const isFav = wishlist.includes(bookId);
+        isFav ? toast.info('Đã xoá khỏi danh sách yêu thích') : toast.success('Đã thêm vào danh sách yêu thích');
     };
 
-    const handleAddToCart = async (book, qty = 1) => {
-        // Kiểm tra stock trước khi thêm vào giỏ hàng
-        const stockCheck = checkStock(book, qty);
+    // CART THƯỜNG — dùng helper của mày (toast có sẵn)
+    const handleAddToCart = async (b, qty = 1) => {
+        const stockCheck = checkStock(b, qty);
         if (!stockCheck.canAdd) {
-            message.error(stockCheck.message);
+            if (stockCheck.code === 'OUT') {
+                toast.error(`🚫 Hết hàng rồi nha\n${b.title}`);
+            } else if (stockCheck.code === 'LIMIT') {
+                toast.warn(`⚠️ Chỉ còn ${stockCheck.stock} cái trong kho. Giảm số lượng rồi thêm lại nha.`);
+            }
             return;
         }
 
         await handleAddToCartHelper({
             user: currentUser,
-            bookId: book.id,
+            bookId: b.id,
             quantity: qty,
             addToCart: apiAddToCart,
             setIsAddingToCart,
@@ -152,65 +188,38 @@ export function BookCard({
         });
     };
 
-    // Xử lý thêm vào giỏ hàng nhóm
-    const handleAddToGroupCart = async (book, qty = 1) => {
-        // Kiểm tra stock trước khi thêm vào giỏ hàng nhóm
-        const stockCheck = checkStock(book, qty);
+    // CART NHÓM — toast giống cart thường
+    const handleAddToGroupCart = async (b, qty = 1) => {
+        const stockCheck = checkStock(b, qty);
         if (!stockCheck.canAdd) {
-            message.error(stockCheck.message);
+            if (stockCheck.code === 'OUT') {
+                toast.error(`🚫 Hết hàng rồi nha\n${b.title}`);
+            } else if (stockCheck.code === 'LIMIT') {
+                toast.warn(`⚠️ Chỉ còn ${stockCheck.stock} cái trong kho. Giảm số lượng rồi thêm lại giúp nhóm.`);
+            }
             return;
         }
 
         const groupToken = typeof window !== 'undefined' ? localStorage.getItem('group_cart_token') : null;
 
-        if (!groupToken) {
-            message.error('Không tìm thấy token giỏ hàng nhóm. Vui lòng tham gia nhóm mua hàng trước.');
-            return;
-        }
-
-        if (!currentUser || !currentUser.id) {
-            message.error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại.');
-            return;
-        }
-
-        try {
-            setIsAddingToGroupCart(true);
-
-            const response = await apiAddToGroupCart(groupToken, book.id, qty);
-
-            message.success({
-                content: `Đã thêm "${book.title}" vào giỏ hàng nhóm thành công!`,
-                duration: 3,
-            });
-
-            console.log('Group cart response:', response);
-        } catch (error) {
-            console.error('Error adding to group cart:', error);
-            message.error({
-                content: error.message || 'Lỗi khi thêm vào giỏ hàng nhóm',
-                duration: 4,
-            });
-        } finally {
-            setIsAddingToGroupCart(false);
-        }
+        await handleAddToGroupCartHelper({
+            user: currentUser,
+            groupToken,
+            bookId: b.id,
+            quantity: qty,
+            addToGroupCart: apiAddToGroupCart,
+            setIsAddingToGroupCart,
+        });
     };
 
-    const discount = calculateDiscount(book.price, book.discount_price);
-    const isFavoriteBook = wishlist.includes(book.id);
-
+    // Hover animations
     useEffect(() => {
         const card = cardRef.current;
         const actions = actionsRef.current;
-
         if (!card || !actions) return;
 
         const buttons = actions.querySelectorAll('.ant-btn');
-
-        gsap.set(buttons, {
-            y: 30,
-            opacity: 0,
-            scale: 0.8,
-        });
+        gsap.set(buttons, { y: 30, opacity: 0, scale: 0.8 });
 
         const handleMouseEnter = () => {
             gsap.to(buttons, {
@@ -222,7 +231,6 @@ export function BookCard({
                 stagger: 0.1,
             });
         };
-
         const handleMouseLeave = () => {
             gsap.to(buttons, {
                 y: 30,
@@ -236,12 +244,15 @@ export function BookCard({
 
         card.addEventListener('mouseenter', handleMouseEnter);
         card.addEventListener('mouseleave', handleMouseLeave);
-
         return () => {
             card.removeEventListener('mouseenter', handleMouseEnter);
             card.removeEventListener('mouseleave', handleMouseLeave);
         };
     }, []);
+
+    const discount = calculateDiscount(book.price, book.discount_price);
+    const isFavoriteBook = wishlist.includes(book.id);
+    const isOutOfStockBadge = isPhysicalBook && isOutOfStock;
 
     return (
         <div className="book-card-wrapper">
@@ -255,9 +266,10 @@ export function BookCard({
                             <div className="discount-badge">-{discount}%</div>
                         )}
                         {/* Badge hết hàng */}
-                        {isPhysicalBook && isOutOfStock && <div className="out-of-stock-badge">Hết hàng</div>}
+                        {isOutOfStockBadge && <div className="out-of-stock-badge">Hết hàng</div>}
                         {/* Badge sách điện tử */}
                         {!isPhysicalBook && <div className="digital-badge">Sách điện tử</div>}
+
                         <img
                             src={book.cover_image || 'https://via.placeholder.com/300x400?text=No+Image'}
                             alt={book.title}
@@ -266,8 +278,9 @@ export function BookCard({
                                 e.currentTarget.src = 'https://via.placeholder.com/300x400?text=No+Image';
                             }}
                         />
+
                         <div ref={actionsRef} className="book-actions">
-                            {/* Button yêu thích - luôn hiển thị */}
+                            {/* Yêu thích */}
                             <Button
                                 type="text"
                                 icon={isFavoriteBook ? <HeartFilled /> : <HeartOutlined />}
@@ -278,7 +291,7 @@ export function BookCard({
                                 }}
                             />
 
-                            {/* Button thêm vào giỏ hàng cá nhân - chỉ hiển thị cho sách vật lý */}
+                            {/* Thêm giỏ cá nhân */}
                             {isPhysicalBook && (
                                 <Button
                                     type="text"
@@ -293,7 +306,7 @@ export function BookCard({
                                 />
                             )}
 
-                            {/* Button thêm vào giỏ hàng nhóm - chỉ hiển thị cho sách vật lý và khi có group cart */}
+                            {/* Thêm giỏ nhóm */}
                             {isPhysicalBook && currentUser?.is_group_cart === true && (
                                 <Tooltip title="Thêm vào giỏ hàng nhóm">
                                     <Button
@@ -306,14 +319,12 @@ export function BookCard({
                                             e.stopPropagation();
                                             handleAddToGroupCart(book);
                                         }}
-                                        style={{
-                                            color: '#52c41a',
-                                        }}
+                                        style={{ color: '#52c41a' }}
                                     />
                                 </Tooltip>
                             )}
 
-                            {/* Button xem nhanh - luôn hiển thị */}
+                            {/* Xem nhanh */}
                             <Button
                                 type="text"
                                 icon={<EyeOutlined />}
@@ -337,6 +348,7 @@ export function BookCard({
                             {typeof book.author === 'string' ? book.author : book.author?.name || 'Unknown Author'}
                         </Text>
                     )}
+
                     <div className="price-container">
                         {book.discount_price > 0 && book.discount_price < book.price ? (
                             <>
@@ -356,7 +368,7 @@ export function BookCard({
                         )}
                     </div>
 
-                    {/* Hiển thị thông tin stock cho sách vật lý */}
+                    {/* Stock info */}
                     {isPhysicalBook && (
                         <div className="stock-info" style={{ marginTop: '8px' }}>
                             {isOutOfStock ? (
@@ -378,11 +390,9 @@ export function BookCard({
                     color: #389e0d !important;
                     background-color: rgba(82, 196, 26, 0.1) !important;
                 }
-
                 .book-card-wrapper .group-cart-btn.ant-btn-loading {
                     color: #52c41a !important;
                 }
-
                 .out-of-stock-badge {
                     position: absolute;
                     top: 8px;
@@ -395,7 +405,6 @@ export function BookCard({
                     font-weight: bold;
                     z-index: 2;
                 }
-
                 .digital-badge {
                     position: absolute;
                     top: 8px;
@@ -408,7 +417,6 @@ export function BookCard({
                     font-weight: bold;
                     z-index: 2;
                 }
-
                 .discount-badge {
                     position: absolute;
                     top: 8px;

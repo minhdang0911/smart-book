@@ -43,7 +43,7 @@ const Header = () => {
             color: '#1890ff',
         },
         {
-            label: 'Ebooks',
+            label: 'Sách đọc',
             path: '/search?type=ebook&sort=popular&page=1&limit=12',
             icon: <BookOutlined />,
             color: '#52c41a',

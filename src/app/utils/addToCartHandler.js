@@ -15,7 +15,7 @@ export const handleAddToCartHelper = async ({
                 router.push('/login');
             }
             return;
-        }
+    }
 
         // Chỉ gọi setIsAddingToCart nếu nó tồn tại
         if (setIsAddingToCart) {

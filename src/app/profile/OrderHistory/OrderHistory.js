@@ -542,7 +542,7 @@ const OrderHistory = ({ token, enabled }) => {
     // Function để cập nhật trạng thái đơn hàng
     const updateOrderStatus = async (orderId, newStatus) => {
         try {
-            const response = await fetch(`https://smartbook.io.vn/api/orders/${orderId}/status`, {
+            const response = await fetch(`http://localhost:8000/api/orders/${orderId}/status`, {
                 method: 'PUT',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -585,7 +585,7 @@ const OrderHistory = ({ token, enabled }) => {
                 // Gọi API để lấy tổng số đơn hàng cho mỗi status
                 const allStatusPromises = statusTabs.map(async (tab) => {
                     if (tab.key === 'all') {
-                        const response = await fetch(`https://smartbook.io.vn/api/orders?page=1`, {
+                        const response = await fetch(`http://localhost:8000/api/orders?page=1`, {
                             method: 'GET',
                             headers: {
                                 Authorization: `Bearer ${token}`,
@@ -598,7 +598,7 @@ const OrderHistory = ({ token, enabled }) => {
                             return { status: 'all', count: data.data?.pagination?.total || 0 };
                         }
                     } else {
-                        const response = await fetch(`https://smartbook.io.vn/api/orders?status=${tab.key}`, {
+                        const response = await fetch(`http://localhost:8000/api/orders?status=${tab.key}`, {
                             method: 'GET',
                             headers: {
                                 Authorization: `Bearer ${token}`,
@@ -641,7 +641,7 @@ const OrderHistory = ({ token, enabled }) => {
         const fetchOrders = async () => {
             setLoading(true);
             try {
-                let url = `https://smartbook.io.vn/api/orders?page=${currentPage}`;
+                let url = `http://localhost:8000/api/orders?page=${currentPage}`;
 
                 // Thêm filter theo status nếu không phải 'all'
                 if (activeTab !== 'all') {
@@ -678,7 +678,7 @@ const OrderHistory = ({ token, enabled }) => {
 
         const fetchOrderDetail = async () => {
             try {
-                const response = await fetch(`https://smartbook.io.vn/api/orders/${selectedOrderId}`, {
+                const response = await fetch(`http://localhost:8000/api/orders/${selectedOrderId}`, {
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -822,7 +822,7 @@ const OrderHistory = ({ token, enabled }) => {
     // Cancel order function
     const cancelOrder = async (orderId) => {
         try {
-            const response = await fetch(`https://smartbook.io.vn/api/orders/${orderId}/cancel`, {
+            const response = await fetch(`http://localhost:8000/api/orders/${orderId}/cancel`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

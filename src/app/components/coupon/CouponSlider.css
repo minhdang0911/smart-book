@@ -1,24 +1,24 @@
+/* ========== WRAPPER ========== */
 .coupon-slider-wrapper {
     width: 80%;
     margin: 0 auto;
     padding: 20px 0;
-    /* background-color: #f5f5f5; */
 }
 
+/* Loading / Error */
 .loading-container {
     padding: 20px;
     text-align: center;
 }
-
 .loading-text {
     margin-top: 16px;
     color: #666;
 }
-
 .error-container {
     padding: 20px;
 }
 
+/* ========== SERVICES GRID ========== */
 .services-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -26,16 +26,14 @@
     margin-bottom: 40px;
     padding: 0 20px;
 }
-
 .service-item {
     display: flex;
     align-items: center;
     padding: 20px;
-    background-color: white;
+    background-color: #fff;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
-
 .service-icon {
     width: 48px;
     height: 48px;
@@ -44,27 +42,19 @@
     align-items: center;
     justify-content: center;
     margin-right: 16px;
+    color: #fff;
 }
-
 .service-icon.blue {
     background-color: #1890ff;
 }
-
 .service-icon.green {
     background-color: #52c41a;
 }
-
 .service-icon.orange {
     background-color: #fa8c16;
 }
-
 .service-icon.red {
     background-color: #f5222d;
-}
-
-.service-icon svg {
-    font-size: 24px;
-    color: white;
 }
 
 .service-item h3 {
@@ -72,13 +62,13 @@
     font-size: 16px;
     font-weight: 600;
 }
-
 .service-item p {
     margin: 0;
     color: #666;
     font-size: 14px;
 }
 
+/* ========== SLIDER HEADER ========== */
 .coupon-slider {
     padding: 0 20px;
 }
@@ -89,7 +79,6 @@
     align-items: center;
     margin-bottom: 20px;
 }
-
 .slider-header h2 {
     margin: 0;
     font-size: 24px;
@@ -101,62 +90,63 @@
     display: flex;
     gap: 8px;
 }
-
 .slider-controls .ant-btn {
     border-radius: 50%;
     width: 40px;
     height: 40px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 }
-
 .slider-controls .ant-btn:not(.disabled) {
     background-color: #1890ff;
     border-color: #1890ff;
-    color: white;
+    color: #fff;
 }
-
 .slider-controls .ant-btn.disabled {
     background-color: #f5f5f5;
     border-color: #d9d9d9;
     color: #bfbfbf;
 }
 
+/* Empty */
 .empty-state {
     text-align: center;
     padding: 60px 20px;
     color: #999;
-    background-color: white;
+    background-color: #fff;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+/* ========== SLIDER CORE ========== */
 .coupon-slider-container {
     position: relative;
     overflow: hidden;
     border-radius: 12px;
     padding: 12px 0;
 }
-
 .coupon-track {
     display: flex;
+    gap: 0; /* chống giãn khác nhau */
     transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     will-change: transform;
 }
 
+/* Mỗi slide cố định bề rộng để mọi card đều nhau */
 .coupon-slide {
-    flex: 0 0 280px; /* Kích thước cố định */
+    flex: 0 0 288px; /* +8px so với 280 để vừa padding */
+    min-width: 288px;
     padding: 0 8px;
-    min-width: 280px;
+    box-sizing: border-box;
 }
 
-/* Hover navigation controls */
+/* ========== NAV (Prev/Next) ========== */
 .coupon-nav {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.92);
     border: 1px solid #e8e8e8;
     border-radius: 50%;
     width: 44px;
@@ -171,182 +161,199 @@
     backdrop-filter: blur(4px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
-
 .coupon-nav:hover {
     background: #1890ff;
-    color: white;
+    color: #fff;
     border-color: #1890ff;
-    transform: translateY(-50%) scale(1.1);
+    transform: translateY(-50%) scale(1.08);
 }
-
 .coupon-nav.prev {
     left: 16px;
 }
-
 .coupon-nav.next {
     right: 16px;
 }
-
 .coupon-nav.disabled {
     opacity: 0.3 !important;
     cursor: not-allowed;
     pointer-events: none;
 }
-
 .coupon-slider-container:hover .coupon-nav:not(.disabled) {
     opacity: 1;
 }
 
-/* Always show on mobile */
-@media (max-width: 768px) {
-    .coupon-nav {
-        opacity: 1;
-    }
-}
-
+/* ========== COUPON CARD ========== */
+/* Dùng grid để cố định 3 vùng: header / content / footer => đồng bộ chiều cao */
+/* Đẩy nội dung tránh xa chỗ khuyết 2 bên + giảm bán kính khuyết */
 .coupon-card {
-    position: relative;
-    overflow: visible; /* Thay đổi từ hidden để hiển thị khuyết */
-    border-radius: 16px;
-    padding: 24px;
-    height: 160px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    cursor: pointer;
-    transform: scale(1);
-    transition: all 0.3s ease;
-}
-
-/* Tạo khuyết thực sự bằng clip-path - khuyết tròn to hơn */
-.coupon-card {
+    /* tăng padding ngang để nút không dính mép khuyết */
+    padding-left: 32px;
+    padding-right: 32px;
+    /* khuyết nhỏ lại 16px để “ăn” ít vào nội dung hơn */
     clip-path: polygon(
         0 0,
-        0 calc(50% - 20px),
-        20px 50%,
-        0 calc(50% + 20px),
+        0 calc(50% - 16px),
+        16px 50%,
+        0 calc(50% + 16px),
         0 100%,
         100% 100%,
-        100% calc(50% + 20px),
-        calc(100% - 20px) 50%,
-        100% calc(50% - 20px),
+        100% calc(50% + 16px),
+        calc(100% - 16px) 50%,
+        100% calc(50% - 16px),
         100% 0
     );
 }
 
-.coupon-card:hover {
-    transform: scale(1.02);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+/* Bảo đảm footer không bị ép wrap kỳ cục và có khoảng cách giữa 2 nút */
+.coupon-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px; /* khoảng cách 2 nút */
+    min-height: 36px;
+    flex-wrap: nowrap; /* không xuống dòng */
 }
 
-/* Xóa pseudo-elements cũ */
-.coupon-card::before,
-.coupon-card::after {
-    display: none;
+/* Nút luôn nằm trọn vẹn, không bị cắt chữ */
+.coupon-code-display,
+.coupon-copy-button {
+    white-space: nowrap;
+    position: relative; /* đề phòng stacking */
+    z-index: 1;
 }
 
+/* Mobile: vẫn giữ an toàn mép khuyết */
+@media (max-width: 768px) {
+    .coupon-card {
+        padding-left: 28px;
+        padding-right: 28px;
+    }
+}
+
+/* In animation nhẹ */
 @keyframes slideIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(16px);
     }
     to {
         opacity: 1;
         transform: translateY(0);
     }
 }
-
 .coupon-card.animate-in {
-    animation: slideIn 0.5s ease forwards;
+    animation: slideIn 0.45s ease forwards;
 }
 
+/* ========== SECTIONS ========== */
 .coupon-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 8px; /* Giảm margin */
+    min-height: 28px; /* cố định header cao tối thiểu */
 }
-
 .coupon-code {
-    font-size: 18px; /* Giảm font size */
+    font-size: 18px;
     font-weight: 700;
-    margin-bottom: 4px;
+    margin: 0;
+    line-height: 1.15;
+    max-width: 70%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
-
 .coupon-min-order {
-    font-size: 13px; /* Giảm font size */
+    font-size: 13px;
+    margin-top: 4px;
+    opacity: 0.9;
 }
 
+/* badge “Còn hạn” đồng đều */
 .coupon-status {
     background-color: rgba(255, 255, 255, 0.9);
-    padding: 4px 10px; /* Giảm padding */
+    padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11px; /* Giảm font size */
+    font-size: 11px;
     font-weight: 600;
     backdrop-filter: blur(4px);
+    white-space: nowrap;
 }
 
+/* Content grow chiếm đều, giới hạn 2 dòng để không bể layout */
 .coupon-content {
-    flex: 1;
     display: flex;
     align-items: center;
-    margin: 4px 0; /* Giảm margin */
+    min-height: 40px; /* đảm bảo phần này không co quá thấp */
 }
-
 .coupon-content div {
-    font-size: 14px; /* Giảm font size */
-    line-height: 1.3;
+    font-size: 14px;
+    line-height: 1.35;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* tối đa 2 dòng */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
+/* Footer luôn cùng cao + nút/label đồng bộ */
 .coupon-footer {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    min-height: 36px;
 }
-
 .coupon-code-display {
-    color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 18px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
+    line-height: 1;
+    user-select: all;
+    white-space: nowrap;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
-
 .coupon-copy-button {
-    border-radius: 20px;
+    border-radius: 18px !important;
     font-weight: 600;
-    padding: 4px 16px;
-    height: 32px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 4px 14px !important;
+    height: 32px !important;
+    line-height: 1 !important;
+    display: inline-flex;
+    align-items: center;
 }
 
+/* Modal info */
 .modal-loading {
     text-align: center;
     padding: 20px;
 }
-
 .modal-loading-text {
     margin-top: 16px;
     color: #666;
 }
-
 .modal-content {
     padding: 16px 0;
 }
-
 .modal-item {
     margin-bottom: 12px;
 }
-
 .modal-empty {
     text-align: center;
     padding: 20px;
     color: #999;
 }
 
-/* Responsive improvements */
+/* ========== RESPONSIVE ========== */
+@media (max-width: 1024px) {
+    .coupon-slide {
+        flex: 0 0 272px;
+        min-width: 272px;
+    }
+    .coupon-card {
+        height: 160px;
+    }
+}
+
 @media (max-width: 768px) {
     .coupon-slider-wrapper {
         width: 95%;
@@ -364,19 +371,18 @@
     }
 
     .coupon-slide {
-        flex: 0 0 260px; /* Kích thước cố định cho mobile */
+        flex: 0 0 260px; /* cố định cho mobile */
         min-width: 260px;
     }
 
     .coupon-card {
-        padding: 20px;
-        height: 140px;
+        padding: 18px;
+        height: 148px; /* vẫn đảm bảo đồng đều */
     }
 
     .coupon-code {
         font-size: 18px;
     }
-
     .coupon-content div {
         font-size: 14px;
     }
@@ -386,11 +392,9 @@
         width: 36px;
         height: 36px;
     }
-
     .coupon-nav.prev {
         left: 8px;
     }
-
     .coupon-nav.next {
         right: 8px;
     }

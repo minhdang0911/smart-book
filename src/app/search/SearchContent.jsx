@@ -1,4 +1,5 @@
 'use client';
+
 import {
     ClearOutlined,
     EyeOutlined,
@@ -17,7 +18,6 @@ import {
     Col,
     Divider,
     Empty,
-    message,
     Pagination,
     Row,
     Select,
@@ -34,8 +34,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { apiAddToCart } from '../../../apis/cart';
 import { apiGetAuthors, apiGetCategories, apiGetMe } from '../../../apis/user';
+import { handleAddToCartHelper } from '../utils/addToCartHandler'; // <-- dùng helper GIỎ THƯỜNG (đã toast)
 import { toggleWishlist } from '../utils/wishlist';
 import styles from './search.module.css';
+
+// 🔔 dùng react-toastify
+import { toast } from 'react-toastify';
+// nhớ mount <ToastContainer /> ở layout/_app nếu chưa
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -49,7 +54,7 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
     const qtyInt = Number.isFinite(Number(quantity)) ? Math.trunc(Number(quantity)) : 1;
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const base = process.env.NEXT_PUBLIC_API_BASE || 'https://smartbook.io.vn';
+    const base = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
 
     const res = await fetch(`${base}/api/group-orders/${groupToken}/items`, {
         method: 'POST',
@@ -60,6 +65,7 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
         body: JSON.stringify({ book_id: bookId, quantity: qtyInt }),
     });
 
+    // vẫn check HTTP error trước
     if (!res.ok) {
         let msg = 'Lỗi khi thêm vào giỏ hàng nhóm';
         try {
@@ -68,7 +74,7 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
         } catch {}
         throw new Error(msg);
     }
-    return res.json();
+    return res.json(); // { success: true, item: {...} }
 };
 
 /* =========================
@@ -80,13 +86,13 @@ const checkStock = (book, requestedQty = 1) => {
 
     if (isPhysical) {
         if (stock <= 0) {
-            return { canAdd: false, message: 'Sản phẩm đã hết hàng' };
+            return { canAdd: false, code: 'OUT', stock, message: 'Sản phẩm đã hết hàng' };
         }
         if (requestedQty > stock) {
-            return { canAdd: false, message: `Chỉ còn ${stock} sản phẩm trong kho` };
+            return { canAdd: false, code: 'LIMIT', stock, message: `Chỉ còn ${stock} sản phẩm trong kho` };
         }
     }
-    return { canAdd: true, message: '' };
+    return { canAdd: true, code: 'OK', stock, message: '' };
 };
 
 /* =========================
@@ -555,32 +561,32 @@ const SearchContent = () => {
     };
 
     /* =========================
-     * ADD TO CART (dựa theo BookCard, thêm check & thông báo)
+     * ADD TO CART (dùng helper + toast)
      * =======================*/
     const handleAddToCart = async (book, qty = 1) => {
         const stockCheck = checkStock(book, qty);
-        if (!stockCheck.canAdd) return message.error(stockCheck.message);
-
-        const token = localStorage.getItem('token');
-        if (!token) return message.warning('Vui lòng đăng nhập để thêm vào giỏ hàng');
+        if (!stockCheck.canAdd) {
+            if (stockCheck.code === 'OUT') return toast.error(`🚫 Hết hàng rồi nha\n${book.title}`);
+            if (stockCheck.code === 'LIMIT') return toast.warn(`⚠️ Chỉ còn ${stockCheck.stock} cái trong kho.`);
+            return;
+        }
 
         try {
             setAddingToCartIds((prev) => new Set(prev).add(book.id));
 
-            // apiAddToCart phải có chữ ký (bookId, quantity)
-            const res = await apiAddToCart(book.id, qty);
-            if (!res || res.success === false) {
-                const errMsg = res?.error || 'Dữ liệu không hợp lệ';
-                throw new Error(errMsg);
-            }
-
-            message.success({
-                content: `Đã thêm "${book.title}" vào giỏ hàng!`,
-                duration: 3,
+            await handleAddToCartHelper({
+                user: currentUser, // helper sẽ tự toast login + success
+                bookId: book.id,
+                quantity: qty,
+                addToCart: apiAddToCart, // phải trả về { success: boolean, ... }
+                setIsAddingToCart: null, // Search list đang xài loading theo id riêng
+                router,
             });
+
+            // helper đã bắn toast + updateCartCount + cartUpdated
         } catch (e) {
+            // helper đã toast error rồi
             console.error('ADD CART ERROR:', e);
-            message.error(e?.message || 'Lỗi khi thêm vào giỏ hàng');
         } finally {
             setAddingToCartIds((prev) => {
                 const next = new Set(prev);
@@ -591,25 +597,45 @@ const SearchContent = () => {
     };
 
     /* =========================
-     * ADD TO GROUP CART
+     * ADD TO GROUP CART (check res.success === true -> toast.success)
      * =======================*/
     const handleAddToGroupCart = async (book, qty = 1) => {
         const stockCheck = checkStock(book, qty);
-        if (!stockCheck.canAdd) return message.error(stockCheck.message);
+        if (!stockCheck.canAdd) {
+            if (stockCheck.code === 'OUT') return toast.error(`🚫 Hết hàng rồi nha\n${book.title}`);
+            if (stockCheck.code === 'LIMIT') return toast.warn(`⚠️ Chỉ còn ${stockCheck.stock} cái trong kho.`);
+            return;
+        }
 
         const groupToken = localStorage.getItem('group_cart_token');
-        if (!groupToken) return message.warning('Chưa có nhóm mua. Vào phòng trước đã.');
+        if (!groupToken) return toast.warn('🔗 Chưa có nhóm mua. Vào phòng trước đã.');
+
+        // check login giống cart thường
+        if (!currentUser || !currentUser.id) {
+            toast.error('🔒 Vui lòng đăng nhập để mua sách!');
+            router.push('/login');
+            return;
+        }
 
         try {
             setAddingGroupIds((prev) => new Set(prev).add(book.id));
-            await apiAddToGroupCart(groupToken, book.id, qty);
-            message.success({
-                content: `Đã thêm "${book.title}" vào giỏ hàng nhóm!`,
-                duration: 3,
-            });
+
+            const res = await apiAddToGroupCart(groupToken, book.id, qty);
+
+            if (res?.success === true) {
+                toast.success(`🎉 Đã thêm "${book.title}" x${qty} vào giỏ hàng nhóm!`);
+                if (typeof window !== 'undefined') {
+                    if (window.updateGroupCartCount) window.updateGroupCartCount();
+                    window.dispatchEvent(new CustomEvent('groupCartUpdated', { detail: res.item }));
+                }
+            } else {
+                // API 200 nhưng success=false
+                const msg = res?.message || 'Không thể thêm vào giỏ hàng nhóm';
+                toast.error(`🚫 ${msg}`);
+            }
         } catch (e) {
-            console.error(e);
-            message.error(e.message || 'Lỗi khi thêm vào giỏ hàng nhóm');
+            toast.error(e?.message || 'Lỗi khi thêm vào giỏ hàng nhóm');
+            console.error('GROUP CART ERROR:', e);
         } finally {
             setAddingGroupIds((prev) => {
                 const next = new Set(prev);
@@ -621,8 +647,10 @@ const SearchContent = () => {
 
     const handleToggleWishlist = async (bookId) => {
         const token = localStorage.getItem('token');
-        if (!token) return message.warning('Vui lòng đăng nhập để thêm vào danh sách yêu thích');
+        if (!token) return toast.warn('Vui lòng đăng nhập để thêm vào danh sách yêu thích');
         await toggleWishlist({ bookId, token, wishlist, setWishlist });
+        const isFav = wishlist.includes(bookId);
+        isFav ? toast.info('Đã xoá khỏi danh sách yêu thích') : toast.success('Đã thêm vào danh sách yêu thích');
     };
 
     const handleQuickView = (book) => {

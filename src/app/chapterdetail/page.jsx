@@ -21,38 +21,32 @@ import HTMLFlipBook from 'react-pageflip';
 const PDFFlipbook = () => {
     const [chapterData, setChapterData] = useState(null);
     const [numPages, setNumPages] = useState(0);
-    const [currentPage, setCurrentPage] = useState(0);
+    const [currentPage, setCurrentPage] = useState(0); // 0-based PDF page
     const [loading, setLoading] = useState(true);
     const [zoom, setZoom] = useState(1);
     const [pdfPages, setPdfPages] = useState([]);
     const [htmlContent, setHtmlContent] = useState('');
-    const [contentType, setContentType] = useState('text'); // 'pdf' or 'text'
+    const [contentType, setContentType] = useState('text'); // 'pdf' | 'text'
     const [pdfDoc, setPdfDoc] = useState(null);
     const [bookId, setBookId] = useState(null);
     const [chapterId, setChapterId] = useState(null);
-    const [pdfCache, setPdfCache] = useState({}); // Cache cho PDF pages
+    const [pdfCache, setPdfCache] = useState({});
     const [showChapterModal, setShowChapterModal] = useState(false);
     const [allChapters, setAllChapters] = useState([]);
     const [loadingChapters, setLoadingChapters] = useState(false);
     const flipBookRef = useRef();
 
-    // Load PDF.js and get data from localStorage
     useEffect(() => {
         const loadPDFJS = async () => {
-            // Get bookId and chapterId from localStorage
             const storedBookId = localStorage.getItem('currentBookId');
             const storedChapterId = localStorage.getItem('currentChapterId');
-
             if (!storedBookId || !storedChapterId) {
-                console.error('BookId or ChapterId not found in localStorage');
                 setLoading(false);
                 return;
             }
-
             setBookId(storedBookId);
             setChapterId(storedChapterId);
 
-            // Load PDF.js only if we need it
             if (typeof window !== 'undefined' && !window.pdfjsLib) {
                 const script = document.createElement('script');
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
@@ -69,24 +63,19 @@ const PDFFlipbook = () => {
         loadPDFJS();
     }, []);
 
-    // Fetch chapter data
     const fetchChapterData = async (currentBookId, currentChapterId) => {
         try {
             setLoading(true);
-            const response = await fetch(
+            const res = await fetch(
                 `https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
             );
-            const data = await response.json();
+            const data = await res.json();
             setChapterData(data);
-
-            // Update localStorage with current chapter info
             localStorage.setItem('currentBookId', data.chapter.book_id.toString());
             localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
             setBookId(data.chapter.book_id);
             setChapterId(data.chapter.id);
 
-            // Determine content type and load accordingly
             if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
                 setContentType('pdf');
                 await loadPDF(data.chapter.pdf_url, data.chapter.id);
@@ -94,291 +83,131 @@ const PDFFlipbook = () => {
                 setContentType('text');
                 loadHTMLContent(data.chapter.content);
             } else {
-                console.error('No valid content found');
                 setLoading(false);
             }
-        } catch (error) {
-            console.error('Error fetching chapter data:', error);
+        } catch (e) {
+            console.error(e);
             setLoading(false);
         }
     };
 
-    // Load HTML content for text-based chapters
     const loadHTMLContent = (content) => {
         setHtmlContent(content);
-        setNumPages(1); // HTML content is treated as a single page
+        setNumPages(1);
         setLoading(false);
-
-        // Reset flipbook to first page
-        setTimeout(() => {
-            if (flipBookRef.current && flipBookRef.current.pageFlip) {
-                flipBookRef.current.pageFlip().flip(0);
-            }
-        }, 100);
+        setTimeout(() => flipBookRef.current?.pageFlip?.().flip(0), 100);
     };
 
-    // Load PDF with PDF.js and caching
     const loadPDF = async (pdfUrl, chapterIdForCache) => {
         try {
-            // Check cache first
             const cacheKey = `${chapterIdForCache}_${pdfUrl}`;
             if (pdfCache[cacheKey]) {
-                console.log('Using cached PDF pages for chapter:', chapterIdForCache);
-                setPdfPages(pdfCache[cacheKey].pages);
-                setNumPages(pdfCache[cacheKey].numPages);
+                const { pages, numPages } = pdfCache[cacheKey];
+                setPdfPages(pages);
+                setNumPages(numPages);
                 setLoading(false);
-
-                // Force flipbook to reset về trang đầu sau khi load
-                setTimeout(() => {
-                    if (flipBookRef.current && flipBookRef.current.pageFlip) {
-                        flipBookRef.current.pageFlip().flip(0);
-                    }
-                }, 100);
+                setTimeout(() => flipBookRef.current?.pageFlip?.().flip(0), 100);
                 return;
             }
 
-            console.log('Loading PDF from URL:', pdfUrl);
             const loadingTask = window.pdfjsLib.getDocument(pdfUrl);
             const pdf = await loadingTask.promise;
             setPdfDoc(pdf);
             setNumPages(pdf.numPages);
 
-            // Render all pages as images
             const pages = [];
             for (let i = 1; i <= pdf.numPages; i++) {
                 const pageImage = await renderPageToImage(pdf, i);
-                pages.push({
-                    pageNumber: i,
-                    imageUrl: pageImage,
-                    width: 600,
-                    height: 800,
-                });
+                pages.push({ pageNumber: i, imageUrl: pageImage, width: 600, height: 800 });
             }
 
             setPdfPages(pages);
-            console.log('PDF Pages loaded:', pages.length);
-
-            // Cache the pages
-            setPdfCache((prev) => ({
-                ...prev,
-                [cacheKey]: {
-                    pages,
-                    numPages: pdf.numPages,
-                    timestamp: Date.now(),
-                },
-            }));
-
+            setPdfCache((prev) => ({ ...prev, [cacheKey]: { pages, numPages: pdf.numPages, timestamp: Date.now() } }));
             setLoading(false);
-
-            // Force flipbook to start at page 0 after loading
-            setTimeout(() => {
-                if (flipBookRef.current && flipBookRef.current.pageFlip) {
-                    flipBookRef.current.pageFlip().flip(0);
-                }
-            }, 100);
-        } catch (error) {
-            console.error('Error loading PDF:', error);
+            setTimeout(() => flipBookRef.current?.pageFlip?.().flip(0), 100);
+        } catch (e) {
+            console.error('Error loading PDF:', e);
             setLoading(false);
         }
     };
 
-    // Render PDF page to image
     const renderPageToImage = async (pdf, pageNumber) => {
         try {
             const page = await pdf.getPage(pageNumber);
-            const scale = 2; // Higher quality
+            const scale = 2;
             const viewport = page.getViewport({ scale });
-
             const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d');
             canvas.height = viewport.height;
             canvas.width = viewport.width;
-
-            const renderContext = {
-                canvasContext: context,
-                viewport: viewport,
-            };
-
-            await page.render(renderContext).promise;
+            await page.render({ canvasContext: ctx, viewport }).promise;
             return canvas.toDataURL('image/jpeg', 0.8);
-        } catch (error) {
-            console.error(`Error rendering page ${pageNumber}:`, error);
+        } catch (e) {
+            console.error(`render ${pageNumber} failed`, e);
             return null;
         }
     };
 
-    // Fetch all chapters for the book
     const fetchAllChapters = async (currentBookId) => {
-        if (allChapters.length > 0) return; // Already loaded
-
+        if (allChapters.length) return;
         try {
             setLoadingChapters(true);
-            const response = await fetch(`https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters`);
-            const data = await response.json();
-
+            const res = await fetch(`https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters`);
+            const data = await res.json();
             if (data.success) {
-                // Calculate word count for each chapter
-                const chaptersWithStats = data.chapters.map((chapter) => ({
-                    ...chapter,
-                    wordCount: chapter.display_content
-                        ? chapter.display_content.replace(/<[^>]*>/g, '').trim().length
-                        : 0,
+                const chaptersWithStats = data.chapters.map((c) => ({
+                    ...c,
+                    wordCount: c.display_content ? c.display_content.replace(/<[^>]*>/g, '').trim().length : 0,
                 }));
                 setAllChapters(chaptersWithStats);
             }
-        } catch (error) {
-            console.error('Error fetching chapters:', error);
         } finally {
             setLoadingChapters(false);
         }
     };
 
-    // Navigate to specific chapter
-    const navigateToChapter = async (chapterId) => {
+    const navigateToChapter = async (cid) => {
         setShowChapterModal(false);
         setLoading(true);
-
         try {
-            const response = await fetch(
-                `https://smartbook.io.vn/api/admin/books/${bookId}/chapters/${chapterId}/detail`,
-            );
-            const data = await response.json();
+            const res = await fetch(`https://smartbook.io.vn/api/admin/books/${bookId}/chapters/${cid}/detail`);
+            const data = await res.json();
             setChapterData(data);
             setCurrentPage(0);
-
-            // Update localStorage
             localStorage.setItem('currentBookId', data.chapter.book_id.toString());
             localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-            // Load content based on type
             if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
                 setContentType('pdf');
                 await loadPDF(data.chapter.pdf_url, data.chapter.id);
-            } else if (data.chapter.content_type === 'text' && data.chapter.content) {
+            } else {
                 setContentType('text');
                 loadHTMLContent(data.chapter.content);
             }
-
-            // Reset flipbook
-            if (flipBookRef.current) {
-                flipBookRef.current.flip(0);
-            }
-        } catch (error) {
-            console.error('Error navigating to chapter:', error);
+            flipBookRef.current?.flip?.(0);
+        } catch (e) {
+            console.error(e);
             setLoading(false);
         }
     };
-    const nextPage = () => {
-        if (flipBookRef.current && flipBookRef.current.pageFlip) {
-            flipBookRef.current.pageFlip().flipNext();
-        }
-    };
 
-    const prevPage = () => {
-        if (flipBookRef.current && flipBookRef.current.pageFlip) {
-            flipBookRef.current.pageFlip().flipPrev();
-        }
-    };
+    const nextPage = () => flipBookRef.current?.pageFlip?.().flipNext();
+    const prevPage = () => flipBookRef.current?.pageFlip?.().flipPrev();
 
     const goToPage = (pageNum) => {
-        if (contentType === 'text') return; // No pagination for text content
-
-        const targetPDFPage = Math.max(1, Math.min(pageNum, numPages));
-        const flipBookPageIndex = targetPDFPage - 1;
-        if (flipBookRef.current && flipBookRef.current.pageFlip) {
-            flipBookRef.current.pageFlip().flip(flipBookPageIndex);
-        }
+        if (contentType === 'text') return;
+        const target = Math.max(1, Math.min(pageNum, numPages));
+        flipBookRef.current?.pageFlip?.().flip(target - 1); // index = page - 1
     };
 
-    // Handle page flip events
     const onFlip = (e) => {
         if (contentType === 'text') return;
-
-        const flipBookPageIndex = e.data;
-        let actualPDFPage;
-
-        if (flipBookPageIndex <= 1) {
-            actualPDFPage = 0;
-        } else {
-            actualPDFPage = flipBookPageIndex - 1;
-        }
-
-        setCurrentPage(Math.min(actualPDFPage, numPages - 1));
+        const pageIndex = e.data; // 0-based child index
+        const pdfPage = Math.min(pageIndex + 1, numPages);
+        setCurrentPage(pdfPage - 1);
     };
 
-    // Navigation functions for chapters
-    const goToPreviousChapter = async () => {
-        if (chapterData?.previous) {
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
-                );
-                const data = await response.json();
-                setChapterData(data);
-                setCurrentPage(0);
-
-                // Update localStorage
-                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-                localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-                // Load content based on type
-                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                    setContentType('pdf');
-                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
-                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                    setContentType('text');
-                    loadHTMLContent(data.chapter.content);
-                }
-
-                // Reset flipbook
-                if (flipBookRef.current) {
-                    flipBookRef.current.flip(0);
-                }
-            } catch (error) {
-                console.error('Error loading previous chapter:', error);
-                setLoading(false);
-            }
-        }
-    };
-
-    const goToNextChapter = async () => {
-        if (chapterData?.next) {
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
-                );
-                const data = await response.json();
-                setChapterData(data);
-                setCurrentPage(0);
-
-                // Update localStorage
-                localStorage.setItem('currentBookId', data.chapter.book_id.toString());
-                localStorage.setItem('currentChapterId', data.chapter.id.toString());
-
-                // Load content based on type
-                if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
-                    setContentType('pdf');
-                    await loadPDF(data.chapter.pdf_url, data.chapter.id);
-                } else if (data.chapter.content_type === 'text' && data.chapter.content) {
-                    setContentType('text');
-                    loadHTMLContent(data.chapter.content);
-                }
-
-                // Reset flipbook
-                if (flipBookRef.current) {
-                    flipBookRef.current.flip(0);
-                }
-            } catch (error) {
-                console.error('Error loading next chapter:', error);
-                setLoading(false);
-            }
-        }
-    };
-
-    const zoomIn = () => setZoom((prev) => Math.min(prev + 0.2, 3));
-    const zoomOut = () => setZoom((prev) => Math.max(prev - 0.2, 0.5));
+    const zoomIn = () => setZoom((p) => Math.min(p + 0.2, 3));
+    const zoomOut = () => setZoom((p) => Math.max(p - 0.2, 0.5));
     const resetZoom = () => setZoom(1);
 
     if (loading) {
@@ -397,9 +226,19 @@ const PDFFlipbook = () => {
         );
     }
 
+    // danh sách trang sẽ render (chèn trang trắng cuối nếu lẻ để luôn 2 mặt)
+    const pagesToRender = (() => {
+        if (contentType !== 'pdf') return [];
+        const arr = [...pdfPages];
+        if (arr.length % 2 !== 0) {
+            arr.push({ pageNumber: null, imageUrl: null, isBlank: true });
+        }
+        return arr;
+    })();
+
     return (
         <div style={styles.container}>
-            {/* Header */}
+            {/* Header (giữ nguyên) */}
             <div style={styles.header}>
                 <div style={styles.headerLeft}>
                     <div style={styles.bookInfo}>
@@ -407,14 +246,13 @@ const PDFFlipbook = () => {
                         <div>
                             <h1 style={styles.bookTitle}>{chapterData?.chapter?.book?.title}</h1>
                             <p style={styles.chapterTitle}>
-                                Chương {chapterData?.chapter?.title}
+                                Chương {chapterData?.chapter?.title}{' '}
                                 <span style={styles.contentType}>({contentType === 'pdf' ? 'PDF' : 'Văn bản'})</span>
                             </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Controls */}
                 <div style={styles.headerRight}>
                     <div style={styles.zoomControls}>
                         <button onClick={zoomOut} style={styles.controlButton} title="Thu nhỏ">
@@ -449,15 +287,13 @@ const PDFFlipbook = () => {
                 </div>
             </div>
 
-            {/* Main Content */}
+            {/* Main */}
             <div style={styles.mainContent}>
-                {/* Background Pattern */}
                 <div style={styles.backgroundPattern}>
                     <div style={styles.backgroundGradient}></div>
                 </div>
 
                 <div style={styles.contentWrapper}>
-                    {/* Navigation Buttons - only show for PDF */}
                     {contentType === 'pdf' && (
                         <>
                             <button
@@ -486,14 +322,8 @@ const PDFFlipbook = () => {
                         </>
                     )}
 
-                    {/* Content Container */}
-                    <div
-                        style={{
-                            ...styles.flipbookWrapper,
-                            transform: `scale(${zoom})`,
-                        }}
-                    >
-                        {contentType === 'pdf' && pdfPages.length > 0 && (
+                    <div style={{ ...styles.flipbookWrapper, transform: `scale(${zoom})` }}>
+                        {contentType === 'pdf' && pagesToRender.length > 0 && (
                             <HTMLFlipBook
                                 ref={flipBookRef}
                                 width={700}
@@ -504,50 +334,41 @@ const PDFFlipbook = () => {
                                 minHeight={600}
                                 maxHeight={1400}
                                 maxShadowOpacity={0.5}
-                                showCover={true}
+                                /* 🔥 Không dùng bìa – vào thẳng 2 mặt */
+                                showCover={false}
                                 mobileScrollSupport={false}
+                                usePortrait={false}
                                 onFlip={onFlip}
                                 className="flipbook"
                                 startPage={0}
-                                drawShadow={true}
+                                drawShadow
                                 flippingTime={800}
-                                usePortrait={false}
                                 startZIndex={0}
                                 autoSize={false}
-                                clickEventForward={true}
-                                useMouseEvents={true}
+                                clickEventForward
+                                useMouseEvents
                                 swipeDistance={30}
-                                showPageCorners={true}
+                                showPageCorners
                                 disableFlipByClick={false}
                             >
-                                {/* Cover Page */}
-                                <div style={styles.page}>
-                                    <div style={styles.coverPage}>
-                                        <Book style={styles.coverIcon} />
-                                        <h1 style={styles.coverTitle}>{chapterData?.chapter?.book?.title}</h1>
-                                        <p style={styles.coverChapter}>Chương {chapterData?.chapter?.title}</p>
-                                        <p style={styles.coverAuthor}>{chapterData?.chapter?.book?.author?.name}</p>
-                                    </div>
-                                </div>
-
-                                {/* Blank page sau cover để tạo spread đúng */}
-                                <div style={styles.page}>
-                                    <div style={styles.blankPage}>
-                                        <p style={styles.blankText}>Trang trắng</p>
-                                    </div>
-                                </div>
-
-                                {/* PDF Pages */}
-                                {pdfPages.map((page, index) => (
-                                    <div key={page.pageNumber} style={styles.page}>
+                                {pagesToRender.map((page, idx) => (
+                                    <div key={idx} style={styles.page}>
                                         <div style={styles.pdfPageContent}>
-                                            <img
-                                                src={page.imageUrl}
-                                                alt={`Trang ${page.pageNumber}`}
-                                                style={styles.pageImage}
-                                                loading="lazy"
-                                            />
-                                            <div style={styles.pageNumber}>{page.pageNumber}</div>
+                                            {page.isBlank ? (
+                                                <div style={styles.blankPage}>
+                                                    <p style={styles.blankText}>Trang trống</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <img
+                                                        src={page.imageUrl}
+                                                        alt={`Trang ${page.pageNumber}`}
+                                                        style={styles.pageImage}
+                                                        loading="lazy"
+                                                    />
+                                                    <div style={styles.pageNumber}>{page.pageNumber}</div>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
@@ -578,7 +399,6 @@ const PDFFlipbook = () => {
                         <span>{chapterData?.chapter?.book?.title}</span>
                     </div>
 
-                    {/* Page Navigation - only for PDF */}
                     {contentType === 'pdf' && (
                         <div style={styles.pageNavigation}>
                             <div style={styles.pageInputGroup}>
@@ -596,7 +416,6 @@ const PDFFlipbook = () => {
                                 </div>
                             </div>
 
-                            {/* Progress Bar */}
                             <div style={styles.progressGroup}>
                                 <span style={styles.pageLabel}>Tiến độ:</span>
                                 <div style={styles.progressBarContainer}>
@@ -614,18 +433,23 @@ const PDFFlipbook = () => {
                         </div>
                     )}
 
-                    {/* Chapter Navigation */}
                     <div style={styles.chapterNavigation}>
                         {chapterData?.previous && (
-                            <button style={styles.chapterButton} onClick={goToPreviousChapter} disabled={loading}>
+                            <button
+                                style={styles.chapterButton}
+                                onClick={async () => {
+                                    await goToPreviousChapter();
+                                }}
+                            >
                                 ← Chương trước
                             </button>
                         )}
                         {chapterData?.next && (
                             <button
                                 style={{ ...styles.chapterButton, ...styles.nextChapterButton }}
-                                onClick={goToNextChapter}
-                                disabled={loading}
+                                onClick={async () => {
+                                    await goToNextChapter();
+                                }}
                             >
                                 Chương tiếp →
                             </button>
@@ -634,7 +458,7 @@ const PDFFlipbook = () => {
                 </div>
             </div>
 
-            {/* Chapter Modal */}
+            {/* Modal chương (giữ nguyên) */}
             {showChapterModal && (
                 <div style={styles.modalOverlay} onClick={() => setShowChapterModal(false)}>
                     <div style={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -647,7 +471,6 @@ const PDFFlipbook = () => {
                                 <X style={styles.controlIcon} />
                             </button>
                         </div>
-
                         <div style={styles.modalBody}>
                             {loadingChapters ? (
                                 <div style={styles.modalLoading}>
@@ -694,7 +517,6 @@ const PDFFlipbook = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-
                                                 {chapter.display_content && (
                                                     <div style={styles.chapterPreview}>
                                                         <div
@@ -710,7 +532,6 @@ const PDFFlipbook = () => {
                                                     </div>
                                                 )}
                                             </div>
-
                                             {chapter.id === chapterData?.chapter?.id && (
                                                 <div style={styles.currentBadge}>Đang đọc</div>
                                             )}
@@ -724,6 +545,58 @@ const PDFFlipbook = () => {
             )}
         </div>
     );
+
+    async function goToPreviousChapter() {
+        if (!chapterData?.previous) return;
+        setLoading(true);
+        try {
+            const res = await fetch(
+                `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
+            );
+            const data = await res.json();
+            setChapterData(data);
+            setCurrentPage(0);
+            localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+            localStorage.setItem('currentChapterId', data.chapter.id.toString());
+            if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                setContentType('pdf');
+                await loadPDF(data.chapter.pdf_url, data.chapter.id);
+            } else {
+                setContentType('text');
+                loadHTMLContent(data.chapter.content);
+            }
+            flipBookRef.current?.flip?.(0);
+        } catch (e) {
+            console.error(e);
+            setLoading(false);
+        }
+    }
+
+    async function goToNextChapter() {
+        if (!chapterData?.next) return;
+        setLoading(true);
+        try {
+            const res = await fetch(
+                `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
+            );
+            const data = await res.json();
+            setChapterData(data);
+            setCurrentPage(0);
+            localStorage.setItem('currentBookId', data.chapter.book_id.toString());
+            localStorage.setItem('currentChapterId', data.chapter.id.toString());
+            if (data.chapter.content_type === 'pdf' && data.chapter.pdf_url) {
+                setContentType('pdf');
+                await loadPDF(data.chapter.pdf_url, data.chapter.id);
+            } else {
+                setContentType('text');
+                loadHTMLContent(data.chapter.content);
+            }
+            flipBookRef.current?.flip?.(0);
+        } catch (e) {
+            console.error(e);
+            setLoading(false);
+        }
+    }
 };
 
 const styles = {

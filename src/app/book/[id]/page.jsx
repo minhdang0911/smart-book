@@ -509,6 +509,8 @@ const BookDetailPage = () => {
     const [activeTab, setActiveTab] = useState('1');
     const [showAllChapters, setShowAllChapters] = useState(false);
     const [showFullDescription, setShowFullDescription] = useState(false);
+    const [isOpeningChapter, setIsOpeningChapter] = useState(false); // NEW
+
     const [form] = Form.useForm();
 
     // Custom hooks
@@ -750,6 +752,34 @@ const BookDetailPage = () => {
     // Utility functions
     const formatPrice = (price) => {
         return new Intl.NumberFormat('vi-VN').format(price);
+    };
+
+    // MỞ CHƯƠNG ĐẦU TIÊN KHI NHẤN "ĐỌC SÁCH"
+    const openFirstChapter = async () => {
+        if (!book?.id) return;
+        try {
+            setIsOpeningChapter(true);
+            const res = await fetch(`https://smartbook.io.vn/api/admin/books/${book.id}/chapters`);
+            const json = await res.json();
+
+            if (!json?.success || !Array.isArray(json?.chapters) || json.chapters.length === 0) {
+                toast.error('Chưa có chương để đọc.');
+                return;
+            }
+
+            // chọn chương có chapter_order nhỏ nhất (phòng API chưa sort)
+            const first = [...json.chapters].sort((a, b) => (a.chapter_order ?? 0) - (b.chapter_order ?? 0))[0];
+
+            localStorage.setItem('currentBookId', String(book.id));
+            localStorage.setItem('currentChapterId', String(first.id));
+
+            router.push(`/chapterdetail`);
+        } catch (e) {
+            console.error(e);
+            toast.error('Không mở được chương đầu. Thử lại nhé.');
+        } finally {
+            setIsOpeningChapter(false);
+        }
     };
 
     // Render functions
@@ -1493,8 +1523,8 @@ const BookDetailPage = () => {
                                     {getCategoryName(book?.category)}
                                 </Tag>
                             </Descriptions.Item>
-                            <Descriptions.Item label="Năm xuất bản">
-                                <Text style={{ fontSize: '14px' }}>{book?.publication_year || 'Không rõ'}</Text>
+                            <Descriptions.Item label="Nhà xuất bản">
+                                <Text style={{ fontSize: '14px' }}>{book?.publisher.name || 'Không rõ'}</Text>
                             </Descriptions.Item>
                             <Descriptions.Item label="Định dạng">
                                 <Tag color={book?.is_physical === 0 ? 'green' : 'orange'} style={{ fontSize: '12px' }}>
@@ -1635,13 +1665,14 @@ const BookDetailPage = () => {
 
                             {/* Action Buttons - Logic theo yêu cầu */}
                             {book.is_physical === 0 ? (
-                                // Sách điện tử - chỉ hiển thị nút "Đọc sách"
+                                // Sách điện tử - chỉ hiển thị nút "Đọc sách" -> mở CHƯƠNG ĐẦU
                                 <Button
                                     type="primary"
                                     size="large"
                                     block
                                     icon={<ReadOutlined />}
-                                    onClick={() => router.push(`/reader/${book.id}`)}
+                                    onClick={openFirstChapter}
+                                    loading={isOpeningChapter}
                                 >
                                     Đọc sách
                                 </Button>
