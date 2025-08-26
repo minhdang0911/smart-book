@@ -46,6 +46,7 @@ export const apiRegisterUser = async (name, email, password, password_confirmati
     return res.data;
 };
 
+
 export const apiForgotPassword = async (email) => {
     try {
         const response = await axios.post(`${BASE_URL}/forgot-password`, {
