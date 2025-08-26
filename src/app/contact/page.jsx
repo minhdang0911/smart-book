@@ -124,26 +124,27 @@ export default function ContactPage() {
 
     return (
         <div style={{ width: '100%', margin: 0, padding: 0 }}>
-            <div style={{ width: '100%', overflow: 'hidden', position: 'relative' }}>
+            <div
+                style={{
+                    width: '100vw',
+                    marginLeft: 'calc(50% - 50vw)',
+                    marginRight: 'calc(50% - 50vw)',
+                    overflow: 'hidden',
+                    position: 'relative',
+                    background: '#fff',
+                }}
+            >
                 <img
                     src={banner.src}
                     alt="Banner"
                     style={{
-                        width: '100%',
-                        height: '80%',
+                        width: '100%', // fill ngang
+                        maxHeight: '600px', // nhỏ gọn lại
+
                         display: 'block',
+                        margin: '0 auto',
                     }}
                 />
-                <div
-                    style={{
-                        position: 'absolute',
-                        top: '50%',
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: '#fff',
-                        textAlign: 'center',
-                    }}
-                ></div>
             </div>
 
             {/* CONTENT */}
@@ -154,7 +155,7 @@ export default function ContactPage() {
                         <Col xs={24} lg={14}>
                             <Card ref={formCardRef} bordered className="ant-card-hoverable">
                                 <Title level={3} style={{ marginBottom: 16 }}>
-                                    Gửi thông điệp
+                                    Gửi liên hệ
                                 </Title>
 
                                 <Form
