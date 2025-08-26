@@ -1,13 +1,12 @@
 'use client';
 
-import { AudioOutlined, BookOutlined, TeamOutlined, TrophyOutlined } from '@ant-design/icons';
-import { Card, Col, Row, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import { AudioOutlined, BookOutlined, QuestionCircleOutlined, TeamOutlined, TrophyOutlined } from '@ant-design/icons';
+import { Card, Col, Collapse, Row, Timeline, Typography } from 'antd';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Paragraph } = Typography;
+const { Panel } = Collapse;
 
 export default function SmartBookLanding() {
-    // Danh sách câu hỏi thường gặp
     const faqList = [
         {
             question: 'SmartBook là gì?',
@@ -26,573 +25,246 @@ export default function SmartBookLanding() {
             answer: 'Bạn có thể đọc sách trên mọi thiết bị: điện thoại, máy tính bảng, laptop.',
         },
     ];
-    const [scrollTop, setScrollTop] = useState(false);
 
-    useEffect(() => {
-        const handleScroll = () => {
-            setScrollTop(window.scrollY > 300);
-        };
-
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    const handleScrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
     const timelineData = [
         {
-            color: '#FF6B35',
-            title: 'Vượt hơn cả phần bản',
-            description:
-                'Tháng 8/2024: SmartBook đạt chứng chỉ Vàng của thế giới Đọc Nam Á với kỳ thành mình phân chia chính điều kiện số 1.',
+            color: 'blue',
             year: '2024',
+            title: 'Vượt hơn cả phần bản',
+            description: 'SmartBook đạt chứng chỉ Vàng của thế giới Đọc Nam Á.',
         },
         {
-            color: '#E74C3C',
-            title: 'Thành lập Công ty Cổ phần SmartBook',
-            description:
-                '04/2023: Công ty Cổ phần SmartBook chính thức được thành lập sau tám tháng xin phép và thành SmartBook hiện có 1 triệu người dùng. 10/2023: SmartBook ra mắt Thương mại điện tử và 12/2023: SmartBook phối hợp với các nhà sách tên lớn để mở kho sách với hàng nghìn đầu sách mới.',
+            color: 'green',
             year: '2023',
+            title: 'Thành lập Công ty Cổ phần SmartBook',
+            description: 'Thành lập chính thức, ra mắt thương mại điện tử và hợp tác với nhiều nhà xuất bản.',
         },
         {
-            color: '#8E44AD',
-            title: 'Sự hỗ trợ nhiều cấp độ người dùng tăm nhìn MKH',
-            description:
-                'Xây dựng ứng dụng SmartBook với cộng đồng người yêu thích đọc sách, lên 3.5 triệu độc giả với hàng 5 triệu người dùng hoạt động tích cực hàng tháng dự kiến.',
+            color: 'purple',
             year: '2022',
+            title: 'Cộng đồng phát triển mạnh',
+            description: 'Xây dựng cộng đồng SmartBook với hàng triệu độc giả và hàng trăm nghìn cuốn sách.',
         },
         {
-            color: '#3498DB',
-            title: 'Chính thức phát hành ứng dụng đọc sách trên các nền tảng di động',
-            description:
-                'SmartBook chính thức trở thành đối tác chính thức của Việt Nam cho China Literature (Tập đoàn cung cấp nội dung số lớn nhất Trung Quốc).',
+            color: 'red',
             year: '2021',
+            title: 'Phát hành ứng dụng di động',
+            description: 'Ra mắt ứng dụng trên iOS & Android, trở thành đối tác của China Literature.',
         },
         {
-            color: '#1ABC9C',
-            title: 'Thử nghiệm Thư viện Ebook đầu tiên tại Việt Nam với 1.5 triệu sách',
-            description:
-                '7/2020: SmartBook hợp với NXB Giáo Trung Ương Tân và mở rộng kế hoạch chuyển ngành 10/2020: Thư viện Ebook SmartBook có cơ sở 16,000 Ebooks, 1.5 triệu độc giả mỗi sách, tại hơn 2 triệu cuốn sách trên cùng dương',
+            color: 'orange',
             year: '2020',
+            title: 'Thư viện Ebook đầu tiên',
+            description: 'Thử nghiệm thư viện Ebook với hơn 1.5 triệu đầu sách, phục vụ hàng triệu người dùng.',
         },
         {
-            color: '#27AE60',
-            title: 'SmartBook ra mắt thân thiện xuất bản điện tử SmartBook',
-            description:
-                'Cung cấp giải pháp sách Woocriff toàn cao, mật độ âm chính dạng, website 6/2019: SmartBook hợp với các nhà sách Alphanbooks & Saonbooks ra mắt các ứng dụng thích thích thương mại điện tử truyền thống',
+            color: 'cyan',
             year: '2019',
+            title: 'Ra mắt nền tảng xuất bản điện tử',
+            description: 'Hợp tác với các nhà sách lớn để phát triển ứng dụng đọc sách trực tuyến.',
         },
         {
-            color: '#F39C12',
-            title: 'Ra mắt thân thương xuất bản điện tử SmartBook',
-            description:
-                'Xây dựng website, ứng dụng SmartBook - Nền tảng Ebook đầu tiên tại Việt Nam với cộng đồng người dùng yêu thích đọc Ebook với hơn 500,000 lượt xem.',
+            color: 'gold',
             year: '2018',
+            title: 'Ý tưởng đầu tiên',
+            description: 'Nhóm sáng lập bắt đầu xây dựng ý tưởng SmartBook – nền tảng Ebook tại Việt Nam.',
+        },
+        {
+            color: 'gray',
+            year: '2017',
+            title: 'Khởi đầu hành trình',
+            description: 'Nhóm nghiên cứu nhỏ được thành lập, ấp ủ mô hình đưa tri thức số đến gần hơn với mọi người.',
         },
     ];
 
     return (
-        <div style={{ background: ' center/cover no-repeat', minHeight: '100vh', position: 'relative' }}>
-            <style>
-                {`
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          }
-          
-          .hero-section {
-            background: Dark Green(135deg, #2C5F2D 0%, #1E4A29 50%, #0F2E18 100%);
-            min-height: 100vh;
-            position: relative;
-            overflow: hidden;
-            padding: -10px 0;
-            color: white;
-          }
-          
-          .hero-sun {
-            position: absolute;
-            top: 60px;
-            right: 80px;
-                <div style={{ background: 'url(/banner.png) center/cover no-repeat', minHeight: '100vh' }}>
-            height: 120px;
-            background: Dark Green(45deg, #FFA500, #FF8C00);
-            border-radius: 50%;
-            box-shadow: 0 0 50px rgba(255, 165, 0, 0.6);
-            animation: sunGlow 4s ease-in-out infinite;
-          }
-          
-          @keyframes sunGlow {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-          }
-          
-          .hero-tree {
-            position: absolute;
-            bottom: 0;
-            left: 8%;
-            width: 350px;
-            height: 400px;
-            z-index: 1;
-          }
-          
-          .tree-trunk {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 160px;
-            background: linear-gradient(to bottom, #8B4513, #654321);
-            border-radius: 10px 10px 0 0;
-          }
-          
-          .tree-crown {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 280px;
-            height: 240px;
-            background: radial-gradient(ellipse, #228B22 0%, #006400 70%);
-            border-radius: 50% 50% 45% 45%;
-          }
-          
-          .tree-leaves {
-            position: absolute;
-            bottom: 140px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 260px;
-            height: 200px;
-          }
-          
-          .leaf {
-            position: absolute;
-            width: 15px;
-            height: 15px;
-            background: #32CD32;
-            border-radius: 50% 0;
-            animation: leafFloat 3s ease-in-out infinite;
-          }
-          
-          @keyframes leafFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.8; }
-            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
-          }
-          
-          .character-sitting {
-            position: absolute;
-            bottom: 100px;
-            left: 13%;
-            width: 80px;
-            height: 100px;
-            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
-            border-radius: 25px 25px 12px 12px;
-            z-index: 3;
-          }
-          
-          .floating-icons {
-            position: absolute;
-            bottom: 180px;
-            left: 25%;
-            z-index: 2;
-          }
-          
-          .icon-float {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            animation: iconFloat 4s ease-in-out infinite;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-          }
-          
-          @keyframes iconFloat {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-25px) scale(1.1); }
-          }
-          
-          .book-showcase {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            align-items: flex-end;
-            margin-top: 60px;
-            z-index: 4;
-            position: relative;
-          }
-          
-          .book-item {
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            transition: transform 0.3s ease;
-            overflow: hidden;
-            position: relative;
-          }
-          
-          .book-item:hover {
-            transform: translateY(-15px) rotateY(15deg);
-          }
-          
-          .book-1 {
-            width: 110px;
-            height: 150px;
-            background: linear-gradient(135deg, #DC143C, #8B0000);
-          }
-          
-          .book-2 {
-            width: 150px;
-            height: 210px;
-            background: linear-gradient(135deg, #FF8C00, #FF4500);
-          }
-          
-          .book-3 {
-            width: 170px;
-            height: 240px;
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-          }
-          
-          .book-4 {
-            width: 130px;
-            height: 180px;
-            background: linear-gradient(135deg, #32CD32, #228B22);
-          }
-          
-          .social-icons {
-            position: fixed;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 999;
-          }
-          
-          .social-icon {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 22px;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            text-decoration: none;
-            font-weight: bold;
-          }
-          
-          .social-icon:hover {
-            transform: scale(1.15);
-          }
-          
-          .social-icon.teal { background: #20B2AA; }
-          .social-icon.orange { background: #FF8C00; }
-          .social-icon.yellow { background: #FFD700; color: #333; }
-          .social-icon.blue { background: #4169E1; }
-          .social-icon.purple { background: #9370DB; }
-          
-          .scroll-top {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 55px;
-            height: 55px;
-            background: #87CEEB;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 999;
-            transition: all 0.3s ease;
-            font-size: 20px;
-          }
-          
-          .scroll-top:hover {
-            background: #4682B4;
-            transform: scale(1.1);
-          }
-          
-          .features-section {
-            padding: 80px 0;
-            background: #ffffff;
-          }
-          
-          .feature-card {
-            text-align: center;
-            padding: 40px 20px;
-            border-radius: 15px;
-            transition: all 0.3s ease;
-            border: none;
-            background: #ffffff;
-            box-shadow: 0 5px 25px rgba(135, 206, 235, 0.15);
-            height: 100%;
-          }
-          
-          .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(135, 206, 235, 0.25);
-          }
-          
-          .feature-icon {
-            width: 90px;
-            height: 90px;
-            background: linear-gradient(135deg, #87CEEB, #4682B4);
-            border-radius: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 28px auto;
-            font-size: 36px;
-            color: white;
-            box-shadow: 0 8px 20px rgba(135, 206, 235, 0.3);
-          }
-          
-          .company-intro {
-            padding: 80px 0;
-            background: #f8fbff;
-          }
-          
-          .timeline-section {
-            padding: 80px 0;
-            background: #ffffff;
-          }
-          
-          .timeline-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 50px;
-            padding: 30px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border-left: 5px solid transparent;
-          }
-          
-          .timeline-item:hover {
-            transform: translateX(15px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
-          }
-          
-          .timeline-year {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: white;
-            margin-right: 30px;
-            flex-shrink: 0;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-          }
-          
-          .timeline-content {
-            flex: 1;
-          }
-          
-          .timeline-title {
-            color: #333;
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            line-height: 1.4;
-          }
-          
-          .timeline-description {
-            color: #666;
-            font-size: 15px;
-            line-height: 1.7;
-            margin: 0;
-          }
-        `}
-            </style>
+        <div style={{ background: '#fff', minHeight: '100vh' }}>
+            <style>{baseCss}</style>
 
-            {/* Hero Section */}
-            <img src="/banner.png" alt="Banner" style={{ width: '100%', height: '800px', display: 'block' }} />
+            {/* Hero */}
+            {/* Hero */}
+            <div style={{ width: '100%' }}>
+                <img src="/banner.png" alt="Banner" className="hero-banner" />
+            </div>
 
-            {/* Features Section */}
+            {/* Features */}
             <section className="features-section">
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                    <Row gutter={[40, 40]} justify="center">
-                        <Col xs={12} sm={6} lg={6}>
+                <div className="container">
+                    <Row gutter={[32, 32]} justify="center" align="stretch">
+                        <Col xs={12} sm={6}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
                                     <BookOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Giới thiệu
-                                </Title>
+                                <Title level={4}>Giới thiệu</Title>
                             </Card>
                         </Col>
-                        <Col xs={12} sm={6} lg={6}>
+                        <Col xs={12} sm={6}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
                                     <TrophyOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Cơ chế đầu tư
-                                </Title>
+                                <Title level={4}>Cơ chế đầu tư</Title>
                             </Card>
                         </Col>
-                        <Col xs={12} sm={6} lg={6}>
+                        <Col xs={12} sm={6}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
                                     <AudioOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Lĩnh vực hoạt động
-                                </Title>
+                                <Title level={4}>Lĩnh vực hoạt động</Title>
                             </Card>
                         </Col>
-                        <Col xs={12} sm={6} lg={6}>
+                        <Col xs={12} sm={6}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
                                     <TeamOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Đội tác
-                                </Title>
+                                <Title level={4}>Đối tác</Title>
                             </Card>
                         </Col>
                     </Row>
                 </div>
             </section>
 
-            {/* Company Introduction */}
+            {/* Company Intro */}
             <section className="company-intro">
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                    <Title level={2} style={{ color: '#333', marginBottom: '48px', fontSize: '32px' }}>
+                <div className="container">
+                    <Title level={2} style={{ textAlign: 'center', marginBottom: 32 }}>
                         Giới thiệu chúng tôi
                     </Title>
-                    <Row gutter={[48, 32]}>
-                        <Col xs={24}>
-                            <Paragraph
-                                style={{
-                                    fontSize: '16px',
-                                    lineHeight: 1.8,
-                                    color: '#666',
-                                    textAlign: 'justify',
-                                    marginBottom: '24px',
-                                }}
-                            >
-                                Năm 2019, SmartBook từ một sản phẩm của Viet Corporation được chính thức ra mắt với mục
-                                tiêu trở thành một nền tảng đọc sách hàng đầu tại Việt Nam. Với sứ mệnh "Mang tri thức
-                                đến mọi người", SmartBook không ngừng phát triển và cải tiến để mang đến trải nghiệm đọc
-                                sách tốt nhất cho người dùng, đích chúng cũng sánh với các nền tảng khác như thế để cung
-                                cấp nội dung chất lượng.
-                            </Paragraph>
-                            <Paragraph
-                                style={{
-                                    fontSize: '16px',
-                                    lineHeight: 1.8,
-                                    color: '#666',
-                                    textAlign: 'justify',
-                                    marginBottom: '24px',
-                                }}
-                            >
-                                Hiện tại, Công ty Cổ phần SmartBook ra mắt để SmartBook tùy hành về đăng ký phòng hoạt
-                                động chính ngành nghề đăng ký ở châu Ebooks các giai đê về hoạt chủ lạ ban và SmartBook.
-                                Điều chúng có thể nhờ hỗ trợ dữ liệu hoạt động ở trong ngoại khu đóng dạng tính năng về
-                                động thông qua thành sao dành cho SmartBooks tôn trong về đờg lại hỗ trợ dưới thằng.
-                            </Paragraph>
-                            <Paragraph
-                                style={{
-                                    fontSize: '16px',
-                                    lineHeight: 1.8,
-                                    color: '#666',
-                                    textAlign: 'justify',
-                                    marginBottom: '24px',
-                                }}
-                            >
-                                Với sự biểu hiện, SmartBook hơi những rằng làm với hoạt SmartBook thành cộng ở chỗ và
-                                điều hoạt cộng với khác thành người dùng về khác nguyên thì đưa nào cũng với hơn 18,000
-                                sản phẩm sách đã và chọn rằn 1,900 sản phẩm lẫn cả về. Giá bán thành công và có thành
-                                đưa với số hoạt động nghệ hoạt sách điện tử hàng đầu với số lượt người dùng uy tín về 30
-                                triệu.
-                            </Paragraph>
-                            <Paragraph
-                                style={{ fontSize: '16px', lineHeight: 1.8, color: '#666', textAlign: 'justify' }}
-                            >
-                                Ngoài ra, Công ty Cổ phần SmartBook cũng đã từng thành công là nhánh trong số các
-                                platform hoạt nơi hoạt gì nhau sách điện tử các sách, lách vụ hoạt nội dung trong việc
-                                nghiệm với hoạt động báo cáo người dùng mắm mọi lúc với hoạt nổi tại 100,000 hoạt điều
-                                chúng hoạt động tại ngành với hoạt động 15,000 các với số hoạt động người. PrimeBook,
-                                VoxBook, BookWise, VastmoveBook, MemBook, NaBook, Lenoct...
-                            </Paragraph>
-                        </Col>
-                    </Row>
+                    <Paragraph style={introStyle}>
+                        Năm 2019, SmartBook chính thức được ra mắt với mục tiêu trở thành nền tảng đọc sách hàng đầu tại
+                        Việt Nam. Với sứ mệnh <b>"Mang tri thức đến mọi người"</b>, SmartBook không ngừng đổi mới để
+                        mang lại trải nghiệm đọc sách phong phú và tiện lợi.
+                    </Paragraph>
+                    <Paragraph style={introStyle}>
+                        Chúng tôi xây dựng hệ sinh thái bao gồm sách giấy, Ebook và Audiobook, giúp độc giả có thể tiếp
+                        cận tri thức ở bất cứ đâu và bất cứ lúc nào. Không chỉ đơn thuần là một ứng dụng, SmartBook còn
+                        là cầu nối giữa độc giả và nhà xuất bản, giữa tri thức và cuộc sống.
+                    </Paragraph>
+                    <Paragraph style={introStyle}>
+                        Đến nay, SmartBook đã hợp tác với hàng trăm nhà xuất bản, đưa về hơn <b>50,000 đầu sách</b>,
+                        phục vụ cho hàng triệu người dùng thường xuyên. Chúng tôi cũng đang mở rộng hợp tác quốc tế để
+                        mang những tinh hoa sách ngoại văn đến gần hơn với độc giả Việt.
+                    </Paragraph>
+                    <Paragraph style={introStyle}>
+                        Trong tương lai, SmartBook hướng đến việc trở thành nền tảng nội dung số toàn diện, không chỉ
+                        giới hạn trong sách, mà còn mở rộng ra các loại hình tri thức khác như khoá học online, podcast,
+                        và nhiều hình thức sáng tạo khác.
+                    </Paragraph>
                 </div>
             </section>
 
-            {/* Timeline Section */}
+            {/* Timeline */}
             <section className="timeline-section">
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                    <Title
-                        level={2}
-                        style={{ textAlign: 'center', marginBottom: '60px', color: '#333', fontSize: '32px' }}
-                    >
+                <div className="container">
+                    <Title level={2} style={{ textAlign: 'center', marginBottom: 48 }}>
                         Lịch sử công ty
                     </Title>
-
-                    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                        {timelineData.map((item, index) => (
-                            <div key={index} className="timeline-item" style={{ borderLeftColor: item.color }}>
-                                <div className="timeline-year" style={{ backgroundColor: item.color }}>
-                                    {item.year}
+                    <Timeline mode="alternate" className="timeline-custom">
+                        {timelineData.map((item, idx) => (
+                            <Timeline.Item key={idx} color={item.color} label={item.year}>
+                                <div className="tl-card">
+                                    <div className="tl-title">{item.title}</div>
+                                    <div className="tl-desc">{item.description}</div>
                                 </div>
-                                <div className="timeline-content">
-                                    <div className="timeline-title" style={{ color: item.color }}>
-                                        {item.title}
-                                    </div>
-                                    <div className="timeline-description">{item.description}</div>
-                                </div>
-                            </div>
+                            </Timeline.Item>
                         ))}
-                    </div>
+                    </Timeline>
                 </div>
             </section>
-            {/* Bảng gợi ý câu hỏi thường gặp - cuối trang */}
-            <div
-                style={{
-                    maxWidth: 650,
-                    margin: '32px auto',
-                    background: '#fff',
-                    borderRadius: 18,
-                    boxShadow: '0 2px 16px #b2dfdb22',
-                    padding: 32,
-                }}
-            >
-                <h2 style={{ color: '#27ae60', marginBottom: 24, textAlign: 'center', fontWeight: 700 }}>
-                    Câu hỏi thường gặp
-                </h2>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <tbody>
+
+            {/* FAQ */}
+            <section className="faq-section">
+                <div className="container">
+                    <Title level={2} style={{ textAlign: 'center', marginBottom: 24 }}>
+                        Câu hỏi thường gặp
+                    </Title>
+                    <Collapse accordion expandIconPosition="end" className="faq-collapse">
                         {faqList.map((faq, idx) => (
-                            <tr key={idx} style={{ borderBottom: '1px solid #e8f5e9' }}>
-                                <td style={{ padding: '16px 12px', fontWeight: 600, color: '#219150', width: '45%' }}>
-                                    {faq.question}
-                                </td>
-                                <td style={{ padding: '16px 12px', color: '#333' }}>{faq.answer}</td>
-                            </tr>
+                            <Panel
+                                header={
+                                    <span>
+                                        <QuestionCircleOutlined style={{ marginRight: 8, color: '#1677ff' }} />
+                                        {faq.question}
+                                    </span>
+                                }
+                                key={idx}
+                            >
+                                <p style={{ margin: 0, color: '#475569' }}>{faq.answer}</p>
+                            </Panel>
                         ))}
-                    </tbody>
-                </table>
-            </div>
+                    </Collapse>
+                </div>
+            </section>
+
+            <footer className="about-footer">© {new Date().getFullYear()} SmartBook — All rights reserved.</footer>
         </div>
     );
 }
+
+const introStyle = { fontSize: 16, lineHeight: 1.8, color: '#475569', textAlign: 'justify', marginBottom: 20 };
+
+const baseCss = `
+.hero-banner {
+  width: 100%;
+  background: url('/banner.png') center top no-repeat;
+  background-size: contain;  /* giữ nguyên tỉ lệ */
+  background-color: #fff;    /* màu nền 2 bên */
+  aspect-ratio: 16/5;        /* hoặc 21/9, set theo tỉ lệ thật của ảnh */
+}
+
+
+
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+.features-section { padding: 72px 0; background: #fff; }
+.feature-card {
+  text-align: center;
+  padding: 32px 20px;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  border: 1px solid #e5eefc;
+  box-shadow: 0 4px 18px rgba(22,119,255,0.08);
+
+  /* ép đều chiều cao */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.feature-card:hover { transform: translateY(-6px); box-shadow: 0 10px 24px rgba(22,119,255,0.15); }
+.feature-icon {
+  width: 70px; height: 70px; background: #eaf3ff; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px auto; font-size: 28px; color: #1677ff;
+}
+.company-intro { padding: 72px 0; background: #f7fbff; }
+
+/* Timeline */
+.timeline-section { padding: 72px 0; background: #fff; }
+.timeline-custom .ant-timeline-item-label { font-weight: 600; color: #1677ff; }
+.tl-card { background: #fff; border: 1px solid #e5eefc; padding: 16px 20px;
+  border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+}
+.tl-title { font-weight: 600; margin-bottom: 6px; color: #0f172a; }
+.tl-desc { color: #475569; font-size: 15px; line-height: 1.6; }
+
+/* FAQ */
+.faq-section { padding: 72px 0; background: #f7fbff; }
+.faq-collapse .ant-collapse-item {
+  border-radius: 8px; margin-bottom: 12px;
+  border: 1px solid #e5eefc !important; overflow: hidden;
+}
+.faq-collapse .ant-collapse-header {
+  font-weight: 600; font-size: 16px; color: #0f172a !important;
+}
+.faq-collapse .ant-collapse-content-box { padding: 16px; background: #fff; }
+
+.about-footer { margin: 48px 0; text-align: center; color: #64748b; font-size: 14px; }
+`;
