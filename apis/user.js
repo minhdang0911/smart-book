@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export const apiLoginUser = async (email, password) => {
     try {
-        const response = await axios.post(`${BASE_URL}/login`, {
+        const response = await axios.post(`http://localhost:8000/api/login`, {
             email,
             password,
         });
@@ -87,7 +87,7 @@ export const apiResetPassword = async ({ email, token, password, password_confir
     }
 };
 
-const BASE_URL = 'http://localhost:8000/api';
+const BASE_URL = 'https://smartbook.io.vn/api';
 
 export const apiSearchBooks = async (params = {}) => {
     try {

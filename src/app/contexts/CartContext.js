@@ -320,7 +320,7 @@ export const CartProvider = ({ children }) => {
             console.log('🧹 Clearing cart...');
 
             const response = await fetch('https://smartbook.io.vn/api/cart/clear', {
-                method: 'POST',
+                method: 'DELETE',
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',

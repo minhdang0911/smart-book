@@ -1,31 +1,51 @@
 'use client';
-import { CreditCardOutlined, DownloadOutlined, QrcodeOutlined } from '@ant-design/icons';
-import { Button, Card, Col, Divider, Form, Image, Input, message, Radio, Row, Select, Spin, Typography } from 'antd';
+import {
+    ClockCircleOutlined,
+    CreditCardOutlined,
+    DownloadOutlined,
+    QrcodeOutlined,
+    UsergroupAddOutlined,
+    UserOutlined,
+} from '@ant-design/icons';
+import {
+    Alert,
+    Button,
+    Card,
+    Col,
+    Divider,
+    Form,
+    Input,
+    message,
+    Radio,
+    Row,
+    Select,
+    Spin,
+    Tag,
+    Typography,
+} from 'antd';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'react-toastify';
 import { apiGetDistricts, apiGetProvinces, apiGetShippingFee, apiGetWardsByDistrict } from '../../../apis/ghtk';
-import { apiSendOtp } from '../../../apis/user'; // Thêm import này
-import { CartContext } from '../../app/contexts/CartContext';
+import { apiSendOtp } from '../../../apis/user';
 import './CheckoutPage.css';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 
-// Component con chứa logic chính
-const CheckoutPageContent = () => {
+const GroupCheckoutPageContent = () => {
     const [form] = Form.useForm();
     const [paymentMethod, setPaymentMethod] = useState('cod');
-    const { cartData, selectedItems, calculateTotal, clearCart } = useContext(CartContext);
-    const [checkoutData, setCheckoutData] = useState(null);
-
-    // Import useSearchParams bên trong Suspense
+    const router = useRouter();
     const { useSearchParams } = require('next/navigation');
     const searchParams = useSearchParams();
-    const router = useRouter();
 
-    // States for address data
+    // Group order states
+    const [groupOrderData, setGroupOrderData] = useState(null);
+    const [groupToken, setGroupToken] = useState('');
+
+    // Address states
     const [provinces, setProvinces] = useState([]);
     const [districts, setDistricts] = useState([]);
     const [wards, setWards] = useState([]);
@@ -43,35 +63,47 @@ const CheckoutPageContent = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [loading, setLoading] = useState(true);
 
-    const getSelectedCartItems = () => {
-        if (!cartData || !selectedItems || selectedItems.length === 0) {
-            return [];
-        }
-        return cartData.items.filter((item) => selectedItems.includes(item.id));
-    };
-
-    const selectedCartItems = getSelectedCartItems();
-    const subtotal = calculateTotal ? calculateTotal() : 0;
-    const total = subtotal + shippingFee;
-
+    // Get group order token from URL
     useEffect(() => {
         try {
-            const dataParam = searchParams.get('data');
-
-            if (dataParam) {
-                const data = JSON.parse(decodeURIComponent(dataParam));
-                console.log('Received checkout data:', data);
-                setCheckoutData(data);
+            const token = localStorage.getItem('group_cart_token');
+            if (token) {
+                setGroupToken(token);
+                fetchGroupOrderData(token);
             } else {
-                message.warning('Không có thông tin đơn hàng. Vui lòng thử lại.');
-                return;
+                message.error('Không tìm thấy thông tin giỏ hàng nhóm');
+                router.push('/');
             }
         } catch (error) {
-            return;
+            console.error('Error getting group token:', error);
+            router.push('/');
         } finally {
             setLoading(false);
         }
     }, [searchParams, router]);
+
+    // Fetch group order data
+    const fetchGroupOrderData = async (token) => {
+        try {
+            const response = await axios.get(`http://localhost:8000/api/group-orders/${token}`);
+            setGroupOrderData(response.data);
+            console.log('Group order data:', response.data);
+        } catch (error) {
+            console.error('Error fetching group order:', error);
+            message.error('Không thể tải thông tin giỏ hàng nhóm');
+        }
+    };
+
+    // Calculate total from group order data
+    const calculateGroupTotal = () => {
+        if (!groupOrderData || !groupOrderData.by_member) return 0;
+        return Object.values(groupOrderData.by_member).reduce((total, member) => {
+            return total + (member.subtotal || 0);
+        }, 0);
+    };
+
+    const subtotal = calculateGroupTotal();
+    const total = subtotal + shippingFee;
 
     // Load provinces on component mount
     useEffect(() => {
@@ -195,9 +227,9 @@ const CheckoutPageContent = () => {
 
     const createZaloPayOrder = async (amount) => {
         try {
-            const response = await axios.post('https://smartbook.io.vn/api/orders/zalopay/create-order', {
+            const response = await axios.post('http://localhost:8000/api/orders/zalopay/create-order', {
                 amount: amount,
-                description: 'Thanh toán đơn hàng',
+                description: 'Thanh toán đơn hàng nhóm',
             });
 
             if (response.data.success) {
@@ -216,17 +248,19 @@ const CheckoutPageContent = () => {
         }
     };
 
-    // Function gửi email đặt hàng thành công
-    const sendOrderSuccessEmail = async (orderResult, customerInfo) => {
+    const sendGroupOrderSuccessEmail = async (orderResult, customerInfo) => {
         try {
-            console.log('📧 [EMAIL] Sending order success email...');
+            console.log('📧 [EMAIL] Sending group order success email...');
 
             const orderData = {
                 name: customerInfo.fullName,
                 phone: customerInfo.phone,
-                order_id: orderResult.order?.id || orderResult.data?.id,
-                total_amount: checkoutData?.totalAmount + shippingFee,
-                items: selectedCartItems,
+                order_id: orderResult.data?.order_id,
+                order_code: orderResult.data?.order_code,
+                total_amount: orderResult.data?.total_price,
+                group_order_id: orderResult.data?.group_order_id,
+                items_count: orderResult.data?.items_count,
+                total_quantity: orderResult.data?.total_quantity,
                 address: `${selectedWard?.WardName || ''}, ${selectedDistrict?.DistrictName || ''}, ${
                     selectedProvince?.ProvinceName || ''
                 }`,
@@ -234,10 +268,10 @@ const CheckoutPageContent = () => {
                     paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng (COD)' : 'Thanh toán online qua ZaloPay',
             };
 
-            await apiSendOtp(customerInfo.email, 'order_success', orderData);
-            console.log('📧 [EMAIL] Order success email sent successfully');
+            await apiSendOtp(customerInfo.email, 'group_order_success', orderData);
+            console.log('📧 [EMAIL] Group order success email sent successfully');
         } catch (error) {
-            console.error('📧 [EMAIL] Error sending order success email:', error);
+            console.error('📧 [EMAIL] Error sending group order success email:', error);
         }
     };
 
@@ -250,8 +284,8 @@ const CheckoutPageContent = () => {
     const handleSubmit = async (values) => {
         const token = localStorage.getItem('token');
 
-        if (selectedCartItems.length === 0) {
-            message.error('Không có sản phẩm nào được chọn');
+        if (!groupOrderData || !groupToken) {
+            message.error('Không có thông tin giỏ hàng nhóm');
             return;
         }
 
@@ -261,33 +295,27 @@ const CheckoutPageContent = () => {
         }
 
         setIsSubmitting(true);
-        const priceOrder = checkoutData?.totalAmount + shippingFee;
+        const totalOrderPrice = total;
 
         try {
             const orderData = {
-                address: `${values.houseNumber || ''}, ${values.street || ''}, ${selectedWard.WardName}, ${
-                    selectedDistrict.DistrictName
-                }, ${selectedProvince.ProvinceName}`.replace(/^,\s*/, ''),
                 sonha: values.houseNumber || '',
-                phone: values.phone,
                 street: values.street || '',
                 district_id: selectedDistrict.DistrictID,
                 ward_id: selectedWard.WardCode,
-                district_name: selectedDistrict.DistrictName,
                 ward_name: selectedWard.WardName,
-                card_id: 1,
+                district_name: selectedDistrict.DistrictName,
                 payment: paymentMethod,
-                cart_item_ids: selectedItems || [],
                 shipping_fee: shippingFee,
-                total_price: priceOrder,
                 note: values.note,
-                price: checkoutData?.totalAmount,
+                customer_name: values.fullName,
+                customer_phone: values.phone,
             };
 
             if (paymentMethod === 'cod') {
-                console.log('🛒 [COD] Processing COD order');
+                console.log('🛒 [COD] Processing Group Order COD checkout');
 
-                const response = await fetch('https://smartbook.io.vn/api/orders', {
+                const response = await fetch(`http://localhost:8000/api/group-orders/${groupToken}/checkout`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -303,39 +331,35 @@ const CheckoutPageContent = () => {
                 }
 
                 if (result.success === true) {
-                    console.log('🛒 [COD] Order created successfully - Sending email');
+                    console.log('🛒 [COD] Group order created successfully - Sending email');
 
-                    // Gửi email đặt hàng thành công
-                    await sendOrderSuccessEmail(result, {
+                    // Send success email
+                    await sendGroupOrderSuccessEmail(result, {
                         fullName: values.fullName,
                         email: values.email,
                         phone: values.phone,
                     });
 
-                    message.success('Đặt hàng thành công! Email xác nhận đã được gửi.');
+                    message.success('Checkout giỏ hàng nhóm thành công! Email xác nhận đã được gửi.');
 
-                    if (clearCart) {
-                        clearCart();
-                    }
-
+                    // Clear any cart data
                     window.updateCartCount?.();
                     window.dispatchEvent(new CustomEvent('cartUpdated'));
                     form.resetFields();
-                    toast.success('Đặt hàng thành công!');
-                    router.push('/');
+                    toast.success('Checkout giỏ hàng nhóm thành công!');
+
+                    // Redirect to order success or group order page
+                    router.push(`/group-orders/${groupToken}?success=true`);
                 } else {
-                    throw new Error(result.message || 'Đặt hàng thất bại');
+                    throw new Error(result.message || 'Checkout thất bại');
                 }
             } else if (paymentMethod === 'credit_card') {
-                console.log('🛒 [ZALOPAY] Starting ZaloPay payment flow');
+                console.log('🛒 [ZALOPAY] Starting ZaloPay payment flow for group order');
 
-                const cartStateBeforePayment = {
-                    selectedCartItems: [...selectedCartItems],
-                    checkoutData: { ...checkoutData },
-                    selectedItems: [...selectedItems],
+                const paymentStateBeforePayment = {
+                    groupToken,
                     orderData: { ...orderData },
                     customerInfo: {
-                        // Thêm customerInfo vào cartState
                         fullName: values.fullName,
                         email: values.email,
                         phone: values.phone,
@@ -343,8 +367,8 @@ const CheckoutPageContent = () => {
                 };
 
                 try {
-                    const zaloPayResult = await createZaloPayOrder(priceOrder);
-                    console.log('🛒 [ZALOPAY] ZaloPay order created:', zaloPayResult);
+                    const zaloPayResult = await createZaloPayOrder(totalOrderPrice);
+                    console.log('🛒 [ZALOPAY] ZaloPay order created for group order:', zaloPayResult);
 
                     if (!zaloPayResult || !zaloPayResult.success) {
                         throw new Error('Không thể tạo thanh toán ZaloPay');
@@ -353,12 +377,13 @@ const CheckoutPageContent = () => {
                     toast.success('Thanh toán ZaloPay đã được tạo! Vui lòng quét mã QR để thanh toán.');
 
                     const paymentInfo = {
-                        cartState: cartStateBeforePayment,
+                        paymentState: paymentStateBeforePayment,
                         timestamp: Date.now(),
-                        priceOrder: priceOrder,
+                        totalOrderPrice: totalOrderPrice,
                         app_trans_id: zaloPayResult?.app_trans_id,
+                        type: 'group_order',
                     };
-                    localStorage.setItem('pending_zaloPay_payment', JSON.stringify(paymentInfo));
+                    localStorage.setItem('pending_group_zaloPay_payment', JSON.stringify(paymentInfo));
 
                     let checkAttempts = 0;
                     const maxAttempts = 60;
@@ -370,26 +395,28 @@ const CheckoutPageContent = () => {
                             checkAttempts++;
                             const appTransId = zaloPayResult?.app_trans_id;
 
-                            console.log('🛒 [ZALOPAY] Checking payment status, attempt:', checkAttempts);
+                            console.log('🛒 [ZALOPAY] Checking group order payment status, attempt:', checkAttempts);
 
                             if (!appTransId) {
-                                console.error('🛒 [ZALOPAY] No app_trans_id found');
+                                console.error('🛒 [ZALOPAY] No app_trans_id found for group order');
                                 toast.error('Không tìm thấy thông tin giao dịch. Vui lòng thử lại.');
                                 return;
                             }
 
                             const statusResponse = await axios.post(
-                                'https://smartbook.io.vn/api/orders/zalopay/check-status',
+                                'http://localhost:8000/api/orders/zalopay/check-status',
                                 {
                                     app_trans_id: appTransId,
                                 },
                             );
 
                             const data = statusResponse.data;
-                            console.log(`🛒 [ZALOPAY] Status check (attempt ${checkAttempts}):`, data);
+                            console.log(`🛒 [ZALOPAY] Group order status check (attempt ${checkAttempts}):`, data);
 
                             if (data.return_code === 1) {
-                                console.log('🛒 [ZALOPAY] Payment successful - Creating order and sending email');
+                                console.log(
+                                    '🛒 [ZALOPAY] Group order payment successful - Creating order and sending email',
+                                );
 
                                 if (statusCheckInterval) {
                                     clearInterval(statusCheckInterval);
@@ -397,218 +424,154 @@ const CheckoutPageContent = () => {
 
                                 try {
                                     const storedPaymentInfo = JSON.parse(
-                                        localStorage.getItem('pending_zaloPay_payment') || '{}',
+                                        localStorage.getItem('pending_group_zaloPay_payment') || '{}',
                                     );
-                                    const storedOrderData = storedPaymentInfo.cartState?.orderData || orderData;
-                                    const storedCustomerInfo = storedPaymentInfo.cartState?.customerInfo;
+                                    const storedOrderData = storedPaymentInfo.paymentState?.orderData || orderData;
+                                    const storedCustomerInfo = storedPaymentInfo.paymentState?.customerInfo;
+                                    const storedGroupToken = storedPaymentInfo.paymentState?.groupToken || groupToken;
 
-                                    const orderResponse = await fetch('https://smartbook.io.vn/api/orders', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            Authorization: `Bearer ${token}`,
+                                    const orderResponse = await fetch(
+                                        `http://localhost:8000/api/group-orders/${storedGroupToken}/checkout`,
+                                        {
+                                            method: 'POST',
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                Authorization: `Bearer ${token}`,
+                                            },
+                                            body: JSON.stringify(storedOrderData),
                                         },
-                                        body: JSON.stringify(storedOrderData),
-                                    });
+                                    );
 
                                     const orderResult = await orderResponse.json();
 
                                     if (!orderResponse.ok || !orderResult.success) {
                                         throw new Error(
                                             orderResult.message ||
-                                                'Không thể tạo đơn hàng sau khi thanh toán thành công',
+                                                'Không thể tạo đơn hàng nhóm sau khi thanh toán thành công',
                                         );
                                     }
 
-                                    console.log('🛒 [ZALOPAY] Order created successfully - Sending email');
+                                    console.log('🛒 [ZALOPAY] Group order created successfully - Sending email');
 
-                                    // Gửi email đặt hàng thành công cho ZaloPay
+                                    // Send success email for ZaloPay group order
                                     if (storedCustomerInfo) {
-                                        await sendOrderSuccessEmail(orderResult, storedCustomerInfo);
+                                        await sendGroupOrderSuccessEmail(orderResult, storedCustomerInfo);
                                     }
 
-                                    if (clearCart) {
-                                        await clearCart();
-                                    }
-
-                                    localStorage.removeItem('pending_zaloPay_payment');
+                                    localStorage.removeItem('pending_group_zaloPay_payment');
                                     localStorage.removeItem('app_trans_id');
 
                                     toast.success(
-                                        'ZaloPay: Thanh toán thành công! Đơn hàng đã được tạo và email đã được gửi.',
+                                        'ZaloPay: Thanh toán thành công! Đơn hàng nhóm đã được tạo và email đã được gửi.',
                                     );
                                     window.updateCartCount?.();
                                     window.dispatchEvent(new CustomEvent('cartUpdated'));
                                     form.resetFields();
 
-                                    router.push('/order-success');
+                                    router.push(`/group-orders/${storedGroupToken}?success=true`);
                                 } catch (orderError) {
                                     console.error(
-                                        '🛒 [ZALOPAY] Error creating order after successful payment:',
+                                        '🛒 [ZALOPAY] Error creating group order after successful payment:',
                                         orderError,
                                     );
                                     toast.error(
-                                        'Thanh toán thành công nhưng không thể tạo đơn hàng. Vui lòng liên hệ hỗ trợ.',
+                                        'Thanh toán thành công nhưng không thể tạo đơn hàng nhóm. Vui lòng liên hệ hỗ trợ.',
                                     );
-                                    localStorage.removeItem('pending_zaloPay_payment');
+                                    localStorage.removeItem('pending_group_zaloPay_payment');
                                     localStorage.removeItem('app_trans_id');
                                 }
                             } else if (data.return_code === 2) {
-                                console.log('🛒 [ZALOPAY] Payment failed - Cart preserved');
+                                console.log('🛒 [ZALOPAY] Group order payment failed');
 
                                 if (statusCheckInterval) {
                                     clearInterval(statusCheckInterval);
                                 }
 
                                 toast.error('ZaloPay: Thanh toán thất bại. Vui lòng thử lại.');
-                                localStorage.removeItem('pending_zaloPay_payment');
+                                localStorage.removeItem('pending_group_zaloPay_payment');
                                 localStorage.removeItem('app_trans_id');
                             } else if (data.return_code === 3) {
-                                console.log('🛒 [ZALOPAY] Payment pending - Cart preserved');
+                                console.log('🛒 [ZALOPAY] Group order payment pending');
 
                                 if (checkAttempts >= maxAttempts) {
                                     if (statusCheckInterval) {
                                         clearInterval(statusCheckInterval);
                                     }
                                     toast.info('ZaloPay: Giao dịch chưa hoàn thành. Vui lòng kiểm tra lại sau.');
-                                    router.push('/order-status');
                                 }
                             }
                         } catch (checkErr) {
-                            console.error('🛒 [ZALOPAY] Error checking payment status:', checkErr);
+                            console.error('🛒 [ZALOPAY] Error checking group order payment status:', checkErr);
 
                             if (checkAttempts >= maxAttempts) {
                                 if (statusCheckInterval) {
                                     clearInterval(statusCheckInterval);
                                 }
                                 toast.error('Không thể kiểm tra trạng thái thanh toán. Vui lòng liên hệ hỗ trợ.');
-                                router.push('/order-status');
                             }
                         }
                     };
 
                     await checkPaymentStatus();
                     statusCheckInterval = setInterval(checkPaymentStatus, checkInterval);
-
-                    setTimeout(() => {
-                        // Clear progress toast after max time
-                    }, maxAttempts * checkInterval);
                 } catch (zaloPayError) {
-                    console.error('🛒 [ZALOPAY] Error creating ZaloPay order:', zaloPayError);
+                    console.error('🛒 [ZALOPAY] Error creating ZaloPay order for group:', zaloPayError);
                     message.error('Lỗi khi tạo thanh toán ZaloPay. Vui lòng thử lại.');
-                    localStorage.removeItem('pending_zaloPay_payment');
+                    localStorage.removeItem('pending_group_zaloPay_payment');
                     return;
                 }
             }
         } catch (error) {
-            console.error('🛒 [ERROR] General error:', error);
-            message.error(error.message || 'Đặt hàng thất bại. Vui lòng thử lại!');
-            toast.error(error.message || 'Đặt hàng thất bại. Vui lòng thử lại!');
+            console.error('🛒 [ERROR] Group order error:', error);
+            message.error(error.message || 'Checkout thất bại. Vui lòng thử lại!');
+            toast.error(error.message || 'Checkout thất bại. Vui lòng thử lại!');
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    useEffect(() => {
-        return () => {
-            const intervals = window.paymentStatusIntervals || [];
-            intervals.forEach((interval) => clearInterval(interval));
-            window.paymentStatusIntervals = [];
-        };
-    }, []);
+    // Get all items from group order
+    const getAllGroupItems = () => {
+        if (!groupOrderData || !groupOrderData.by_member) return [];
 
-    useEffect(() => {
-        const handleWindowFocus = async () => {
-            const pendingPayment = localStorage.getItem('pending_zaloPay_payment');
-
-            if (pendingPayment) {
-                console.log('🛒 [ZALOPAY] Window focused - Checking payment status');
-                const paymentInfo = JSON.parse(pendingPayment);
-                const appTransId = paymentInfo.app_trans_id;
-
-                if (appTransId) {
-                    try {
-                        const statusResponse = await axios.post(
-                            'https://smartbook.io.vn/api/orders/zalopay/check-status',
-                            {
-                                app_trans_id: appTransId,
-                            },
-                        );
-
-                        const data = statusResponse.data;
-
-                        if (data.return_code === 1) {
-                            console.log(
-                                '🛒 [ZALOPAY] Payment completed while away - Processing order and sending email',
-                            );
-
-                            // Xử lý đơn hàng và gửi email
-                            try {
-                                const storedOrderData = paymentInfo.cartState?.orderData;
-                                const storedCustomerInfo = paymentInfo.cartState?.customerInfo;
-
-                                if (storedOrderData && storedCustomerInfo) {
-                                    const token = localStorage.getItem('token');
-                                    const orderResponse = await fetch('https://smartbook.io.vn/api/orders', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            Authorization: `Bearer ${token}`,
-                                        },
-                                        body: JSON.stringify(storedOrderData),
-                                    });
-
-                                    const orderResult = await orderResponse.json();
-
-                                    if (orderResponse.ok && orderResult.success) {
-                                        // Gửi email đặt hàng thành công
-                                        await sendOrderSuccessEmail(orderResult, storedCustomerInfo);
-
-                                        toast.success(
-                                            'Thanh toán đã hoàn thành! Đơn hàng đã được tạo và email đã được gửi.',
-                                        );
-
-                                        // Clear cart and redirect
-                                        if (clearCart) {
-                                            await clearCart();
-                                        }
-                                        localStorage.removeItem('pending_zaloPay_payment');
-                                        localStorage.removeItem('app_trans_id');
-                                        router.push('/order-success');
-                                    }
-                                }
-                            } catch (error) {
-                                console.error('🛒 [ZALOPAY] Error processing order on focus:', error);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('🛒 [ZALOPAY] Error checking status on focus:', error);
-                    }
-                }
+        const allItems = [];
+        Object.values(groupOrderData.by_member).forEach((member) => {
+            if (member.items) {
+                member.items.forEach((item) => allItems.push(item));
             }
-        };
+        });
+        return allItems;
+    };
 
-        window.addEventListener('focus', handleWindowFocus);
+    const groupItems = getAllGroupItems();
 
-        return () => {
-            window.removeEventListener('focus', handleWindowFocus);
-        };
-    }, []);
+    if (loading) {
+        return (
+            <div
+                style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    minHeight: '400px',
+                }}
+            >
+                <Spin size="large" />
+            </div>
+        );
+    }
 
-    if (!selectedCartItems || selectedCartItems.length === 0) {
+    if (!groupOrderData) {
         return (
             <div className="checkout-container">
                 <div style={{ textAlign: 'center', padding: '50px', minHeight: '400px' }}>
-                    <Title level={3}>Giỏ hàng trống</Title>
-                    <Text>Vui lòng thêm sản phẩm vào giỏ hàng để thanh toán.</Text>
+                    <Title level={3}>Không tìm thấy giỏ hàng nhóm</Title>
+                    <Text>Vui lòng kiểm tra lại đường link hoặc liên hệ với chủ nhóm.</Text>
                 </div>
             </div>
         );
     }
 
-    const totalAmount = Number(checkoutData?.totalAmount || 0);
-    const fee = Number(shippingFee || 0);
-    const totalWithShipping = totalAmount + fee;
+    const totalWithShipping = subtotal + shippingFee;
 
     return (
         <div className="checkout-container">
@@ -617,8 +580,46 @@ const CheckoutPageContent = () => {
                     <Col xs={24} lg={16}>
                         <div className="checkout-form-section">
                             <Title level={3} className="section-title">
-                                Xác nhận thanh toán
+                                <UsergroupAddOutlined /> Checkout Giỏ Hàng Nhóm
                             </Title>
+
+                            {/* Group Info Card */}
+                            <Card className="form-card">
+                                <Title level={4} className="card-title">
+                                    <UsergroupAddOutlined /> Thông tin nhóm
+                                </Title>
+                                <Alert
+                                    message="Đơn hàng nhóm"
+                                    description={`Bạn đang checkout cho nhóm có ${
+                                        groupOrderData.members?.length || 0
+                                    } thành viên. Tất cả sản phẩm sẽ được giao đến một địa chỉ duy nhất.`}
+                                    type="info"
+                                    showIcon
+                                    style={{ marginBottom: 16 }}
+                                />
+                                <Row gutter={16}>
+                                    <Col span={12}>
+                                        <Text strong>Thành viên: </Text>
+                                        <Tag color="blue">
+                                            <UserOutlined /> {groupOrderData.members?.length || 0} người
+                                        </Tag>
+                                    </Col>
+                                    <Col span={12}>
+                                        <Text strong>Trạng thái: </Text>
+                                        <Tag color={groupOrderData.status === 'open' ? 'green' : 'orange'}>
+                                            {groupOrderData.status === 'open' ? 'Đang mở' : groupOrderData.status}
+                                        </Tag>
+                                    </Col>
+                                </Row>
+                                {groupOrderData.expires_at && (
+                                    <div style={{ marginTop: 8 }}>
+                                        <Text type="secondary">
+                                            <ClockCircleOutlined /> Hết hạn:{' '}
+                                            {new Date(groupOrderData.expires_at).toLocaleString('vi-VN')}
+                                        </Text>
+                                    </div>
+                                )}
+                            </Card>
 
                             <Card className="form-card">
                                 <Title level={4} className="card-title">
@@ -752,34 +753,71 @@ const CheckoutPageContent = () => {
 
                             <Card className="form-card">
                                 <Title level={4} className="card-title">
-                                    <DownloadOutlined /> Sản phẩm ({selectedCartItems.length} sản phẩm)
+                                    <DownloadOutlined /> Sản phẩm nhóm ({groupItems.length} sản phẩm)
                                 </Title>
-                                <div className="product-section">
-                                    {selectedCartItems.map((item) => (
-                                        <div key={item.id} className="product-item">
-                                            <Image
-                                                src={item.book.cover_image || '/api/placeholder/80/100'}
-                                                alt={item.book.title}
-                                                width={60}
-                                                height={80}
-                                                className="product-image"
-                                                fallback="/api/placeholder/80/100"
-                                            />
-                                            <div className="product-details">
-                                                <Text strong className="product-name">
-                                                    {item.book.title}
-                                                </Text>
-                                                <Text className="product-author">{item.book.author.name}</Text>
-                                                <Text className="product-quantity">Số lượng: {item.quantity}</Text>
+
+                                {/* Display members and their items */}
+                                {groupOrderData.members &&
+                                    groupOrderData.members.map((member) => {
+                                        const memberItems = groupOrderData.by_member[member.id]?.items || [];
+                                        const memberSubtotal = groupOrderData.by_member[member.id]?.subtotal || 0;
+
+                                        return (
+                                            <div
+                                                key={member.id}
+                                                style={{
+                                                    marginBottom: 20,
+                                                    border: '1px solid #f0f0f0',
+                                                    borderRadius: 8,
+                                                    padding: 16,
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        marginBottom: 12,
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <Text strong>{member.name}</Text>
+                                                        {member.role === 'owner' && (
+                                                            <Tag color="gold" style={{ marginLeft: 8 }}>
+                                                                Chủ nhóm
+                                                            </Tag>
+                                                        )}
+                                                    </div>
+                                                    <Text strong style={{ color: '#52c41a' }}>
+                                                        {memberSubtotal.toLocaleString('vi-VN')}đ
+                                                    </Text>
+                                                </div>
+
+                                                {memberItems.map((item) => (
+                                                    <div
+                                                        key={item.id}
+                                                        className="product-item"
+                                                        style={{ marginBottom: 8 }}
+                                                    >
+                                                        <div className="product-details">
+                                                            <Text strong className="product-name">
+                                                                {item.title}
+                                                            </Text>
+                                                            <Text className="product-quantity">
+                                                                Số lượng: {item.qty}
+                                                            </Text>
+                                                        </div>
+                                                        <div className="product-price">
+                                                            <Text strong>
+                                                                {parseFloat(item.price).toLocaleString('vi-VN')}đ
+                                                            </Text>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
-                                            <div className="product-price">
-                                                <Text strong>
-                                                    {parseFloat(item.book.price).toLocaleString('vi-VN')}đ
-                                                </Text>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
+                                        );
+                                    })}
+
                                 <div className="shipping-info">
                                     <Row>
                                         <Col span={12}>
@@ -819,21 +857,6 @@ const CheckoutPageContent = () => {
                                         )}
                                     </div>
                                 </div>
-
-                                <div className="total-section">
-                                    <Row justify="space-between" align="middle">
-                                        <Col>
-                                            <Text strong className="total-label">
-                                                Tổng số tiền
-                                            </Text>
-                                        </Col>
-                                        <Col>
-                                            <Text strong className="total-amount">
-                                                {total.toLocaleString()}đ
-                                            </Text>
-                                        </Col>
-                                    </Row>
-                                </div>
                             </Card>
 
                             <Card className="form-card">
@@ -852,7 +875,7 @@ const CheckoutPageContent = () => {
                                                 <div>
                                                     <Text strong>Thanh toán khi nhận hàng</Text>
                                                     <br />
-                                                    <Text className="payment-desc">Thanh toán khi nhận hàng</Text>
+                                                    <Text className="payment-desc">Thanh toán khi nhận hàng (COD)</Text>
                                                 </div>
                                             </div>
                                         </Radio>
@@ -878,40 +901,22 @@ const CheckoutPageContent = () => {
                         <div className="order-summary-section">
                             <Card className="summary-card">
                                 <Title level={4} className="card-title">
-                                    Thông tin thanh toán
+                                    <UsergroupAddOutlined /> Thông tin thanh toán nhóm
                                 </Title>
 
                                 <div className="summary-row">
-                                    <Text>Số sản phẩm</Text>
-                                    <Text>
-                                        {selectedCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0)} sản
-                                        phẩm
-                                    </Text>
+                                    <Text>Số thành viên</Text>
+                                    <Text>{groupOrderData.members?.length || 0} người</Text>
+                                </div>
+
+                                <div className="summary-row">
+                                    <Text>Tổng sản phẩm</Text>
+                                    <Text>{groupItems.reduce((sum, item) => sum + (item.qty || 1), 0)} sản phẩm</Text>
                                 </div>
 
                                 <div className="summary-row">
                                     <Text>Tổng tiền hàng</Text>
-                                    <Text>{subtotal.toLocaleString()}đ</Text>
-                                </div>
-
-                                <div className="summary-row">
-                                    <div
-                                        style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            marginBottom: '8px',
-                                        }}
-                                    >
-                                        <Text>Tạm tính:</Text>
-                                        <Text>{checkoutData?.totalAmount?.toLocaleString('vi-VN')}đ</Text>
-                                    </div>
-                                    <Text>Voucher </Text>
-                                    <Text>{checkoutData?.totalDiscount?.toLocaleString('vi-VN')}đ</Text>
-                                </div>
-
-                                <div className="summary-row">
-                                    <Text>Giảm giá vận chuyển</Text>
-                                    <Text>0đ</Text>
+                                    <Text>{subtotal.toLocaleString('vi-VN')}đ</Text>
                                 </div>
 
                                 <div className="summary-row">
@@ -932,12 +937,17 @@ const CheckoutPageContent = () => {
                                 <div className="summary-row total-row">
                                     <Text strong>Tổng cộng</Text>
                                     <Text strong className="total-price">
-                                        {totalWithShipping.toLocaleString('vi-VN', {
-                                            style: 'currency',
-                                            currency: 'VND',
-                                        })}
+                                        {totalWithShipping.toLocaleString('vi-VN')}đ
                                     </Text>
                                 </div>
+
+                                <Alert
+                                    message="Lưu ý đơn hàng nhóm"
+                                    description="Đây là đơn hàng nhóm. Tất cả sản phẩm sẽ được giao đến một địa chỉ duy nhất. Vui lòng phối hợp với các thành viên khác để nhận hàng."
+                                    type="warning"
+                                    showIcon
+                                    style={{ marginBottom: 16, fontSize: 12 }}
+                                />
 
                                 <Button
                                     type="primary"
@@ -946,10 +956,45 @@ const CheckoutPageContent = () => {
                                     block
                                     loading={isSubmitting}
                                     onClick={() => form.submit()}
-                                    disabled={selectedCartItems.length === 0}
+                                    disabled={!groupOrderData || groupItems.length === 0}
                                 >
-                                    {isSubmitting ? 'Đang xử lý...' : 'Đặt hàng'}
+                                    {isSubmitting ? 'Đang xử lý...' : 'Checkout Giỏ Hàng Nhóm'}
                                 </Button>
+                            </Card>
+
+                            {/* Group members info */}
+                            <Card className="summary-card" style={{ marginTop: 16 }}>
+                                <Title level={5} className="card-title">
+                                    <UserOutlined /> Thành viên nhóm
+                                </Title>
+                                {groupOrderData.members &&
+                                    groupOrderData.members.map((member) => (
+                                        <div
+                                            key={member.id}
+                                            style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                padding: '8px 0',
+                                                borderBottom: '1px solid #f0f0f0',
+                                            }}
+                                        >
+                                            <div>
+                                                <Text strong>{member.name}</Text>
+                                                {member.role === 'owner' && (
+                                                    <Tag color="gold" size="small" style={{ marginLeft: 4 }}>
+                                                        Chủ nhóm
+                                                    </Tag>
+                                                )}
+                                            </div>
+                                            <Text style={{ color: '#52c41a' }}>
+                                                {(groupOrderData.by_member[member.id]?.subtotal || 0).toLocaleString(
+                                                    'vi-VN',
+                                                )}
+                                                đ
+                                            </Text>
+                                        </div>
+                                    ))}
                             </Card>
                         </div>
                     </Col>
@@ -959,4 +1004,4 @@ const CheckoutPageContent = () => {
     );
 };
 
-export default CheckoutPageContent;
+export default GroupCheckoutPageContent;

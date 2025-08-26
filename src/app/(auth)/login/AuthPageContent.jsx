@@ -11,7 +11,7 @@ import CustomNotification from './Notifi';
 
 const { Title, Text } = Typography;
 
-// 🔥 Component xử lý Google callback
+/* ================= Google Callback ================= */
 const GoogleCallback = () => {
     const router = useRouter();
     const [processing, setProcessing] = useState(true);
@@ -33,7 +33,8 @@ const GoogleCallback = () => {
                     localStorage.setItem('token', token);
                     message.success('🎉 Đăng nhập Google thành công!');
                     setTimeout(() => {
-                        window.location.href = 'localhost:3000/';
+                        // quay về home đúng protocol
+                        window.location.href = '/';
                     }, 1500);
                 } else {
                     message.error('Không nhận được token từ Google!');
@@ -69,7 +70,8 @@ const GoogleCallback = () => {
     }
 
     return null;
-}
+};
+
 const handleGoogleLogin = () => {
     localStorage.setItem('redirect_after_login', '/');
     const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3000';
@@ -79,6 +81,7 @@ const handleGoogleLogin = () => {
     window.location.href = apiUrl;
 };
 
+/* ================= Main Component ================= */
 export default function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [showForgot, setShowForgot] = useState(false);
@@ -98,6 +101,7 @@ export default function AuthPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const otpInputRefs = useRef([]);
+    const submittingRef = useRef(false); // chống double-submit
 
     const isGoogleCallback = searchParams.get('access_token') || searchParams.get('error');
 
@@ -110,28 +114,38 @@ export default function AuthPage() {
     useEffect(() => {
         let timer;
         if (countdown > 0) {
-            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+            timer = setTimeout(() => setCountdown((c) => c - 1), 1000);
         }
         return () => clearTimeout(timer);
     }, [countdown]);
 
+    useEffect(() => setMounted(true), []);
+
     if (isGoogleCallback) return <GoogleCallback />;
 
+    /* ================= Submit ================= */
     const onFinish = async (values) => {
-        if (loading) return;
+        if (submittingRef.current) return;
+        submittingRef.current = true;
         setLoading(true);
         try {
             if (isLogin) {
                 const data = await apiLoginUser(values.email, values.password);
 
                 if (!data.email_verified) {
+                    // BE chịu trách nhiệm gửi OTP nếu cần
                     setOtpEmail(values.email);
                     setNotifContent({
                         message: '⚠️ Chưa xác thực email',
                         description: 'Vui lòng kiểm tra email và nhập mã OTP!',
                     });
                     setShowNotif(true);
-                    await handleSendOtp(values.email);
+
+                    // KHÔNG tự gửi OTP ở FE nữa
+                    // Dựa vào flag/resend_after từ BE nếu có:
+                    const waitSec =
+                        typeof data?.resend_after === 'number' && data.resend_after > 0 ? data.resend_after : 60;
+                    setCountdown(waitSec);
                     setShowOtp(true);
                 } else {
                     localStorage.setItem('token', data.access_token);
@@ -150,6 +164,8 @@ export default function AuthPage() {
                     values.password_confirmation,
                     values.phone,
                 );
+
+                // BE chịu trách nhiệm gửi OTP sau khi đăng ký
                 setOtpEmail(values.email);
                 setNotifContent({
                     message: '🎉 Đăng ký thành công!',
@@ -157,12 +173,12 @@ export default function AuthPage() {
                 });
                 setShowNotif(true);
 
-                if (!registerResult?.otp_sent && !registerResult?.otp_already_sent) {
-                    await handleSendOtp(values.email);
-                } else {
-                    setCountdown(60);
-                }
-
+                // KHÔNG tự gửi OTP ở FE nữa — chỉ đọc flag từ server
+                const waitSec =
+                    typeof registerResult?.resend_after === 'number' && registerResult.resend_after > 0
+                        ? registerResult.resend_after
+                        : 60;
+                setCountdown(waitSec);
                 setShowOtp(true);
             }
         } catch (err) {
@@ -178,33 +194,37 @@ export default function AuthPage() {
             setShowNotif(true);
         } finally {
             setLoading(false);
+            submittingRef.current = false;
         }
     };
 
-    const handleSendOtp = async (email) => {
-        if (otpSent || sendOtpLoading) return;
+    /* ================= Resend OTP (user-click only) ================= */
+    const handleResendOtpClick = async () => {
+        if (countdown > 0 || otpSent || sendOtpLoading) return;
         setSendOtpLoading(true);
         setOtpSent(true);
         try {
-            await apiSendOtp(email);
+            // Resend do user bấm — vẫn gọi BE qua API resend
+            await apiSendOtp(otpEmail);
             setNotifContent({
-                message: '📤 OTP đã gửi',
-                description: 'Vui lòng kiểm tra email để lấy mã OTP.',
+                message: '📤 OTP đã gửi lại',
+                description: 'Kiểm tra email để lấy mã mới.',
             });
             setShowNotif(true);
             setCountdown(60);
         } catch (err) {
             setNotifContent({
-                message: '❌ Không thể gửi OTP',
-                description: err.message || 'Vui lòng thử lại!',
+                message: '❌ Không thể gửi lại OTP',
+                description: err?.message || 'Vui lòng thử lại!',
             });
             setShowNotif(true);
+            setOtpSent(false); // cho phép thử lại khi lỗi
         } finally {
             setSendOtpLoading(false);
-            setTimeout(() => setOtpSent(false), 3000);
         }
     };
 
+    /* ================= OTP Input ================= */
     const handleOtpChange = (index, value) => {
         if (!/^\d?$/.test(value)) return;
         const newOtpValues = [...otpValues];
@@ -228,7 +248,7 @@ export default function AuthPage() {
             navigator.clipboard.readText().then((text) => {
                 const numbers = text.replace(/\D/g, '').slice(0, 6);
                 if (numbers.length === 6) {
-                    const newOtp = numbers?.split('');
+                    const newOtp = numbers.split('');
                     setOtpValues(newOtp);
                     otpInputRefs.current[5]?.focus();
                 }
@@ -236,6 +256,7 @@ export default function AuthPage() {
         }
     };
 
+    /* ================= Verify OTP ================= */
     const handleVerifyOtp = async () => {
         const otpCode = otpValues.join('');
         if (otpCode.length !== 6) {
@@ -252,7 +273,7 @@ export default function AuthPage() {
             const result = await apiVerifyOtp(otpEmail, otpCode);
             setNotifContent({
                 message: '✅ Xác thực thành công!',
-                description: `${result.message}\nChào mừng ${result.user.name}!`,
+                description: `${result.message}\nChào mừng ${result.user?.name || ''}!`,
             });
             setShowNotif(true);
             setShowOtp(false);
@@ -266,7 +287,7 @@ export default function AuthPage() {
         } catch (err) {
             setNotifContent({
                 message: '❌ Xác thực thất bại!',
-                description: err.message || 'OTP không đúng!',
+                description: err?.message || 'OTP không đúng!',
             });
             setShowNotif(true);
         } finally {
@@ -274,36 +295,11 @@ export default function AuthPage() {
         }
     };
 
-    const handleResendOtp = () => {
-        if (countdown > 0 || otpSent) return;
-        handleSendOtp(otpEmail);
-    };
-
+    /* ================= Helpers ================= */
     const resetOtpModal = () => {
         setOtpValues(['', '', '', '', '', '']);
         setCountdown(0);
         setOtpSent(false);
-    };
-
-    const handleForgotPassword = async (values) => {
-        setForgotLoading(true);
-        try {
-            await apiForgotPassword(values.email);
-            setNotifContent({
-                message: '📧 Gửi thành công',
-                description: 'Hãy kiểm tra email để đặt lại mật khẩu.',
-            });
-            setShowNotif(true);
-            setShowForgot(false);
-        } catch (err) {
-            setNotifContent({
-                message: '❌ Gửi thất bại',
-                description: 'Email không tồn tại!',
-            });
-            setShowNotif(true);
-        } finally {
-            setForgotLoading(false);
-        }
     };
 
     const switchMode = () => {
@@ -312,9 +308,7 @@ export default function AuthPage() {
         router.push(`/login?mode=${newMode}`);
     };
 
-    useEffect(() => setMounted(true), []);
-
-    // 👇🏻 phần JSX giữ nguyên (bạn có thể copy từ phần return trong file cũ)
+    /* ================= Render ================= */
     return (
         <div className="auth-container">
             <div className="floating-shapes">
@@ -485,7 +479,7 @@ export default function AuthPage() {
                 centered
                 className="modal-content"
             >
-                <Form layout="vertical" onFinish={handleForgotPassword} size="large">
+                <Form layout="vertical" onFinish={apiForgotPasswordSubmit} size="large">
                     <Form.Item
                         name="email"
                         rules={[
@@ -567,7 +561,7 @@ export default function AuthPage() {
 
                     <Button
                         type="link"
-                        onClick={handleResendOtp}
+                        onClick={handleResendOtpClick}
                         loading={sendOtpLoading}
                         disabled={countdown > 0 || otpSent}
                         style={{ padding: 0 }}
@@ -586,4 +580,28 @@ export default function AuthPage() {
             )}
         </div>
     );
+
+    /* nested function to keep lints happy */
+    function apiForgotPasswordSubmit(values) {
+        (async () => {
+            setForgotLoading(true);
+            try {
+                await apiForgotPassword(values.email);
+                setNotifContent({
+                    message: '📧 Gửi thành công',
+                    description: 'Hãy kiểm tra email để đặt lại mật khẩu.',
+                });
+                setShowNotif(true);
+                setShowForgot(false);
+            } catch (err) {
+                setNotifContent({
+                    message: '❌ Gửi thất bại',
+                    description: 'Email không tồn tại!',
+                });
+                setShowNotif(true);
+            } finally {
+                setForgotLoading(false);
+            }
+        })();
+    }
 }

@@ -1,751 +1,557 @@
 'use client';
 
-import { ArrowUpOutlined, AudioOutlined, BookOutlined, TeamOutlined, TrophyOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import { Modal, Input, Button, Spin } from 'antd';
-import { Card, Col, Row, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import {
+    BookOutlined,
+    BulbOutlined,
+    LeftOutlined,
+    PauseCircleOutlined,
+    PlayCircleOutlined,
+    RightOutlined,
+    RocketOutlined,
+} from '@ant-design/icons';
+import { Button, Card, Col, Row, Spin, Tag, Typography, message } from 'antd';
+import { gsap } from 'gsap';
+import { useEffect, useRef, useState } from 'react';
+import * as THREE from 'three';
 
-const { Title, Paragraph, Text } = Typography;
+/**
+ * SmartBookLanding3D — World of Books (No fake data)
+ * - Lấy sách thật từ API: http://localhost:8000/api/books/search?limit=500
+ * - Map cover_image vào bìa 3D (TextureLoader)
+ * - Phân trang 24 quyển/lần (Prev/Next)
+ * - Click nền: di chuyển camera theo path; Click sách: zoom cận
+ * - Day/Night + Fog + fireflies + vật liệu Physical
+ */
+export default function SmartBookLanding3D() {
+    const mountRef = useRef(null);
+    const threeRef = useRef({});
 
-export default function SmartBookLanding() {
-    const [qaVisible, setQaVisible] = useState(false);
-    const [question, setQuestion] = useState('');
-    const [answer, setAnswer] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [isNight, setIsNight] = useState(false);
+    const [hoverInfo, setHoverInfo] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-    // Danh sách FAQ mẫu
-    const faqList = [
-        {
-            q: 'SmartBook là gì',
-            a: 'SmartBook là nền tảng giúp bạn tìm kiếm, đọc và quản lý sách mọi lúc, mọi nơi.'
-        },
-        {
-            q: 'mua sách',
-            a: 'Bạn có thể tìm kiếm sách, thêm vào giỏ hàng và thanh toán trực tuyến hoặc nhận sách giấy tại nhà.'
-        },
-        {
-            q: 'sách nói',
-            a: 'SmartBook cung cấp cả sách giấy, eBook và AudioBook.'
-        },
-        {
-            q: 'đọc sách trên điện thoại',
-            a: 'Bạn có thể đọc sách trên mọi thiết bị: điện thoại, máy tính bảng, laptop.'
-        },
-        {
-            q: 'tạo tài khoản',
-            a: 'Bạn có thể đăng ký tài khoản miễn phí để lưu trữ sách yêu thích và theo dõi lịch sử đọc.'
-        },
-        {
-            q: 'sách có bản quyền không',
-            a: 'Tất cả sách trên SmartBook đều được mua bản quyền hợp pháp từ nhà xuất bản và tác giả.'
-        },
-        {
-            q: 'cách thanh toán',
-            a: 'Chúng tôi hỗ trợ nhiều phương thức thanh toán như thẻ tín dụng, chuyển khoản ngân hàng, ví điện tử.'
-        },
-        {
-            q: 'chính sách hoàn trả',
-            a: 'Bạn có thể hoàn trả sách trong vòng 7 ngày nếu không hài lòng với chất lượng sản phẩm.'
-        },
-        {
-            q: 'cách tìm sách',
-            a: 'Bạn có thể tìm sách theo tên, tác giả, thể loại hoặc từ khóa trong thanh tìm kiếm của ứng dụng.'
-        },
-        {
-            q: 'có cập nhật sách mới không',
-            a: 'Thư viện SmartBook được cập nhật liên tục mỗi tuần với nhiều đầu sách mới, đa dạng thể loại.'
-        },
-    ];
+    const [books, setBooks] = useState([]);
+    const [page, setPage] = useState(1);
+    const pageSize = 24;
 
-    const handleQaOpen = () => setQaVisible(true);
-    const handleQaClose = () => {
-        setQaVisible(false);
-        setQuestion('');
-        setAnswer('');
-    };
-    const handleAsk = () => {
-        if (!question.trim()) return;
-        setLoading(true);
-        setTimeout(() => {
-            // Tìm câu trả lời gần đúng nhất
-            const qLower = question.toLowerCase();
-            const found = faqList.find(faq => qLower.includes(faq.q.toLowerCase()));
-            setAnswer(found ? found.a : 'Không tìm thấy câu trả lời phù hợp.');
-            setLoading(false);
-        }, 600);
-    };
-    const [scrollTop, setScrollTop] = useState(false);
+    const { Title, Paragraph } = Typography;
 
+    // ===== Fetch API (no fake data) =====
     useEffect(() => {
-        const handleScroll = () => {
-            setScrollTop(window.scrollY > 300);
+        let aborted = false;
+        (async () => {
+            try {
+                setLoading(true);
+                const res = await fetch('http://localhost:8000/api/books/search?limit=500');
+                const json = await res.json();
+                const arr = (json?.data || []).map((b) => ({
+                    id: b.id,
+                    title: b.title,
+                    author: b?.author?.name || '—',
+                    cover: b.cover_image,
+                }));
+                if (!aborted) setBooks(arr);
+            } catch (e) {
+                console.error(e);
+                message.error('Không gọi được API sách. Kiểm tra backend/CORS.');
+            } finally {
+                if (!aborted) setLoading(false);
+            }
+        })();
+        return () => {
+            aborted = true;
         };
-
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
-    const handleScrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-    const timelineData = [
-        {
-            color: '#FF6B35',
-            title: 'Vượt hơn cả phần bản',
-            description:
-                'Tháng 8/2024: SmartBook đạt chứng chỉ Vàng của thế giới Đọc Nam Á với kỳ thành mình phân chia chính điều kiện số 1.',
-            year: '2024',
-        },
-        {
-            color: '#E74C3C',
-            title: 'Thành lập Công ty Cổ phần SmartBook',
-            description:
-                '04/2023: Công ty Cổ phần SmartBook chính thức được thành lập sau tám tháng xin phép và thành SmartBook hiện có 1 triệu người dùng. 10/2023: SmartBook ra mắt Thương mại điện tử và 12/2023: SmartBook phối hợp với các nhà sách tên lớn để mở kho sách với hàng nghìn đầu sách mới.',
-            year: '2023',
-        },
-        {
-            color: '#8E44AD',
-            title: 'Sự hỗ trợ nhiều cấp độ người dùng tăm nhìn MKH',
-            description:
-                'Xây dựng ứng dụng SmartBook với cộng đồng người yêu thích đọc sách, lên 3.5 triệu độc giả với hàng 5 triệu người dùng hoạt động tích cực hàng tháng dự kiến.',
-            year: '2022',
-        },
-        {
-            color: '#3498DB',
-            title: 'Chính thức phát hành ứng dụng đọc sách trên các nền tảng di động',
-            description:
-                'SmartBook chính thức trở thành đối tác chính thức của Việt Nam cho China Literature (Tập đoàn cung cấp nội dung số lớn nhất Trung Quốc).',
-            year: '2021',
-        },
-        {
-            color: '#1ABC9C',
-            title: 'Thử nghiệm Thư viện Ebook đầu tiên tại Việt Nam với 1.5 triệu sách',
-            description:
-                '7/2020: SmartBook hợp với NXB Giáo Trung Ương Tân và mở rộng kế hoạch chuyển ngành 10/2020: Thư viện Ebook SmartBook có cơ sở 16,000 Ebooks, 1.5 triệu độc giả mỗi sách, tại hơn 2 triệu cuốn sách trên cùng dương',
-            year: '2020',
-        },
-        {
-            color: '#27AE60',
-            title: 'SmartBook ra mắt thân thiện xuất bản điện tử SmartBook',
-            description:
-                'Cung cấp giải pháp sách Woocriff toàn cao, mật độ âm chính dạng, website 6/2019: SmartBook hợp với các nhà sách Alphanbooks & Saonbooks ra mắt các ứng dụng thích thích thương mại điện tử truyền thống',
-            year: '2019',
-        },
-        {
-            color: '#F39C12',
-            title: 'Ra mắt thân thương xuất bản điện tử SmartBook',
-            description:
-                'Xây dựng website, ứng dụng SmartBook - Nền tảng Ebook đầu tiên tại Việt Nam với cộng đồng người dùng yêu thích đọc Ebook với hơn 500,000 lượt xem.',
-            year: '2018',
-        },
-    ];
+    // ===== Three.js Init =====
+    useEffect(() => {
+        const mountEl = mountRef.current;
+        if (!mountEl) return;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf7fbff);
+        scene.fog = new THREE.Fog(0xf0f6ff, 18, 70);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setSize(mountEl.clientWidth, mountEl.clientHeight);
+        renderer.shadowMap.enabled = true;
+        mountEl.appendChild(renderer.domElement);
+
+        const camera = new THREE.PerspectiveCamera(60, mountEl.clientWidth / mountEl.clientHeight, 0.1, 2000);
+        camera.position.set(0, 3.2, 16);
+
+        // Lights
+        const hemi = new THREE.HemisphereLight(0xffffff, 0xbad5ff, 0.9);
+        scene.add(hemi);
+        const dir = new THREE.DirectionalLight(0xffffff, 1.15);
+        dir.position.set(10, 12, 8);
+        dir.castShadow = true;
+        dir.shadow.mapSize.set(1024, 1024);
+        scene.add(dir);
+
+        // Env for reflections
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        const rt = pmrem.fromScene(new THREE.Scene());
+        const envTex = rt.texture;
+
+        // Ground
+        const groundGeo = new THREE.PlaneGeometry(160, 160, 200, 200);
+        const pos = groundGeo.attributes.position;
+        for (let i = 0; i < pos.count; i++) {
+            const y = Math.sin(i * 0.27) * 0.15 + Math.cos(i * 0.19) * 0.12;
+            pos.setY(i, y);
+        }
+        pos.needsUpdate = true;
+        groundGeo.computeVertexNormals();
+        const groundMatDay = new THREE.MeshStandardMaterial({ color: 0xeaf3ff, roughness: 0.95 });
+        const groundMatNight = new THREE.MeshStandardMaterial({ color: 0x0b1220, roughness: 1.0 });
+        const ground = new THREE.Mesh(groundGeo, groundMatDay);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Groups
+        const bookGroup = new THREE.Group();
+        scene.add(bookGroup);
+
+        // Fireflies
+        const fireflies = new THREE.Group();
+        scene.add(fireflies);
+        const fireflyGeo = new THREE.SphereGeometry(0.035, 10, 10);
+        const fireflyMat = new THREE.MeshBasicMaterial({ color: 0xffd166 });
+        for (let i = 0; i < 120; i++) {
+            const f = new THREE.Mesh(fireflyGeo, fireflyMat);
+            f.position.set(
+                THREE.MathUtils.randFloatSpread(24),
+                1 + Math.random() * 4.2,
+                THREE.MathUtils.randFloatSpread(70) - 15,
+            );
+            fireflies.add(f);
+        }
+
+        // Path for camera travel
+        const curvePoints = [
+            new THREE.Vector3(0, 2.4, 20),
+            new THREE.Vector3(0, 2.2, 8),
+            new THREE.Vector3(0, 2.0, 0),
+            new THREE.Vector3(0.4, 2.2, -12),
+            new THREE.Vector3(-0.4, 2.4, -24),
+            new THREE.Vector3(0, 2.6, -38),
+            new THREE.Vector3(0.2, 2.8, -55),
+        ];
+        const path = new THREE.CatmullRomCurve3(curvePoints, false, 'catmullrom', 0.08);
+        const pathGeo = new THREE.TubeGeometry(path, 140, 0.05, 8, false);
+        const pathMatDay = new THREE.MeshStandardMaterial({ color: 0x1677ff, roughness: 0.6, metalness: 0.2 });
+        const pathMatNight = new THREE.MeshStandardMaterial({
+            color: 0x4f46e5,
+            roughness: 0.6,
+            metalness: 0.2,
+            emissive: 0x4338ca,
+            emissiveIntensity: 0.35,
+        });
+        const pathMesh = new THREE.Mesh(pathGeo, pathMatDay);
+        scene.add(pathMesh);
+
+        // Raycast
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        function onPointerMove(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        }
+        renderer.domElement.addEventListener('pointermove', onPointerMove);
+
+        // Timeline travel
+        const travel = { t: 0 };
+        const tl = gsap.timeline({ paused: true });
+        tl.to(travel, {
+            t: 1,
+            duration: 36,
+            ease: 'power2.inOut',
+            onUpdate: () => {
+                const p = path.getPointAt(travel.t);
+                const lookAt = path.getPointAt(Math.min(travel.t + 0.01, 1));
+                camera.position.copy(p);
+                camera.lookAt(lookAt);
+            },
+        });
+        function nudge(step = 0.08) {
+            gsap.to(travel, {
+                t: Math.min(1, travel.t + step),
+                duration: 0.8,
+                ease: 'power2.out',
+                onUpdate: tl.getChildren()[0]?.vars?.onUpdate,
+            });
+        }
+
+        // Night toggle
+        function setNight(n) {
+            if (n) {
+                scene.background = new THREE.Color(0x060816);
+                scene.fog = new THREE.Fog(0x060816, 12, 55);
+                ground.material = groundMatNight;
+                pathMesh.material = pathMatNight;
+                dir.intensity = 0.8;
+                hemi.intensity = 0.45;
+            } else {
+                scene.background = new THREE.Color(0xf7fbff);
+                scene.fog = new THREE.Fog(0xf0f6ff, 18, 70);
+                ground.material = groundMatDay;
+                pathMesh.material = pathMatDay;
+                dir.intensity = 1.15;
+                hemi.intensity = 0.9;
+            }
+        }
+        setNight(false);
+
+        // Loader for covers
+        const loader = new THREE.TextureLoader();
+        loader.crossOrigin = 'anonymous';
+
+        function clearBooks() {
+            while (bookGroup.children.length) {
+                const m = bookGroup.children.pop();
+                m.traverse((o) => {
+                    if (o.isMesh) {
+                        o.geometry?.dispose?.();
+                        o.material?.map?.dispose?.();
+                        if (Array.isArray(o.material)) o.material.forEach((mm) => mm.dispose?.());
+                        o.material?.dispose?.();
+                    }
+                });
+            }
+        }
+
+        function makeBook({ title, author, cover }, x, z) {
+            const w = THREE.MathUtils.randFloat(0.9, 1.2);
+            const h = THREE.MathUtils.randFloat(1.4, 2.0);
+            const d = THREE.MathUtils.randFloat(0.18, 0.32);
+            const geo = new THREE.BoxGeometry(w, h, d);
+
+            const coverMat = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                metalness: 0.05,
+                roughness: 0.65,
+                clearcoat: 0.6,
+                clearcoatRoughness: 0.35,
+                envMap: envTex,
+            });
+            const pagesMat = new THREE.MeshStandardMaterial({ color: 0xf7f7f2, roughness: 0.9 });
+            const spineMat = new THREE.MeshStandardMaterial({ color: 0x1f2a44, roughness: 0.6, metalness: 0.05 });
+            const mats = [pagesMat, pagesMat, pagesMat, pagesMat, coverMat, spineMat];
+            const mesh = new THREE.Mesh(geo, mats);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            if (cover) {
+                loader.load(
+                    cover,
+                    (tex) => {
+                        tex.colorSpace = THREE.SRGBColorSpace;
+                        tex.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy?.() || 8);
+                        coverMat.map = tex;
+                        coverMat.needsUpdate = true;
+                    },
+                    undefined,
+                    () => {},
+                );
+            }
+
+            // Label (title + author)
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#0000';
+            ctx.fillRect(0, 0, 512, 512);
+            ctx.fillStyle = '#0f172a';
+            ctx.font = 'bold 40px "Segoe UI"';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            wrapText(ctx, `${title}\n${author}`, 256, 256, 420, 50);
+            const tex = new THREE.CanvasTexture(canvas);
+            tex.colorSpace = THREE.SRGBColorSpace;
+            const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }));
+            sprite.scale.set(1.6, 1.6, 1);
+            sprite.position.set(0, h / 2 + 0.1, 0);
+            mesh.add(sprite);
+
+            mesh.position.set(x, h / 2, z);
+            mesh.rotation.y = THREE.MathUtils.randFloatSpread(0.4);
+            mesh.userData = { title, author };
+            return mesh;
+        }
+
+        function wrapText(ctx, text, x, y, maxWidth, lh) {
+            const lines = [];
+            text.split('\n').forEach((block) => {
+                const words = block.split(/\s+/);
+                let line = '';
+                for (let i = 0; i < words.length; i++) {
+                    const test = line + words[i] + ' ';
+                    if (ctx.measureText(test).width > maxWidth && i > 0) {
+                        lines.push(line.trim());
+                        line = words[i] + ' ';
+                    } else line = test;
+                }
+                lines.push(line.trim());
+            });
+            const totalH = lines.length * lh;
+            let yy = y - totalH / 2 + lh / 2;
+            for (const l of lines) {
+                ctx.fillText(l, x, yy);
+                yy += lh;
+            }
+        }
+
+        function buildPage(list) {
+            clearBooks();
+            const cols = 4,
+                rows = 6;
+            const gapX = 3.2,
+                gapZ = 3.8;
+            const startX = -((cols - 1) * gapX) / 2;
+            const startZ = -((rows - 1) * gapZ) / 2 - 8;
+            let k = 0;
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    if (k >= list.length) break;
+                    const b = list[k++];
+                    const x = startX + c * gapX + THREE.MathUtils.randFloatSpread(0.5);
+                    const z = startZ + r * gapZ + THREE.MathUtils.randFloatSpread(0.6);
+                    const mesh = makeBook(b, x, z);
+                    bookGroup.add(mesh);
+                }
+            }
+        }
+
+        // Click: nếu trúng sách => zoom, else => nudge theo path
+        function onClick(e) {
+            const rect = renderer.domElement.getBoundingClientRect();
+            const m = new THREE.Vector2(
+                ((e.clientX - rect.left) / rect.width) * 2 - 1,
+                -((e.clientY - rect.top) / rect.height) * 2 + 1,
+            );
+            raycaster.setFromCamera(m, camera);
+            const hits = raycaster.intersectObjects(bookGroup.children, true);
+            if (hits.length) {
+                let obj = hits[0].object;
+                while (obj && !bookGroup.children.includes(obj)) obj = obj.parent;
+                if (obj) {
+                    const target = obj.position.clone().add(new THREE.Vector3(0.8, 0.6, 1.2));
+                    gsap.to(camera.position, {
+                        x: target.x,
+                        y: target.y,
+                        z: target.z,
+                        duration: 0.9,
+                        ease: 'power3.out',
+                    });
+                    gsap.to({}, { duration: 0.9, onUpdate: () => camera.lookAt(obj.position) });
+                    setHoverInfo(obj.userData);
+                    return;
+                }
+            }
+            nudge(0.08);
+        }
+        renderer.domElement.addEventListener('click', onClick);
+
+        function onResize() {
+            const { clientWidth, clientHeight } = mountEl;
+            camera.aspect = clientWidth / clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(clientWidth, clientHeight);
+        }
+        window.addEventListener('resize', onResize);
+
+        // Animate
+        const clock = new THREE.Clock();
+        let raf;
+        function animate() {
+            const t = clock.getElapsedTime();
+            fireflies.children.forEach((f, i) => {
+                f.position.y += Math.sin(t + i) * 0.0015;
+                f.position.x += Math.cos(t * 0.5 + i) * 0.0009;
+            });
+
+            raycaster.setFromCamera(mouse, camera);
+            const hits = raycaster.intersectObjects(bookGroup.children, true);
+            if (hits.length) {
+                let m = hits[0].object;
+                while (m && !bookGroup.children.includes(m)) m = m.parent;
+                if (m) {
+                    const { title, author } = m.userData || {};
+                    setHoverInfo({ title, author });
+                    gsap.to(m.rotation, { y: m.rotation.y + 0.35, duration: 0.6, overwrite: true });
+                }
+            } else if (hoverInfo) setHoverInfo(null);
+
+            renderer.render(scene, camera);
+            raf = requestAnimationFrame(animate);
+        }
+        animate();
+
+        // expose
+        threeRef.current = { buildPage, setNight };
+
+        // cleanup
+        return () => {
+            cancelAnimationFrame(raf);
+            window.removeEventListener('resize', onResize);
+            renderer.domElement.removeEventListener('pointermove', onPointerMove);
+            renderer.domElement.removeEventListener('click', onClick);
+            mountEl.removeChild(renderer.domElement);
+            renderer.dispose();
+            groundGeo.dispose();
+            pathGeo.dispose();
+            pmrem.dispose();
+        };
+    }, []);
+
+    // Rebuild page when books/page change
+    useEffect(() => {
+        const api = threeRef.current;
+        if (!api?.buildPage) return;
+        const start = (page - 1) * pageSize;
+        api.buildPage(books.slice(start, start + pageSize));
+    }, [books, page]);
+
+    // Night sync
+    useEffect(() => {
+        threeRef.current?.setNight?.(isNight);
+    }, [isNight]);
+
+    const total = books.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
     return (
-        <div style={{ background: '#569bd0ff' }}>
-            <style>
-                {`
-          body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-          }
-          
-          .hero-section {
-            background: linear-gradient(135deg, #2C5F2D 0%, #1E4A29 50%, #0F2E18 100%);
-            min-height: 100vh;
-            position: relative;
-            overflow: hidden;
-            padding: 60px 0;
-            color: white;
-          }
-          
-          .hero-sun {
-            position: absolute;
-            top: 60px;
-            right: 80px;
-            width: 120px;
-            height: 120px;
-            background: linear-gradient(45deg, #FFA500, #FF8C00);
-            border-radius: 50%;
-            box-shadow: 0 0 50px rgba(255, 165, 0, 0.6);
-            animation: sunGlow 4s ease-in-out infinite;
-          }
-          
-          @keyframes sunGlow {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-          }
-          
-          .hero-tree {
-            position: absolute;
-            bottom: 0;
-            left: 8%;
-            width: 350px;
-            height: 400px;
-            z-index: 1;
-          }
-          
-          .tree-trunk {
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 20px;
-            height: 160px;
-            background: linear-gradient(to bottom, #8B4513, #654321);
-            border-radius: 10px 10px 0 0;
-          }
-          
-          .tree-crown {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 280px;
-            height: 240px;
-            background: radial-gradient(ellipse, #228B22 0%, #006400 70%);
-            border-radius: 50% 50% 45% 45%;
-          }
-          
-          .tree-leaves {
-            position: absolute;
-            bottom: 140px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 260px;
-            height: 200px;
-          }
-          
-          .leaf {
-            position: absolute;
-            width: 15px;
-            height: 15px;
-            background: #32CD32;
-            border-radius: 50% 0;
-            animation: leafFloat 3s ease-in-out infinite;
-          }
-          
-          @keyframes leafFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.8; }
-            50% { transform: translateY(-20px) rotate(180deg); opacity: 1; }
-          }
-          
-          .character-sitting {
-            position: absolute;
-            bottom: 100px;
-            left: 13%;
-            width: 80px;
-            height: 100px;
-            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
-            border-radius: 25px 25px 12px 12px;
-            z-index: 3;
-          }
-          
-          .floating-icons {
-            position: absolute;
-            bottom: 180px;
-            left: 25%;
-            z-index: 2;
-          }
-          
-          .icon-float {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-            animation: iconFloat 4s ease-in-out infinite;
-            backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-          }
-          
-          @keyframes iconFloat {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            50% { transform: translateY(-25px) scale(1.1); }
-          }
-          
-          .book-showcase {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            align-items: flex-end;
-            margin-top: 60px;
-            z-index: 4;
-            position: relative;
-          }
-          
-          .book-item {
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-            transition: transform 0.3s ease;
-            overflow: hidden;
-            position: relative;
-          }
-          
-          .book-item:hover {
-            transform: translateY(-15px) rotateY(15deg);
-          }
-          
-          .book-1 {
-            width: 110px;
-            height: 150px;
-            background: linear-gradient(135deg, #DC143C, #8B0000);
-          }
-          
-          .book-2 {
-            width: 150px;
-            height: 210px;
-            background: linear-gradient(135deg, #FF8C00, #FF4500);
-          }
-          
-          .book-3 {
-            width: 170px;
-            height: 240px;
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-          }
-          
-          .book-4 {
-            width: 130px;
-            height: 180px;
-            background: linear-gradient(135deg, #32CD32, #228B22);
-          }
-          
-          .social-icons {
-            position: fixed;
-            right: 20px;
-            top: 50%;
-            transform: translateY(-50%);
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 999;
-          }
-          
-          .social-icon {
-            width: 55px;
-            height: 55px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 22px;
-            cursor: pointer;
-            transition: transform 0.3s ease;
-            text-decoration: none;
-            font-weight: bold;
-          }
-          
-          .social-icon:hover {
-            transform: scale(1.15);
-          }
-          
-          .social-icon.teal { background: #20B2AA; }
-          .social-icon.orange { background: #FF8C00; }
-          .social-icon.yellow { background: #FFD700; color: #333; }
-          .social-icon.blue { background: #4169E1; }
-          .social-icon.purple { background: #9370DB; }
-          
-          .scroll-top {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 55px;
-            height: 55px;
-            background: #87CEEB;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            z-index: 999;
-            transition: all 0.3s ease;
-            font-size: 20px;
-          }
-          
-          .scroll-top:hover {
-            background: #4682B4;
-            transform: scale(1.1);
-          }
-          
-          .features-section {
-            padding: 80px 0;
-            background: #ffffff;
-          }
-          
-          .feature-card {
-            text-align: center;
-            padding: 40px 20px;
-            border-radius: 15px;
-            transition: all 0.3s ease;
-            border: none;
-            background: #ffffff;
-            box-shadow: 0 5px 25px rgba(135, 206, 235, 0.15);
-            height: 100%;
-          }
-          
-          .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 35px rgba(135, 206, 235, 0.25);
-          }
-          
-          .feature-icon {
-            width: 90px;
-            height: 90px;
-            background: linear-gradient(135deg, #87CEEB, #4682B4);
-            border-radius: 22px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 28px auto;
-            font-size: 36px;
-            color: white;
-            box-shadow: 0 8px 20px rgba(135, 206, 235, 0.3);
-          }
-          
-          .company-intro {
-            padding: 80px 0;
-            background: #f8fbff;
-          }
-          
-          .timeline-section {
-            padding: 80px 0;
-            background: #ffffff;
-          }
-          
-          .timeline-item {
-            display: flex;
-            align-items: flex-start;
-            margin-bottom: 50px;
-            padding: 30px;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border-left: 5px solid transparent;
-          }
-          
-          .timeline-item:hover {
-            transform: translateX(15px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
-          }
-          
-          .timeline-year {
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: white;
-            margin-right: 30px;
-            flex-shrink: 0;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-          }
-          
-          .timeline-content {
-            flex: 1;
-          }
-          
-          .timeline-title {
-            color: #333;
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 15px;
-            line-height: 1.4;
-          }
-          
-          .timeline-description {
-            color: #666;
-            font-size: 15px;
-            line-height: 1.7;
-            margin: 0;
-          }
-        `}
-            </style>
+        <div style={{ width: '100%', minHeight: '100vh', background: 'var(--sb-bg)' }}>
+            <style>{baseCss}</style>
+            <section className="hero3d">
+                <div className="canvas-wrap" ref={mountRef} />
 
-            {/* Social Icons + Q&A Icon */}
-            <div className="social-icons">
-                <a href="#" className="social-icon teal">📚</a>
-                <a href="#" className="social-icon orange">🧡</a>
-                <a href="#" className="social-icon yellow">�</a>
-                <a href="#" className="social-icon blue">💙</a>
-                <a href="#" className="social-icon purple">💜</a>
-                {/* Icon hỏi đáp AI */}
-                <div style={{ position: 'fixed', bottom: -50, right: 10, zIndex: 1000 }}>
-                    <Button
-                        type="primary"
-                        shape="circle"
-                        icon={<QuestionCircleOutlined style={{ fontSize: 28 }} />}
-                        size="large"
-                        style={{ boxShadow: '0 2px 8px #27ae6044', background: '#27ae60', border: 'none' }}
-                        onClick={handleQaOpen}
-                        title="Hỏi đáp AI"
-                    />
-                </div>
-            </div>
-
-            {/* Modal hỏi đáp AI */}
-            <Modal
-                open={qaVisible}
-                onCancel={handleQaClose}
-                footer={null}
-                centered
-                title={<span style={{ color: '#27ae60' }}>Hỏi đáp SmartBook</span>}
-            >
-                <Input.TextArea
-                    value={question}
-                    onChange={e => setQuestion(e.target.value)}
-                    placeholder="Nhập câu hỏi của bạn..."
-                    autoSize={{ minRows: 2, maxRows: 4 }}
-                    style={{ marginBottom: 12 }}
-                />
-                <Button type="primary" onClick={handleAsk} loading={loading} block>
-                    Gửi câu hỏi
-                </Button>
-                <div style={{ marginTop: 18, minHeight: 40 }}>
-                    {loading ? <Spin /> : answer && <div><b>Trả lời:</b> {answer}</div>}
-                </div>
-            </Modal>
-
-            {/* Scroll to top */}
-            {scrollTop && (
-                <div className="scroll-top" onClick={handleScrollToTop}>
-                    <ArrowUpOutlined />
-                </div>
-            )}
-
-            {/* Hero Section */}
-            {/* <section className="hero-section">
-                <div className="hero-sun"></div>
-
-                {/* Tree */}
-                <div className="hero-tree">
-                    <div className="tree-trunk"></div>
-                    <div className="tree-crown"></div>
-                    <div className="tree-leaves">
-                        {[...Array(25)].map((_, i) => (
-                            <div
-                                key={i}
-                                className="leaf"
-                                style={{
-                                    left: `${30 + Math.random() * 200}px`,
-                                    top: `${20 + Math.random() * 160}px`,
-                                    animationDelay: `${i * 0.15}s`,
-                                }}
-                            />
-                        ))}
+                {/* Overlay */}
+                <div className="overlay">
+                    <Tag color="processing" className="brand">
+                        SmartBook
+                    </Tag>
+                    <Title level={2} className="bigtitle">
+                        Khám phá <span>Thế Giới Sách</span>
+                    </Title>
+                    <Paragraph className="subtitle">
+                        Ảnh cover lấy từ API thật. Click nền để đi tiếp, click sách để zoom.
+                    </Paragraph>
+                    <div className="actions">
+                        <Button
+                            type="primary"
+                            size="large"
+                            icon={<PlayCircleOutlined />}
+                            onClick={() => gsap.globalTimeline.getChildren().forEach((tl) => tl.play && tl.play())}
+                        >
+                            Khám phá
+                        </Button>
+                        <Button
+                            size="large"
+                            icon={<PauseCircleOutlined />}
+                            onClick={() => gsap.globalTimeline.getChildren().forEach((tl) => tl.pause && tl.pause())}
+                        >
+                            Tạm dừng
+                        </Button>
+                        <Button size="large" icon={<BulbOutlined />} onClick={() => setIsNight((v) => !v)}>
+                            {isNight ? 'Ngày' : 'Đêm'}
+                        </Button>
+                        <Button
+                            shape="circle"
+                            icon={<LeftOutlined />}
+                            disabled={page <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        />
+                        <span className="pg">
+                            {page} / {totalPages}
+                        </span>
+                        <Button
+                            shape="circle"
+                            icon={<RightOutlined />}
+                            disabled={page >= totalPages}
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        />
                     </div>
                 </div>
 
-                {/* Character sitting */}
-                <div className="character-sitting"></div>
+                {/* Hover card */}
+                {hoverInfo && (
+                    <Card className="hover-card" bordered>
+                        <div className="hover-title">{hoverInfo.title}</div>
+                        <div className="hover-sub">{hoverInfo.author}</div>
+                    </Card>
+                )}
 
-                {/* Floating icons */}
-                <div className="floating-icons">
-                    <div className="icon-float" style={{ left: '-20px', animationDelay: '0s' }}>
-                        📖
+                {loading && (
+                    <div className="loading">
+                        <Spin tip="Đang tải sách từ API..." />
                     </div>
-                    <div className="icon-float" style={{ left: '70px', top: '30px', animationDelay: '1.5s' }}>
-                        🎧
-                    </div>
-                    <div className="icon-float" style={{ left: '140px', top: '15px', animationDelay: '3s' }}>
-                        💬
-                    </div>
-                </div>
+                )}
+            </section>
 
-                <div
-                    style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 5 }}
-                >
-                    <Row gutter={[48, 48]} align="middle" style={{ minHeight: '90vh' }}>
-                        <Col xs={24} lg={12}>
-                            <div style={{ textAlign: 'left', paddingLeft: '12%' }}>
-                                <Title
-                                    level={1}
-                                    style={{
-                                        fontSize: '4rem',
-                                        color: 'rgba(255,255,255,0.95)',
-                                        marginBottom: '20px',
-                                        fontWeight: 'bold',
-                                        lineHeight: 1.2,
-                                        textShadow: '2px 2px 4px rgba(0,0,0,0.3)',
-                                    }}
-                                >
-                                    SmartBook 4.0 - Ebook & Audiobook
-                                </Title>
-                                <Paragraph
-                                    style={{
-                                        fontSize: '20px',
-                                        color: 'rgba(255,255,255,0.8)',
-                                        fontStyle: 'italic',
-                                        marginBottom: '40px',
-                                        textShadow: '1px 1px 2px rgba(0,0,0,0.3)',
-                                    }}
-                                >
-                                    Nghệ có đọc sách mới lúc nào cũng nơi
-                                </Paragraph>
-                            </div>
-                        </Col>
-
-                        <Col xs={24} lg={12}>
-                            <div className="book-showcase">
-                                <div className="book-item book-1"></div>
-                                <div className="book-item book-2"></div>
-                                <div className="book-item book-3"></div>
-                                <div className="book-item book-4"></div>
-                            </div>
-                        </Col>
-                    </Row>
-                </div>
-            {/* </section> */} 
-
-            {/* Features Section */}
-            <section className="features-section">
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                    <Row gutter={[40, 40]} justify="center">
-                        <Col xs={12} sm={6} lg={6}>
+            {/* Features */}
+            <section className="features">
+                <div className="container">
+                    <Row gutter={[24, 24]}>
+                        <Col xs={24} md={8}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
                                     <BookOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Giới thiệu
-                                </Title>
+                                <Title level={4}>Ảnh thật từ API</Title>
+                                <Paragraph>Map cover trực tiếp lên bìa sách 3D.</Paragraph>
                             </Card>
                         </Col>
-                        <Col xs={12} sm={6} lg={6}>
+                        <Col xs={24} md={8}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
-                                    <TrophyOutlined />
+                                    <RocketOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Cơ chế đầu tư
-                                </Title>
+                                <Title level={4}>Click để di chuyển</Title>
+                                <Paragraph>Đi dọc path bằng click nền, zoom gần khi click sách.</Paragraph>
                             </Card>
                         </Col>
-                        <Col xs={12} sm={6} lg={6}>
+                        <Col xs={24} md={8}>
                             <Card className="feature-card" bordered={false}>
                                 <div className="feature-icon">
-                                    <AudioOutlined />
+                                    <BulbOutlined />
                                 </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Lĩnh vực hoạt động
-                                </Title>
-                            </Card>
-                        </Col>
-                        <Col xs={12} sm={6} lg={6}>
-                            <Card className="feature-card" bordered={false}>
-                                <div className="feature-icon">
-                                    <TeamOutlined />
-                                </div>
-                                <Title level={4} style={{ color: '#333', marginBottom: '8px', fontSize: '18px' }}>
-                                    Đội tác
-                                </Title>
+                                <Title level={4}>Day/Night + Fog</Title>
+                                <Paragraph>Vibe điện ảnh, hiệu ứng mượt hơn.</Paragraph>
                             </Card>
                         </Col>
                     </Row>
                 </div>
             </section>
 
-            {/* Company Introduction */}
-            <section className="company-intro">
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                    <Title level={2} style={{ color: '#333', marginBottom: '48px', fontSize: '32px' }}>
-                        Giới thiệu chúng tôi
-                    </Title>
-                    <Row gutter={[48, 32]}>
-                        <Col xs={24}>
-                            <Paragraph
-                                style={{
-                                    fontSize: '16px',
-                                    lineHeight: 1.8,
-                                    color: '#666',
-                                    textAlign: 'justify',
-                                    marginBottom: '24px',
-                                }}
-                            >
-                                Năm 2019, SmartBook từ một sản phẩm của Viet Corporation được chính thức ra mắt với mục
-                                tiêu trở thành một nền tảng đọc sách hàng đầu tại Việt Nam. Với sứ mệnh "Mang tri thức
-                                đến mọi người", SmartBook không ngừng phát triển và cải tiến để mang đến trải nghiệm đọc
-                                sách tốt nhất cho người dùng, đích chúng cũng sánh với các nền tảng khác như thế để cung
-                                cấp nội dung chất lượng.
-                            </Paragraph>
-                            <Paragraph
-                                style={{
-                                    fontSize: '16px',
-                                    lineHeight: 1.8,
-                                    color: '#666',
-                                    textAlign: 'justify',
-                                    marginBottom: '24px',
-                                }}
-                            >
-                                Hiện tại, Công ty Cổ phần SmartBook ra mắt để SmartBook tùy hành về đăng ký phòng hoạt
-                                động chính ngành nghề đăng ký ở châu Ebooks các giai đê về hoạt chủ lạ ban và SmartBook.
-                                Điều chúng có thể nhờ hỗ trợ dữ liệu hoạt động ở trong ngoại khu đóng dạng tính năng về
-                                động thông qua thành sao dành cho SmartBooks tôn trong về đờg lại hỗ trợ dưới thằng.
-                            </Paragraph>
-                            <Paragraph
-                                style={{
-                                    fontSize: '16px',
-                                    lineHeight: 1.8,
-                                    color: '#666',
-                                    textAlign: 'justify',
-                                    marginBottom: '24px',
-                                }}
-                            >
-                                Với sự biểu hiện, SmartBook hơi những rằng làm với hoạt SmartBook thành cộng ở chỗ và
-                                điều hoạt cộng với khác thành người dùng về khác nguyên thì đưa nào cũng với hơn 18,000
-                                sản phẩm sách đã và chọn rằn 1,900 sản phẩm lẫn cả về. Giá bán thành công và có thành
-                                đưa với số hoạt động nghệ hoạt sách điện tử hàng đầu với số lượt người dùng uy tín về 30
-                                triệu.
-                            </Paragraph>
-                            <Paragraph
-                                style={{ fontSize: '16px', lineHeight: 1.8, color: '#666', textAlign: 'justify' }}
-                            >
-                                Ngoài ra, Công ty Cổ phần SmartBook cũng đã từng thành công là nhánh trong số các
-                                platform hoạt nơi hoạt gì nhau sách điện tử các sách, lách vụ hoạt nội dung trong việc
-                                nghiệm với hoạt động báo cáo người dùng mắm mọi lúc với hoạt nổi tại 100,000 hoạt điều
-                                chúng hoạt động tại ngành với hoạt động 15,000 các với số hoạt động người. PrimeBook,
-                                VoxBook, BookWise, VastmoveBook, MemBook, NaBook, Lenoct...
-                            </Paragraph>
-                        </Col>
-                    </Row>
-                </div>
-            </section>
-
-            {/* Timeline Section */}
-            <section className="timeline-section">
-                <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 24px' }}>
-                    <Title
-                        level={2}
-                        style={{ textAlign: 'center', marginBottom: '60px', color: '#333', fontSize: '32px' }}
-                    >
-                        Lịch sử công ty
-                    </Title>
-
-                    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
-                        {timelineData.map((item, index) => (
-                            <div key={index} className="timeline-item" style={{ borderLeftColor: item.color }}>
-                                <div className="timeline-year" style={{ backgroundColor: item.color }}>
-                                    {item.year}
-                                </div>
-                                <div className="timeline-content">
-                                    <div className="timeline-title" style={{ color: item.color }}>
-                                        {item.title}
-                                    </div>
-                                    <div className="timeline-description">{item.description}</div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </section>
+            <footer className="footer">© {new Date().getFullYear()} SmartBook — World of Books.</footer>
         </div>
     );
 }
+
+const baseCss = `
+:root{ --sb-blue:#1677ff; --sb-ink:#0f172a; --sb-ink-2:#475569; --sb-bg:#ffffff; --card-shadow:0 10px 30px rgba(22,119,255,.08); }
+*{box-sizing:border-box}
+body{margin:0}
+.hero3d{position:relative;height:100vh;width:100%;background:linear-gradient(180deg,#f7fbff 0%,#fff 100%)}
+.canvas-wrap{position:absolute;inset:0}
+.overlay{position:absolute;left:4vw;top:8vh;z-index:3;max-width:540px}
+.brand{font-size:14px; padding:6px 10px}
+.bigtitle{margin:.3rem 0 0 0; font-weight:800; color:var(--sb-ink)}
+.bigtitle span{color:var(--sb-blue)}
+.subtitle{color:#475569;margin:.2rem 0 1rem}
+.hover-card{position:absolute;right:20px;top:20px;z-index:4;box-shadow:var(--card-shadow)}
+.actions{display:flex;gap:12px;margin-top:12px;align-items:center}
+.pg{min-width:76px;text-align:center;font-weight:600}
+.features{padding:72px 0;background:#fff}
+.container{width:min(1100px,92%);margin:0 auto}
+.feature-card{border:none;border-radius:16px;box-shadow:var(--card-shadow)}
+.feature-icon{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;background:linear-gradient(135deg,#eaf3ff,#d6e9ff);margin-bottom:12px;font-size:28px;color:#1e90ff}
+.footer{padding:24px 0 56px;text-align:center;color:#64748b}
+.loading{position:absolute;inset:0;display:grid;place-items:center;background:rgba(255,255,255,.5);z-index:5}
+@media(max-width:768px){.overlay{left:5vw;top:6vh;right:5vw;max-width:none}}
+`;

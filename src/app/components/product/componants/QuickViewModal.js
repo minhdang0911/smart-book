@@ -2,8 +2,9 @@
 
 import { HeartFilled, HeartOutlined, ShoppingCartOutlined, UsergroupAddOutlined } from '@ant-design/icons';
 import { Button, InputNumber, message, Modal, Tooltip, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiAddToCart } from '../../../../../apis/cart';
+import { apiGetMe } from '../../../../../apis/user'; // Import apiGetMe
 import { handleAddToCartHelper } from '../../../utils/addToCartHandler';
 import { toggleWishlist } from '../../../utils/wishlist';
 
@@ -36,17 +37,21 @@ function HtmlClamp({ html, rows = 4, expandLabel = 'Xem thêm', collapseLabel = 
 }
 
 // API function để thêm vào giỏ hàng nhóm
-const apiAddToGroupCart = async (groupOrderId, bookId, quantity) => {
+const apiAddToGroupCart = async (groupOrderId, bookId, quantity, memberId) => {
     const groupToken = typeof window !== 'undefined' ? localStorage.getItem('group_cart_token') : null;
     if (!groupToken) throw new Error('Không tìm thấy token giỏ hàng nhóm');
 
-    const response = await fetch(`http://localhost:8000/api/group-orders/${groupOrderId}/items`, {
+    const response = await fetch(`https://smartbook.io.vn/api/group-orders/${groupOrderId}/items`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${groupToken}`,
         },
-        body: JSON.stringify({ book_id: bookId, quantity }),
+        body: JSON.stringify({
+            book_id: bookId,
+            quantity,
+            member_id: memberId, // Thêm member_id vào request
+        }),
     });
 
     if (!response.ok) {
@@ -75,6 +80,30 @@ export function QuickViewModal({
     isCartGroup = false,
     groupOrderId = null,
 }) {
+    const [currentUser, setCurrentUser] = useState(user);
+    const [isAddingToGroupCart, setIsAddingToGroupCart] = useState(false);
+
+    // Lấy thông tin user nếu chưa có
+    useEffect(() => {
+        const fetchUserInfo = async () => {
+            if (!currentUser && typeof window !== 'undefined') {
+                const token = localStorage.getItem('token');
+                if (token) {
+                    try {
+                        const userData = await apiGetMe(token);
+                        setCurrentUser(userData.data || userData);
+                    } catch (error) {
+                        console.error('Lỗi lấy thông tin người dùng:', error);
+                    }
+                }
+            }
+        };
+
+        if (isCartGroup && visible) {
+            fetchUserInfo();
+        }
+    }, [currentUser, isCartGroup, visible]);
+
     if (!book) return null;
 
     const formatPrice = (price) => {
@@ -106,7 +135,7 @@ export function QuickViewModal({
 
     const handleAddToCart = async (book, qty) => {
         await handleAddToCartHelper({
-            user,
+            user: currentUser,
             bookId: book.id,
             quantity: qty,
             addToCart: apiAddToCart,
@@ -114,23 +143,41 @@ export function QuickViewModal({
             router: null,
         });
     };
-
+    console.log(currentUser);
     // Thêm vào giỏ hàng nhóm
     const handleAddToGroupCart = async (book, qty) => {
         if (!groupOrderId) {
             message.error('Không tìm thấy thông tin nhóm mua hàng');
             return;
         }
+
+        if (!currentUser || !currentUser.id) {
+            message.error('Không tìm thấy thông tin người dùng. Vui lòng đăng nhập lại');
+            return;
+        }
+
         try {
-            setIsAddingToCart(true);
-            await apiAddToGroupCart(groupOrderId, book.id, qty);
-            message.success(`Đã thêm "${book.title}" vào giỏ hàng nhóm thành công!`);
-            // optional: onGroupCartUpdated?.();
+            setIsAddingToGroupCart(true);
+
+            const response = await apiAddToGroupCart(groupOrderId, book.id, qty, currentUser.id);
+
+            message.success({
+                content: `Đã thêm "${book.title}" vào giỏ hàng nhóm thành công!`,
+                duration: 3,
+            });
+
+            console.log('Group cart response:', response);
+
+            // Optional: Callback để cập nhật UI nếu cần
+            // onGroupCartUpdated?.(response);
         } catch (error) {
             console.error('Error adding to group cart:', error);
-            message.error(error.message || 'Lỗi khi thêm vào giỏ hàng nhóm');
+            message.error({
+                content: error.message || 'Lỗi khi thêm vào giỏ hàng nhóm',
+                duration: 4,
+            });
         } finally {
-            setIsAddingToCart(false);
+            setIsAddingToGroupCart(false);
         }
     };
 
@@ -213,7 +260,7 @@ export function QuickViewModal({
                         />
                     </div>
 
-                    <div style={{ display: 'flex', gap: 12 }}>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                         {/* Thêm vào giỏ hàng cá nhân */}
                         <Button
                             type="primary"
@@ -221,20 +268,26 @@ export function QuickViewModal({
                             size="large"
                             loading={isAddingToCart}
                             onClick={() => handleAddToCart(book, quantity || 1)}
+                            disabled={isAddingToGroupCart}
                         >
                             Thêm vào giỏ hàng
                         </Button>
 
-                        {/* Thêm vào giỏ hàng nhóm */}
+                        {/* Thêm vào giỏ hàng nhóm - chỉ hiển thị khi isCartGroup = true */}
                         {isCartGroup && (
                             <Tooltip title="Thêm vào giỏ hàng nhóm">
                                 <Button
                                     type="primary"
                                     icon={<UsergroupAddOutlined />}
                                     size="large"
-                                    loading={isAddingToCart}
+                                    loading={isAddingToGroupCart}
                                     onClick={() => handleAddToGroupCart(book, quantity || 1)}
-                                    style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+                                    disabled={isAddingToCart}
+                                    style={{
+                                        backgroundColor: '#52c41a',
+                                        borderColor: '#52c41a',
+                                        color: '#ffffff',
+                                    }}
                                 >
                                     Giỏ hàng nhóm
                                 </Button>
@@ -248,10 +301,28 @@ export function QuickViewModal({
                             size="large"
                             onClick={() => handleToggleWishlist(book.id)}
                             danger={isFavorite}
+                            disabled={isAddingToCart || isAddingToGroupCart}
                         >
                             {isFavorite ? 'Đã yêu thích' : 'Yêu thích'}
                         </Button>
                     </div>
+
+                    {/* Hiển thị thông tin debug khi cần thiết */}
+                    {isCartGroup && process.env.NODE_ENV === 'development' && (
+                        <div
+                            style={{
+                                marginTop: 16,
+                                padding: 8,
+                                backgroundColor: '#f0f0f0',
+                                borderRadius: 4,
+                                fontSize: 12,
+                            }}
+                        >
+                            <Text type="secondary">
+                                Debug: Group Order ID: {groupOrderId} | Member ID: {currentUser?.id}
+                            </Text>
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -430,7 +430,7 @@ const Cart = () => {
     const checkCoupon = async (couponCode) => {
         try {
             setCheckingCoupon(true);
-            const response = await fetch('https://smartbook.io.vn/api/coupons/check', {
+            const response = await fetch('http://localhost:8000/api/coupons/check', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

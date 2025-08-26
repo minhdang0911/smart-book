@@ -1073,3 +1073,30 @@
 }
 
 /* iPad specific - using mobile layout already defined above */
+.cart-empty {
+    min-height: 360px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cart-empty-actions {
+    text-align: center;
+}
+
+.group-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-bottom: 12px;
+}
+
+.empty-cta {
+    margin-top: 8px;
+}
+
+.empty-desc {
+    margin-top: 8px;
+    color: #8c8c8c; /* xám nhẹ */
+    font-size: 13px;
+}
