@@ -4,7 +4,7 @@ export default async function VoyageSlider() {
     let banners = [];
     try {
         const res = await fetch('https://smartbook.io.vn/api/banners/get', {
-            cache: 'no-store',
+            next: { revalidate: 60 },
         });
 
         const data = await res.json();

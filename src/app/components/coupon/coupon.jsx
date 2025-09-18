@@ -17,7 +17,7 @@ const CouponSlider = async () => {
 
     try {
         const res = await fetch('https://smartbook.io.vn/api/coupons/get', {
-            cache: 'no-store',
+            next: { revalidate: 60 },
         });
 
         const raw = await res.text(); // BE 500 đôi khi trả HTML
