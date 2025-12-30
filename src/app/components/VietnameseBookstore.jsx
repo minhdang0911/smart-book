@@ -10,7 +10,7 @@ const VietnameseBookstore = () => {
     useEffect(() => {
         const fetchBooks = async () => {
             try {
-                const response = await fetch('https://smartbook.io.vn/api/books/search?limit=500');
+                const response = await fetch('https://data-smartbook.gamer.gd/api/books/search?limit=500');
                 const data = await response.json();
 
                 if (data.status === 'success' && data.data) {

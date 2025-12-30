@@ -1,6 +1,6 @@
 export const deleteComment = async (commentId) => {
     try {
-        const response = await fetch(`https://smartbook.io.vn/api/comments/${commentId}`, {
+        const response = await fetch(`https://data-smartbook.gamer.gd/api/comments/${commentId}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',

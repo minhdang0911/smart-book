@@ -21,7 +21,7 @@ const useReaction = () => {
         const token = localStorage.getItem('token');
 
         try {
-            const response = await fetch(`https://smartbook.io.vn/api/comments/${itemId}/react`, {
+            const response = await fetch(`https://data-smartbook.gamer.gd/api/comments/${itemId}/react`, {
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

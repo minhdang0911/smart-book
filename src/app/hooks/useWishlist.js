@@ -33,7 +33,10 @@ export const useWishlist = () => {
         }
     }, []);
 
-    const swrKey = useMemo(() => (token ? ['https://smartbook.io.vn/api/books/followed', token] : null), [token]);
+    const swrKey = useMemo(
+        () => (token ? ['https://data-smartbook.gamer.gd/api/books/followed', token] : null),
+        [token],
+    );
 
     const { data, error, isLoading, mutate } = useSWR(swrKey, fetcher, {
         revalidateOnFocus: false,
@@ -53,8 +56,8 @@ export const useWishlist = () => {
 
         const isFollowed = wishlist.includes(bookId);
         const url = isFollowed
-            ? 'https://smartbook.io.vn/api/books/unfollow'
-            : 'https://smartbook.io.vn/api/books/follow';
+            ? 'https://data-smartbook.gamer.gd/api/books/unfollow'
+            : 'https://data-smartbook.gamer.gd/api/books/follow';
 
         try {
             // Optimistic UI nhẹ

@@ -53,13 +53,16 @@ const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, curre
         if (!showReplies && replies.length === 0) {
             setLoadingReplies(true);
             try {
-                const res = await fetch(`https://smartbook.io.vn/api/comments/replies?parent_id=${comment.id}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+                const res = await fetch(
+                    `https://data-smartbook.gamer.gd/api/comments/replies?parent_id=${comment.id}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({}), // nếu không cần gửi gì thêm trong body thì để rỗng
                     },
-                    body: JSON.stringify({}), // nếu không cần gửi gì thêm trong body thì để rỗng
-                });
+                );
 
                 const data = await res.json();
                 if (data.success) {
@@ -107,7 +110,7 @@ const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, curre
 
         setIsSaving(true);
         try {
-            const res = await fetch(`https://smartbook.io.vn/api/comments/${commentData.id}`, {
+            const res = await fetch(`https://data-smartbook.gamer.gd/api/comments/${commentData.id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -148,7 +151,7 @@ const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, curre
     const handleDeleteComment = async () => {
         setIsDeleting(true);
         try {
-            const res = await fetch(`https://smartbook.io.vn/api/comments/${commentData.id}`, {
+            const res = await fetch(`https://data-smartbook.gamer.gd/api/comments/${commentData.id}`, {
                 method: 'PATCH',
                 headers: {
                     Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -192,7 +195,7 @@ const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, curre
                 return;
             }
 
-            const res = await fetch(`https://smartbook.io.vn/api/comments`, {
+            const res = await fetch(`https://data-smartbook.gamer.gd/api/comments`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

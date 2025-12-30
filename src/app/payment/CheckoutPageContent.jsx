@@ -195,7 +195,7 @@ const CheckoutPageContent = () => {
 
     const createZaloPayOrder = async (amount) => {
         try {
-            const response = await axios.post('https://smartbook.io.vn/api/orders/zalopay/create-order', {
+            const response = await axios.post('https://data-smartbook.gamer.gd/api/orders/zalopay/create-order', {
                 amount: amount,
                 description: 'Thanh toán đơn hàng',
             });
@@ -287,7 +287,7 @@ const CheckoutPageContent = () => {
             if (paymentMethod === 'cod') {
                 console.log('🛒 [COD] Processing COD order');
 
-                const response = await fetch('https://smartbook.io.vn/api/orders', {
+                const response = await fetch('https://data-smartbook.gamer.gd/api/orders', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -379,7 +379,7 @@ const CheckoutPageContent = () => {
                             }
 
                             const statusResponse = await axios.post(
-                                'https://smartbook.io.vn/api/orders/zalopay/check-status',
+                                'https://data-smartbook.gamer.gd/api/orders/zalopay/check-status',
                                 {
                                     app_trans_id: appTransId,
                                 },
@@ -402,7 +402,7 @@ const CheckoutPageContent = () => {
                                     const storedOrderData = storedPaymentInfo.cartState?.orderData || orderData;
                                     const storedCustomerInfo = storedPaymentInfo.cartState?.customerInfo;
 
-                                    const orderResponse = await fetch('https://smartbook.io.vn/api/orders', {
+                                    const orderResponse = await fetch('https://data-smartbook.gamer.gd/api/orders', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -529,7 +529,7 @@ const CheckoutPageContent = () => {
                 if (appTransId) {
                     try {
                         const statusResponse = await axios.post(
-                            'https://smartbook.io.vn/api/orders/zalopay/check-status',
+                            'https://data-smartbook.gamer.gd/api/orders/zalopay/check-status',
                             {
                                 app_trans_id: appTransId,
                             },
@@ -549,7 +549,7 @@ const CheckoutPageContent = () => {
 
                                 if (storedOrderData && storedCustomerInfo) {
                                     const token = localStorage.getItem('token');
-                                    const orderResponse = await fetch('https://smartbook.io.vn/api/orders', {
+                                    const orderResponse = await fetch('https://data-smartbook.gamer.gd/api/orders', {
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',

@@ -16,7 +16,7 @@ const CouponSlider = async () => {
     ];
 
     try {
-        const res = await fetch('https://smartbook.io.vn/api/coupons/get', {
+        const res = await fetch('https://data-smartbook.gamer.gd/api/coupons/get', {
             next: { revalidate: 60 },
         });
 

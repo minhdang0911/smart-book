@@ -67,7 +67,7 @@ const PDFFlipbook = () => {
         try {
             setLoading(true);
             const res = await fetch(
-                `https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
+                `https://data-smartbook.gamer.gd/api/admin/books/${currentBookId}/chapters/${currentChapterId}/detail`,
             );
             const data = await res.json();
             setChapterData(data);
@@ -152,7 +152,7 @@ const PDFFlipbook = () => {
         if (allChapters.length) return;
         try {
             setLoadingChapters(true);
-            const res = await fetch(`https://smartbook.io.vn/api/admin/books/${currentBookId}/chapters`);
+            const res = await fetch(`https://data-smartbook.gamer.gd/api/admin/books/${currentBookId}/chapters`);
             const data = await res.json();
             if (data.success) {
                 const chaptersWithStats = data.chapters.map((c) => ({
@@ -170,7 +170,7 @@ const PDFFlipbook = () => {
         setShowChapterModal(false);
         setLoading(true);
         try {
-            const res = await fetch(`https://smartbook.io.vn/api/admin/books/${bookId}/chapters/${cid}/detail`);
+            const res = await fetch(`https://data-smartbook.gamer.gd/api/admin/books/${bookId}/chapters/${cid}/detail`);
             const data = await res.json();
             setChapterData(data);
             setCurrentPage(0);
@@ -551,7 +551,7 @@ const PDFFlipbook = () => {
         setLoading(true);
         try {
             const res = await fetch(
-                `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
+                `https://data-smartbook.gamer.gd/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.previous.id}/detail`,
             );
             const data = await res.json();
             setChapterData(data);
@@ -577,7 +577,7 @@ const PDFFlipbook = () => {
         setLoading(true);
         try {
             const res = await fetch(
-                `https://smartbook.io.vn/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
+                `https://data-smartbook.gamer.gd/api/admin/books/${chapterData.chapter.book_id}/chapters/${chapterData.next.id}/detail`,
             );
             const data = await res.json();
             setChapterData(data);

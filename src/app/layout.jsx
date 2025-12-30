@@ -20,9 +20,12 @@ export default function RootLayout({ children }) {
 
         const intervalRef = setInterval(async () => {
             try {
-                const statusResponse = await axios.post('https://smartbook.io.vn/api/orders/zalopay/check-status', {
-                    app_trans_id: appTransId,
-                });
+                const statusResponse = await axios.post(
+                    'https://data-smartbook.gamer.gd/api/orders/zalopay/check-status',
+                    {
+                        app_trans_id: appTransId,
+                    },
+                );
 
                 const data = statusResponse.data;
                 console.log('🔁 [ZALOPAY] Auto check status:', data);

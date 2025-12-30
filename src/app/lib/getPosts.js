@@ -1,6 +1,6 @@
 export async function getPosts() {
     try {
-        const response = await fetch('https://smartbook.io.vn/api/posts', {
+        const response = await fetch('https://data-smartbook.gamer.gd/api/posts', {
             next: { revalidate: 60 },
         });
 

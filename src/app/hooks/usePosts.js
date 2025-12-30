@@ -1,6 +1,6 @@
 import useSWR from 'swr';
 
-const BASE_URL = 'https://smartbook.io.vn/api';
+const BASE_URL = 'https://data-smartbook.gamer.gd/api';
 
 const fetcher = async (url) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;

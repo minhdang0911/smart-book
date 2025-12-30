@@ -5,7 +5,7 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export const useReviewStats = (bookId) => {
     const { data, error, isLoading, mutate } = useSWR(
-        bookId ? `https://smartbook.io.vn/api/ratings/book/${bookId}/stats` : null,
+        bookId ? `https://data-smartbook.gamer.gd/api/ratings/book/${bookId}/stats` : null,
         fetcher,
         {
             revalidateOnFocus: false,

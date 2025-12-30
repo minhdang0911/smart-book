@@ -5,7 +5,7 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export const useReviews = (bookId, starLevel = 'all') => {
     const url = bookId
-        ? `https://smartbook.io.vn/api/ratings/book/${bookId}/filter${
+        ? `https://data-smartbook.gamer.gd/api/ratings/book/${bookId}/filter${
               starLevel !== 'all' ? `?star_level=${starLevel}` : ''
           }`
         : null;

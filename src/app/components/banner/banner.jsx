@@ -3,10 +3,15 @@ import VoyageSliderClient from './VoyageSliderClient';
 export default async function VoyageSlider() {
     let banners = [];
     try {
-        const res = await fetch('https://smartbook.io.vn/api/banners/get', {
+        const res = await fetch('https://data-smartbook.gamer.gd/api/banners/get', {
+            headers: {
+                Accept: 'application/json',
+                'User-Agent': 'Mozilla/5.0',
+            },
             next: { revalidate: 60 },
         });
 
+        console.log('banner', banner);
         const data = await res.json();
 
         if (data?.success && Array.isArray(data.data) && data.data.length > 0) {
