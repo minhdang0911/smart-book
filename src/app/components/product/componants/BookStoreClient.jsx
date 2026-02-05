@@ -32,7 +32,11 @@ export function BookStoreClient({ initialBooks }) {
                     if (userResponse?.status === true) {
                         setUser(userResponse.user);
                     }
+<<<<<<< HEAD
                     const followedRes = await fetch('https://data-smartbook.gamer.gd/api/books/followed', {
+=======
+                    const followedRes = await fetch('http://localhost:8000/api/books/followed', {
+>>>>>>> b236b22 (up group order)
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     const followedData = await followedRes.json();

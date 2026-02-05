@@ -3,7 +3,11 @@ import axios from 'axios';
 import useSWR from 'swr';
 
 const fetchOrders = async (token) => {
+<<<<<<< HEAD
     const response = await axios.get('https://data-smartbook.gamer.gd/api/orders', {
+=======
+    const response = await axios.get('http://localhost:8000/api/orders', {
+>>>>>>> b236b22 (up group order)
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -12,7 +16,11 @@ const fetchOrders = async (token) => {
 };
 
 const fetchOrderDetail = async (id, token) => {
+<<<<<<< HEAD
     const response = await axios.get(`https://data-smartbook.gamer.gd/api/orders/${id}`, {
+=======
+    const response = await axios.get(`http://localhost:8000/api/orders/${id}`, {
+>>>>>>> b236b22 (up group order)
         headers: {
             Authorization: `Bearer ${token}`,
         },
@@ -36,7 +44,11 @@ export const useOrders = (token, enabled = false) => {
     const cancelOrder = async (id) => {
         try {
             await axios.post(
+<<<<<<< HEAD
                 `https://data-smartbook.gamer.gd/api/orders/${id}/cancel`,
+=======
+                `http://localhost:8000/api/orders/${id}/cancel`,
+>>>>>>> b236b22 (up group order)
                 {},
                 {
                     headers: {

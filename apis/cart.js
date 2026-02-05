@@ -3,6 +3,7 @@ import { toast } from 'react-toastify';
 export const apiAddToCart = async (bookId, quantity) => {
     try {
         const token = localStorage.getItem('token');
+
         const response = await fetch('https://data-smartbook.gamer.gd/api/cart/add', {
             method: 'POST',
             headers: {

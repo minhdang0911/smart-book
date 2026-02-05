@@ -195,7 +195,11 @@ const CheckoutPageContent = () => {
 
     const createZaloPayOrder = async (amount) => {
         try {
+<<<<<<< HEAD
             const response = await axios.post('https://data-smartbook.gamer.gd/api/orders/zalopay/create-order', {
+=======
+            const response = await axios.post('http://localhost:8000/api/orders/zalopay/create-order', {
+>>>>>>> b236b22 (up group order)
                 amount: amount,
                 description: 'Thanh toán đơn hàng',
             });
@@ -287,7 +291,11 @@ const CheckoutPageContent = () => {
             if (paymentMethod === 'cod') {
                 console.log('🛒 [COD] Processing COD order');
 
+<<<<<<< HEAD
                 const response = await fetch('https://data-smartbook.gamer.gd/api/orders', {
+=======
+                const response = await fetch('http://localhost:8000/api/orders', {
+>>>>>>> b236b22 (up group order)
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -379,7 +387,11 @@ const CheckoutPageContent = () => {
                             }
 
                             const statusResponse = await axios.post(
+<<<<<<< HEAD
                                 'https://data-smartbook.gamer.gd/api/orders/zalopay/check-status',
+=======
+                                'http://localhost:8000/api/orders/zalopay/check-status',
+>>>>>>> b236b22 (up group order)
                                 {
                                     app_trans_id: appTransId,
                                 },
@@ -402,7 +414,11 @@ const CheckoutPageContent = () => {
                                     const storedOrderData = storedPaymentInfo.cartState?.orderData || orderData;
                                     const storedCustomerInfo = storedPaymentInfo.cartState?.customerInfo;
 
+<<<<<<< HEAD
                                     const orderResponse = await fetch('https://data-smartbook.gamer.gd/api/orders', {
+=======
+                                    const orderResponse = await fetch('http://localhost:8000/api/orders', {
+>>>>>>> b236b22 (up group order)
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',
@@ -529,7 +545,11 @@ const CheckoutPageContent = () => {
                 if (appTransId) {
                     try {
                         const statusResponse = await axios.post(
+<<<<<<< HEAD
                             'https://data-smartbook.gamer.gd/api/orders/zalopay/check-status',
+=======
+                            'http://localhost:8000/api/orders/zalopay/check-status',
+>>>>>>> b236b22 (up group order)
                             {
                                 app_trans_id: appTransId,
                             },
@@ -549,7 +569,11 @@ const CheckoutPageContent = () => {
 
                                 if (storedOrderData && storedCustomerInfo) {
                                     const token = localStorage.getItem('token');
+<<<<<<< HEAD
                                     const orderResponse = await fetch('https://data-smartbook.gamer.gd/api/orders', {
+=======
+                                    const orderResponse = await fetch('http://localhost:8000/api/orders', {
+>>>>>>> b236b22 (up group order)
                                         method: 'POST',
                                         headers: {
                                             'Content-Type': 'application/json',

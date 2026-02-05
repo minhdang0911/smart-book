@@ -124,7 +124,11 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                 });
                 fd.append('avatar', avatarFile);
 
+<<<<<<< HEAD
                 res = await fetch('https://data-smartbook.gamer.gd/api/user/profile', {
+=======
+                res = await fetch('http://localhost:8000/api/user/profile', {
+>>>>>>> b236b22 (up group order)
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -133,7 +137,11 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                     body: fd,
                 });
             } else {
+<<<<<<< HEAD
                 res = await fetch('https://data-smartbook.gamer.gd/api/user/profile', {
+=======
+                res = await fetch('http://localhost:8000/api/user/profile', {
+>>>>>>> b236b22 (up group order)
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

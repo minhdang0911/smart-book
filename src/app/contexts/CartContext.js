@@ -92,7 +92,11 @@ export const CartProvider = ({ children }) => {
             fetchingRef.current = true;
             if (showLoading) setLoading(true);
 
+<<<<<<< HEAD
             const response = await fetch('https://data-smartbook.gamer.gd/api/cart', {
+=======
+            const response = await fetch('http://localhost:8000/api/cart', {
+>>>>>>> b236b22 (up group order)
                 headers: {
                     Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json',
@@ -137,7 +141,11 @@ export const CartProvider = ({ children }) => {
             }
 
             try {
+<<<<<<< HEAD
                 const response = await fetch('https://data-smartbook.gamer.gd/api/cart/add', {
+=======
+                const response = await fetch('http://localhost:8000/api/cart/add', {
+>>>>>>> b236b22 (up group order)
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -205,7 +213,11 @@ export const CartProvider = ({ children }) => {
             setUpdatingItems((prev) => new Set([...prev, itemId]));
 
             try {
+<<<<<<< HEAD
                 const response = await fetch(`https://data-smartbook.gamer.gd/api/cart/item/${itemId}`, {
+=======
+                const response = await fetch(`http://localhost:8000/api/cart/item/${itemId}`, {
+>>>>>>> b236b22 (up group order)
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -262,7 +274,11 @@ export const CartProvider = ({ children }) => {
         async (itemIds) => {
             const token = localStorage.getItem('token');
             try {
+<<<<<<< HEAD
                 const response = await fetch('https://data-smartbook.gamer.gd/api/cart/remove', {
+=======
+                const response = await fetch('http://localhost:8000/api/cart/remove', {
+>>>>>>> b236b22 (up group order)
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -319,7 +335,11 @@ export const CartProvider = ({ children }) => {
         try {
             console.log('🧹 Clearing cart...');
 
+<<<<<<< HEAD
             const response = await fetch('https://data-smartbook.gamer.gd/api/cart/clear', {
+=======
+            const response = await fetch('http://localhost:8000/api/cart/clear', {
+>>>>>>> b236b22 (up group order)
                 method: 'DELETE',
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -383,7 +403,11 @@ export const CartProvider = ({ children }) => {
         try {
             console.log('🧹 Clearing selected items:', selectedItems);
 
+<<<<<<< HEAD
             const response = await fetch('https://data-smartbook.gamer.gd/api/cart/remove', {
+=======
+            const response = await fetch('http://localhost:8000/api/cart/remove', {
+>>>>>>> b236b22 (up group order)
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

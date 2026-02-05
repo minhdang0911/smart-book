@@ -84,7 +84,11 @@ const useBookChapters = (bookId) => {
             setIsLoading(true);
             setError(null);
             try {
+<<<<<<< HEAD
                 const response = await fetch(`https://data-smartbook.gamer.gd/api/admin/books/${bookId}/chapters`);
+=======
+                const response = await fetch(`http://localhost:8000/api/admin/books/${bookId}/chapters`);
+>>>>>>> b236b22 (up group order)
                 const data = await response.json();
 
                 if (data.success) {
@@ -759,7 +763,11 @@ const BookDetailPage = () => {
         if (!book?.id) return;
         try {
             setIsOpeningChapter(true);
+<<<<<<< HEAD
             const res = await fetch(`https://data-smartbook.gamer.gd/api/admin/books/${book.id}/chapters`);
+=======
+            const res = await fetch(`http://localhost:8000/api/admin/books/${book.id}/chapters`);
+>>>>>>> b236b22 (up group order)
             const json = await res.json();
 
             if (!json?.success || !Array.isArray(json?.chapters) || json.chapters.length === 0) {

@@ -1,7 +1,11 @@
 // hooks/useAllBooks.js
 import useSWR from 'swr';
 
+<<<<<<< HEAD
 const BASE_URL = 'https://data-smartbook.gamer.gd/api';
+=======
+const BASE_URL = 'http://localhost:8000/api';
+>>>>>>> b236b22 (up group order)
 
 const fetcher = async (url) => {
     const res = await fetch(url);

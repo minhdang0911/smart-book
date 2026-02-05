@@ -18,7 +18,11 @@ export const useProfile = (user, token) => {
 
     const handleSubmit = async () => {
         try {
+<<<<<<< HEAD
             const res = await fetch('https://data-smartbook.gamer.gd/api/user/profile', {
+=======
+            const res = await fetch('http://localhost:8000/api/user/profile', {
+>>>>>>> b236b22 (up group order)
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

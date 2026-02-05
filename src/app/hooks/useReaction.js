@@ -21,7 +21,11 @@ const useReaction = () => {
         const token = localStorage.getItem('token');
 
         try {
+<<<<<<< HEAD
             const response = await fetch(`https://data-smartbook.gamer.gd/api/comments/${itemId}/react`, {
+=======
+            const response = await fetch(`http://localhost:8000/api/comments/${itemId}/react`, {
+>>>>>>> b236b22 (up group order)
                 method: 'POST',
                 headers: {
                     Authorization: `Bearer ${token}`,

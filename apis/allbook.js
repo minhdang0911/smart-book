@@ -1,4 +1,5 @@
 const BASE_URL = 'https://data-smartbook.gamer.gd/api';
+
 export const apiGetAllBook = async () => {
     try {
         const url = `${BASE_URL}/books`;

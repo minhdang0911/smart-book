@@ -4,7 +4,11 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export const useBookImages = (bookId) => {
     const { data, error, isLoading } = useSWR(
+<<<<<<< HEAD
         bookId ? `https://data-smartbook.gamer.gd/api/books/${bookId}/images` : null,
+=======
+        bookId ? `http://localhost:8000/api/books/${bookId}/images` : null,
+>>>>>>> b236b22 (up group order)
         fetcher,
         {
             revalidateOnFocus: false,

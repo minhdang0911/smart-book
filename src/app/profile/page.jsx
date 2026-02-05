@@ -63,7 +63,11 @@ const ChangePassword = ({ token }) => {
         const token = localStorage?.getItem('token');
 
         try {
+<<<<<<< HEAD
             const response = await fetch('https://data-smartbook.gamer.gd/api/user/change-password', {
+=======
+            const response = await fetch('http://localhost:8000/api/user/change-password', {
+>>>>>>> b236b22 (up group order)
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

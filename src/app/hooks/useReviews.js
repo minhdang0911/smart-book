@@ -5,7 +5,11 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export const useReviews = (bookId, starLevel = 'all') => {
     const url = bookId
+<<<<<<< HEAD
         ? `https://data-smartbook.gamer.gd/api/ratings/book/${bookId}/filter${
+=======
+        ? `http://localhost:8000/api/ratings/book/${bookId}/filter${
+>>>>>>> b236b22 (up group order)
               starLevel !== 'all' ? `?star_level=${starLevel}` : ''
           }`
         : null;

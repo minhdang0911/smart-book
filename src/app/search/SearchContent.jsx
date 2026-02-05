@@ -669,7 +669,11 @@ const SearchContent = () => {
 
     const loadPublishers = async () => {
         try {
+<<<<<<< HEAD
             const response = await fetch('https://data-smartbook.gamer.gd/api/publisher');
+=======
+            const response = await fetch('http://localhost:8000/api/publisher');
+>>>>>>> b236b22 (up group order)
             const data = await response.json();
             if (data.status) setPublishers(data.data);
         } catch (error) {
@@ -693,7 +697,11 @@ const SearchContent = () => {
             params.page = currentPage;
             params.limit = pageSize;
 
+<<<<<<< HEAD
             const response = await axios.get('https://data-smartbook.gamer.gd/api/books/search', { params });
+=======
+            const response = await axios.get('http://localhost:8000/api/books/search', { params });
+>>>>>>> b236b22 (up group order)
             if (response.data.status === 'success') {
                 setBooks(response.data.data);
                 if (response.data.pagination) setPagination(response.data.pagination);

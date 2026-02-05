@@ -22,7 +22,11 @@ export const useSameCategoryBooks = (category, currentBookId) => {
     if (category && category !== 'Không rõ') {
         if (typeof category === 'string') {
             // Nếu là string thì search theo name
+<<<<<<< HEAD
             searchUrl = `https://data-smartbook.gamer.gd/api/books/search?category=${encodeURIComponent(category)}`;
+=======
+            searchUrl = `http://localhost:8000/api/books/search?category=${encodeURIComponent(category)}`;
+>>>>>>> b236b22 (up group order)
         } else if (typeof category === 'object') {
             // Nếu là object thì ưu tiên ID, fallback về name
             const categoryId = category._id || category.id;
@@ -30,6 +34,7 @@ export const useSameCategoryBooks = (category, currentBookId) => {
 
             if (categoryId) {
                 // Thử search theo ID trước
+<<<<<<< HEAD
                 searchUrl = `https://data-smartbook.gamer.gd/api/books/search?category=${encodeURIComponent(
                     categoryId,
                 )}`;
@@ -38,6 +43,12 @@ export const useSameCategoryBooks = (category, currentBookId) => {
                 searchUrl = `https://data-smartbook.gamer.gd/api/books/search?category=${encodeURIComponent(
                     categoryName,
                 )}`;
+=======
+                searchUrl = `http://localhost:8000/api/books/search?category=${encodeURIComponent(categoryId)}`;
+            } else if (categoryName) {
+                // Fallback về name
+                searchUrl = `http://localhost:8000/api/books/search?category=${encodeURIComponent(categoryName)}`;
+>>>>>>> b236b22 (up group order)
             }
         }
     }

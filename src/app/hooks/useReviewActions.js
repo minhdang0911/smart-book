@@ -40,7 +40,11 @@ export const useReviewActions = () => {
             let latestOrderInfo = null;
 
             do {
+<<<<<<< HEAD
                 const res = await fetch(`https://data-smartbook.gamer.gd/api/orders?page=${page}`, {
+=======
+                const res = await fetch(`http://localhost:8000/api/orders?page=${page}`, {
+>>>>>>> b236b22 (up group order)
                     method: 'GET',
                     headers: {
                         Authorization: `Bearer ${getToken()}`,
@@ -118,7 +122,11 @@ export const useReviewActions = () => {
 
     const submitReview = async (bookId, rating, comment) => {
         // không đổi API: vẫn gửi như cũ
+<<<<<<< HEAD
         const res = await fetch('https://data-smartbook.gamer.gd/api/ratings', {
+=======
+        const res = await fetch('http://localhost:8000/api/ratings', {
+>>>>>>> b236b22 (up group order)
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

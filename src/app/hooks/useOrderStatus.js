@@ -1,7 +1,11 @@
 import useSWR from 'swr';
 
 const fetchOrderStatus = async (orderId, token) => {
+<<<<<<< HEAD
     const response = await fetch(`https://data-smartbook.gamer.gd/api/orders/${orderId}/sync-status`, {
+=======
+    const response = await fetch(`http://localhost:8000/api/orders/${orderId}/sync-status`, {
+>>>>>>> b236b22 (up group order)
         headers: {
             Authorization: `Bearer ${token}`,
         },

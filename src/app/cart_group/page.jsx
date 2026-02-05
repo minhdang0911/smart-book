@@ -179,7 +179,11 @@ const CartGroup = () => {
         }
 
         try {
+<<<<<<< HEAD
             const res = await fetch('https://data-smartbook.gamer.gd/api/me', {
+=======
+            const res = await fetch('http://localhost:8000/api/me', {
+>>>>>>> b236b22 (up group order)
                 method: 'GET',
                 headers: getAuthHeaders(),
                 credentials: 'include',

@@ -41,7 +41,11 @@ const apiAddToGroupCart = async (groupOrderId, bookId, quantity, memberId) => {
     const groupToken = typeof window !== 'undefined' ? localStorage.getItem('group_cart_token') : null;
     if (!groupToken) throw new Error('Không tìm thấy token giỏ hàng nhóm');
 
+<<<<<<< HEAD
     const response = await fetch(`https://data-smartbook.gamer.gd/api/group-orders/${groupOrderId}/items`, {
+=======
+    const response = await fetch(`http://localhost:8000/api/group-orders/${groupOrderId}/items`, {
+>>>>>>> b236b22 (up group order)
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

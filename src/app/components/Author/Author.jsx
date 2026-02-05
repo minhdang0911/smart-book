@@ -13,7 +13,11 @@ const AdvancedPartnersMarquee = () => {
     useEffect(() => {
         const fetchPublishers = async () => {
             try {
+<<<<<<< HEAD
                 const response = await fetch('https://data-smartbook.gamer.gd/api/publisher');
+=======
+                const response = await fetch('http://localhost:8000/api/publisher');
+>>>>>>> b236b22 (up group order)
                 const data = await response.json();
                 if (data.status) {
                     setPartners(data.data);
