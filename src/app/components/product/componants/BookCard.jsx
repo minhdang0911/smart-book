@@ -25,7 +25,7 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
     }
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
-    const response = await fetch(`http://localhost:8000/api/group-orders/${groupToken}/items`, {
+    const response = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/group-orders/${groupToken}/items`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

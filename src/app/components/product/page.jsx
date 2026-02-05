@@ -15,6 +15,7 @@ async function BookStorePage() {
 
     try {
         const response = await apiGetAllBook();
+        console.log('test sách', response);
         if (response?.status === 'success') {
             initialBooks = {
                 featured: response.latest_ebooks?.slice(0, 5) || [],

@@ -85,7 +85,7 @@ export default function GroupCheckoutPageContent({ urlToken }) {
     // Fetch group
     const fetchGroupOrderData = async (token) => {
         try {
-            const res = await axios.get(`http://localhost:8000/api/group-orders/${token}`);
+            const res = await axios.get(`https://smartbook-backend.tranminhdang.cloud/api/group-orders/${token}`);
             setGroupOrderData(res.data);
         } catch (err) {
             console.error('fetch group error:', err);
@@ -227,11 +227,14 @@ export default function GroupCheckoutPageContent({ urlToken }) {
 
         try {
             if (paymentMethod === 'cod') {
-                const response = await fetch(`http://localhost:8000/api/group-orders/${groupToken}/checkout`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify(orderData),
-                });
+                const response = await fetch(
+                    `https://smartbook-backend.tranminhdang.cloud/api/group-orders/${groupToken}/checkout`,
+                    {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify(orderData),
+                    },
+                );
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.message || `HTTP ${response.status}`);
 

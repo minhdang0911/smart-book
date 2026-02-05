@@ -309,7 +309,7 @@ const Cart = () => {
                 Authorization: `Bearer ${authToken}`,
             };
 
-            const response = await fetch('http://localhost:8000/api/group-orders', {
+            const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/group-orders', {
                 method: 'POST',
                 headers,
                 credentials: 'include',
@@ -383,7 +383,7 @@ const Cart = () => {
     const checkCoupon = async (couponCode) => {
         try {
             setCheckingCoupon(true);
-            const response = await fetch('http://localhost:8000/api/coupons/check', {
+            const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/coupons/check', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: couponCode }),
