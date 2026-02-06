@@ -22,7 +22,7 @@ const SmartBookChatbot = () => {
 
     const API_BASE = 'https://smartbook-backend.tranminhdang.cloud/api';
 
-    const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'AIzaSyDhZbONQYp7sPTaq_Wv83qRrQo3_FYCZhs';
+    const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'AIzaSyDLT-mwpbPA6Il7QWqZkg8sL4FN62JGqBE ';
 
     // Load chat from localStorage on component mount
     useEffect(() => {
@@ -40,6 +40,17 @@ const SmartBookChatbot = () => {
         }
         setChatInitialized(true);
     }, []);
+
+    const callAI = async (text) => {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: text }),
+        });
+
+        const data = await res.json();
+        return data.reply;
+    };
 
     // Save messages to localStorage whenever messages change
     useEffect(() => {
@@ -475,12 +486,13 @@ const SmartBookChatbot = () => {
         }).format(parseFloat(price));
     };
 
-    // Enhanced Gemini AI integration
+    // Enhanced Gemini AI integration - FIXED MODEL NAME
     const callGeminiAI = async (userMessage) => {
         try {
             const systemPrompt = createAdvancedSystemPrompt();
+            // FIXED: Changed from 'gemini-pro' to 'gemini-1.5-flash'
             const response = await fetch(
-                `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_API_KEY}`,
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -962,8 +974,35 @@ NHIỆM VỤ: Trở thành AI tư vấn sách thân thiện và linh hoạt nh�
                                         }}
                                     >
                                         <Spin size="small" />
-                                        <span style={{ fontSize: '14px', color: '#666' }}>
-                                            Đang suy nghĩ cách giúp bạn tốt nhất...
+                                        <span
+                                            style={{
+                                                display: 'inline-flex',
+                                                gap: '4px',
+                                                fontSize: '20px',
+                                                color: '#999',
+                                            }}
+                                        >
+                                            {[0, 1, 2].map((i) => (
+                                                <span
+                                                    key={i}
+                                                    style={{
+                                                        animation: 'dotBlink 1.4s infinite both',
+                                                        animationDelay: `${i * 0.2}s`,
+                                                    }}
+                                                >
+                                                    .
+                                                </span>
+                                            ))}
+
+                                            <style>
+                                                {`
+      @keyframes dotBlink {
+        0% { opacity: 0.2; }
+        20% { opacity: 1; }
+        100% { opacity: 0.2; }
+      }
+    `}
+                                            </style>
                                         </span>
                                     </div>
                                 </div>

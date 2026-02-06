@@ -11,6 +11,7 @@ import './globals.css';
 
 export default function RootLayout({ children }) {
     const router = useRouter(); // Next.js router
+    console.log('env', process.env.GEMINI_API_KEY);
 
     useEffect(() => {
         const appTransId = JSON.parse(localStorage.getItem('pending_zaloPay_payment'))?.cartState?.zaloPayResult
