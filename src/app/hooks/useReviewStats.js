@@ -5,11 +5,8 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export const useReviewStats = (bookId) => {
     const { data, error, isLoading, mutate } = useSWR(
-<<<<<<< HEAD
-        bookId ? `https://data-smartbook.gamer.gd/api/ratings/book/${bookId}/stats` : null,
-=======
-        bookId ? `http://localhost:8000/api/ratings/book/${bookId}/stats` : null,
->>>>>>> b236b22 (up group order)
+        bookId ? `https://smartbook-backend.tranminhdang.cloud/api/ratings/book/${bookId}/stats` : null,
+
         fetcher,
         {
             revalidateOnFocus: false,

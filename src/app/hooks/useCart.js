@@ -3,11 +3,7 @@ export const useCart = () => {
 
     const addToCart = async (bookId, quantity) => {
         try {
-<<<<<<< HEAD
-            const response = await fetch('https://data-smartbook.gamer.gd/api/cart/add', {
-=======
-            const response = await fetch('http://localhost:8000/api/cart/add', {
->>>>>>> b236b22 (up group order)
+            const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/cart/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

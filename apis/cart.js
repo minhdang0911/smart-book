@@ -4,7 +4,7 @@ export const apiAddToCart = async (bookId, quantity) => {
     try {
         const token = localStorage.getItem('token');
 
-        const response = await fetch('https://data-smartbook.gamer.gd/api/cart/add', {
+        const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/cart/add', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

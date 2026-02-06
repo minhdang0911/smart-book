@@ -121,11 +121,8 @@ const CoffeeBlogInterface = () => {
 
     const fetchPinnedPosts = async () => {
         try {
-<<<<<<< HEAD
-            const res = await fetchWithAuth('https://data-smartbook.gamer.gd/api/posts/pinned');
-=======
-            const res = await fetchWithAuth('http://localhost:8000/api/posts/pinned');
->>>>>>> b236b22 (up group order)
+            const res = await fetchWithAuth('https://smartbook-backend.tranminhdang.cloud/api/posts/pinned');
+
             const result = await res.json();
             if (result.success) {
                 setPinnedPosts(result.data);
@@ -137,11 +134,8 @@ const CoffeeBlogInterface = () => {
 
     const fetchPopularPosts = async () => {
         try {
-<<<<<<< HEAD
-            const res = await fetchWithAuth('https://data-smartbook.gamer.gd/api/posts/popular');
-=======
-            const res = await fetchWithAuth('http://localhost:8000/api/posts/popular');
->>>>>>> b236b22 (up group order)
+            const res = await fetchWithAuth('https://smartbook-backend.tranminhdang.cloud/api/posts/popular');
+
             const result = await res.json();
             if (result.success) {
                 setPopularPosts(result.data);
@@ -153,11 +147,8 @@ const CoffeeBlogInterface = () => {
 
     const fetchAllPosts = async () => {
         try {
-<<<<<<< HEAD
-            const res = await fetchWithAuth('https://data-smartbook.gamer.gd/api/posts?per_page=50');
-=======
-            const res = await fetchWithAuth('http://localhost:8000/api/posts?per_page=50');
->>>>>>> b236b22 (up group order)
+            const res = await fetchWithAuth('https://smartbook-backend.tranminhdang.cloud/api/posts?per_page=50');
+
             const result = await res.json();
             if (result.success) {
                 setAllPosts(result.data);
@@ -169,11 +160,10 @@ const CoffeeBlogInterface = () => {
 
     const fetchRecentPosts = async () => {
         try {
-<<<<<<< HEAD
-            const res = await fetchWithAuth('https://data-smartbook.gamer.gd/api/posts?per_page=10&sort=created_at');
-=======
-            const res = await fetchWithAuth('http://localhost:8000/api/posts?per_page=10&sort=created_at');
->>>>>>> b236b22 (up group order)
+            const res = await fetchWithAuth(
+                'https://smartbook-backend.tranminhdang.cloud/api/posts?per_page=10&sort=created_at',
+            );
+
             const result = await res.json();
             if (result.success) {
                 setRecentPosts(result.data);
@@ -188,11 +178,7 @@ const CoffeeBlogInterface = () => {
         if (!token) return message.warning('Vui lòng đăng nhập để thả tim');
 
         try {
-<<<<<<< HEAD
-            const res = await fetch(`https://data-smartbook.gamer.gd/api/posts/${postId}/like`, {
-=======
-            const res = await fetch(`http://localhost:8000/api/posts/${postId}/like`, {
->>>>>>> b236b22 (up group order)
+            const res = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/posts/${postId}/like`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -212,11 +198,8 @@ const CoffeeBlogInterface = () => {
     const handleClick = (slug, id) => {
         const viewedKey = `viewed_${slug}`;
         if (!sessionStorage.getItem(viewedKey)) {
-<<<<<<< HEAD
-            fetch(`https://data-smartbook.gamer.gd/api/posts/${slug}/view`, { method: 'POST' });
-=======
-            fetch(`http://localhost:8000/api/posts/${slug}/view`, { method: 'POST' });
->>>>>>> b236b22 (up group order)
+            fetch(`https://smartbook-backend.tranminhdang.cloud/api/posts/${slug}/view`, { method: 'POST' });
+
             sessionStorage.setItem(viewedKey, 'true');
         }
         localStorage.setItem('postid', id);

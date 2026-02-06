@@ -20,12 +20,8 @@ const SmartBookChatbot = () => {
     const messagesEndRef = useRef(null);
     const chatContainerRef = useRef(null);
 
-    // API configuration
-<<<<<<< HEAD
-    const API_BASE = 'https://data-smartbook.gamer.gd/api';
-=======
-    const API_BASE = 'http://localhost:8000/api';
->>>>>>> b236b22 (up group order)
+    const API_BASE = 'https://smartbook-backend.tranminhdang.cloud/api';
+
     const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'AIzaSyDhZbONQYp7sPTaq_Wv83qRrQo3_FYCZhs';
 
     // Load chat from localStorage on component mount

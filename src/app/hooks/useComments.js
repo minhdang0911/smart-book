@@ -8,11 +8,8 @@ import { toast } from 'react-toastify';
 const stripCombining = (s) => (s || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 
 // Base URL: set trong .env hoặc fallback về 127.0.0.1:8000 (Laravel mặc định)
-<<<<<<< HEAD
-const RAW_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://data-smartbook.gamer.gd';
-=======
-const RAW_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
->>>>>>> b236b22 (up group order)
+
+const RAW_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://smartbook-backend.tranminhdang.cloud';
 
 // Ép dùng http (tránh https khi backend chỉ chạy http) + strip kí tự rác
 const API_BASE = stripCombining(RAW_BASE).replace(/^https:\/\//i, 'http://');

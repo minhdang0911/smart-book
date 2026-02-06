@@ -2,7 +2,7 @@ import axios from 'axios';
 
 export const apiLoginUser = async (email, password) => {
     try {
-        const response = await axios.post(`http://localhost:8000/api/login`, {
+        const response = await axios.post(`https://smartbook-backend.tranminhdang.cloud/api/login`, {
             email,
             password,
         });
@@ -87,7 +87,7 @@ export const apiResetPassword = async ({ email, token, password, password_confir
     }
 };
 
-const BASE_URL = 'https://data-smartbook.gamer.gd/api';
+const BASE_URL = 'https://smartbook-backend.tranminhdang.cloud/api';
 
 export const apiSearchBooks = async (params = {}) => {
     try {

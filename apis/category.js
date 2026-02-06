@@ -1,4 +1,4 @@
-const BASE_URL = 'https://data-smartbook.gamer.gd/api';
+const BASE_URL = 'https://smartbook-backend.tranminhdang.cloud/api';
 
 export const fetchCategories = async () => {
     const response = await fetch(`${BASE_URL}/categories`, {

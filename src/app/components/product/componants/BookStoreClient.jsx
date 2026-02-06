@@ -32,11 +32,8 @@ export function BookStoreClient({ initialBooks }) {
                     if (userResponse?.status === true) {
                         setUser(userResponse.user);
                     }
-<<<<<<< HEAD
-                    const followedRes = await fetch('https://data-smartbook.gamer.gd/api/books/followed', {
-=======
-                    const followedRes = await fetch('http://localhost:8000/api/books/followed', {
->>>>>>> b236b22 (up group order)
+
+                    const followedRes = await fetch('https://smartbook-backend.tranminhdang.cloud/api/books/followed', {
                         headers: { Authorization: `Bearer ${token}` },
                     });
                     const followedData = await followedRes.json();

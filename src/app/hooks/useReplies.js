@@ -11,18 +11,17 @@ const useReplies = (parentId) => {
         if (!showReplies && replies.length === 0) {
             setLoading(true);
             try {
-<<<<<<< HEAD
-                const res = await fetch(`https://data-smartbook.gamer.gd/api/comments/replies?parent_id=${parentId}`, {
-=======
-                const res = await fetch(`http://localhost:8000/api/comments/replies?parent_id=${parentId}`, {
->>>>>>> b236b22 (up group order)
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
+                const res = await fetch(
+                    `https://smartbook-backend.tranminhdang.cloud/api/comments/replies?parent_id=${parentId}`,
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        // body có thể rỗng nếu backend không cần
+                        body: JSON.stringify({}),
                     },
-                    // body có thể rỗng nếu backend không cần
-                    body: JSON.stringify({}),
-                });
+                );
 
                 const data = await res.json();
                 if (data.success) {

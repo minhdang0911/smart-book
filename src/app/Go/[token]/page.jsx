@@ -19,7 +19,7 @@ export default function Page({ params }) {
         let cancelled = false;
 
         const joinGroup = async () => {
-            const joinUrl = `https://smartbook-backend.tranminhdang.cloud/0/api/group-orders/${token}/join`;
+            const joinUrl = `https://smartbook-backend.tranminhdang.cloud/api/group-orders/${token}/join`;
 
             try {
                 const authToken =

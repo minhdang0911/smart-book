@@ -2,11 +2,7 @@ import { message } from 'antd';
 import useSWR from 'swr';
 
 const fetchFavoriteBooks = async (token) => {
-<<<<<<< HEAD
-    const response = await fetch('https://data-smartbook.gamer.gd/api/books/followed', {
-=======
-    const response = await fetch('http://localhost:8000/api/books/followed', {
->>>>>>> b236b22 (up group order)
+    const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/books/followed', {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

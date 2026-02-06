@@ -1,13 +1,10 @@
 export const toggleWishlist = async ({ bookId, token, wishlist, setWishlist }) => {
     try {
         const isFollowed = wishlist.includes(bookId);
-<<<<<<< HEAD
+
         const url = isFollowed
-            ? 'https://data-smartbook.gamer.gd/api/books/unfollow'
-            : 'https://data-smartbook.gamer.gd/api/books/follow';
-=======
-        const url = isFollowed ? 'http://localhost:8000/api/books/unfollow' : 'http://localhost:8000/api/books/follow';
->>>>>>> b236b22 (up group order)
+            ? 'https://smartbook-backend.tranminhdang.cloud/api/books/unfollow'
+            : 'https://smartbook-backend.tranminhdang.cloud/api/books/follow';
 
         const response = await fetch(url, {
             method: isFollowed ? 'DELETE' : 'POST',

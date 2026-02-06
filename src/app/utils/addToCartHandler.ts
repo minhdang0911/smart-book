@@ -59,11 +59,7 @@ export const toggleWishlist = async ({ bookId, token, wishlist, setWishlist }: T
         const isCurrentlyFavorited = wishlist.includes(bookId);
         const endpoint = isCurrentlyFavorited ? 'unfollow' : 'follow';
 
-<<<<<<< HEAD
-        const response = await fetch(`https://data-smartbook.gamer.gd/api/books/${endpoint}`, {
-=======
-        const response = await fetch(`http://localhost:8000/api/books/${endpoint}`, {
->>>>>>> b236b22 (up group order)
+        const response = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/books/${endpoint}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

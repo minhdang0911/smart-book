@@ -22,11 +22,8 @@ export const useSameAuthorBooks = (author, currentBookId) => {
     if (author) {
         if (typeof author === 'string') {
             // Nếu là string thì search theo name
-<<<<<<< HEAD
-            searchUrl = `https://data-smartbook.gamer.gd/api/books/search?author=${encodeURIComponent(author)}`;
-=======
-            searchUrl = `http://localhost:8000/api/books/search?author=${encodeURIComponent(author)}`;
->>>>>>> b236b22 (up group order)
+
+            searchUrl = `https://smartbook-backend.tranminhdang.cloud/api/books/search?author=${encodeURIComponent(author)}`;
         } else if (typeof author === 'object') {
             // Nếu là object thì ưu tiên ID, fallback về name
             const authorId = author._id || author.id;
@@ -34,17 +31,11 @@ export const useSameAuthorBooks = (author, currentBookId) => {
 
             if (authorId) {
                 // Thử search theo ID trước
-<<<<<<< HEAD
-                searchUrl = `https://data-smartbook.gamer.gd/api/books/search?author=${encodeURIComponent(authorId)}`;
+
+                searchUrl = `https://smartbook-backend.tranminhdang.cloud/api/books/search?author=${encodeURIComponent(authorId)}`;
             } else if (authorName) {
                 // Fallback về name
-                searchUrl = `https://data-smartbook.gamer.gd/api/books/search?author=${encodeURIComponent(authorName)}`;
-=======
-                searchUrl = `http://localhost:8000/api/books/search?author=${encodeURIComponent(authorId)}`;
-            } else if (authorName) {
-                // Fallback về name
-                searchUrl = `http://localhost:8000/api/books/search?author=${encodeURIComponent(authorName)}`;
->>>>>>> b236b22 (up group order)
+                searchUrl = `https://smartbook-backend.tranminhdang.cloud/api/books/search?author=${encodeURIComponent(authorName)}`;
             }
         }
     }

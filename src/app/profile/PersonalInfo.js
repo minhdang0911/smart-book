@@ -124,11 +124,7 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                 });
                 fd.append('avatar', avatarFile);
 
-<<<<<<< HEAD
-                res = await fetch('https://data-smartbook.gamer.gd/api/user/profile', {
-=======
-                res = await fetch('http://localhost:8000/api/user/profile', {
->>>>>>> b236b22 (up group order)
+                res = await fetch('https://smartbook-backend.tranminhdang.cloud/api/user/profile', {
                     method: 'POST',
                     headers: {
                         Authorization: `Bearer ${token}`,
@@ -137,11 +133,7 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                     body: fd,
                 });
             } else {
-<<<<<<< HEAD
-                res = await fetch('https://data-smartbook.gamer.gd/api/user/profile', {
-=======
-                res = await fetch('http://localhost:8000/api/user/profile', {
->>>>>>> b236b22 (up group order)
+                res = await fetch('https://smartbook-backend.tranminhdang.cloud/api/user/profile', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -479,7 +471,9 @@ export default function PersonalInfo({ user, token, mutateUser }) {
                     border: 1px solid #fff;
                     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
                     cursor: pointer;
-                    transition: transform 0.12s ease, opacity 0.12s ease;
+                    transition:
+                        transform 0.12s ease,
+                        opacity 0.12s ease;
                 }
                 .avatar-edit:hover {
                     transform: translateY(-1px);

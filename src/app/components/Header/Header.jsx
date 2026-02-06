@@ -89,11 +89,8 @@ const Header = () => {
         if (token) {
             try {
                 console.log('🔄 Header: Fetching cart count...');
-<<<<<<< HEAD
-                const response = await fetch('https://data-smartbook.gamer.gd/api/cart/count', {
-=======
-                const response = await fetch('http://localhost:8000/api/cart/count', {
->>>>>>> b236b22 (up group order)
+
+                const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/cart/count', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json',
@@ -227,11 +224,7 @@ const Header = () => {
             if (!token) return;
 
             try {
-<<<<<<< HEAD
-                const response = await fetch('https://data-smartbook.gamer.gd/api/cart/count', {
-=======
-                const response = await fetch('http://localhost:8000/api/cart/count', {
->>>>>>> b236b22 (up group order)
+                const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/cart/count', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json',

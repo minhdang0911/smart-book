@@ -208,11 +208,8 @@ const FavoriteBooks = ({ enabled, token }) => {
 
             try {
                 setLoading(true);
-<<<<<<< HEAD
-                const response = await fetch('https://data-smartbook.gamer.gd/api/books/followed', {
-=======
-                const response = await fetch('http://localhost:8000/api/books/followed', {
->>>>>>> b236b22 (up group order)
+
+                const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/books/followed', {
                     headers: {
                         Authorization: `Bearer ${token}`,
                         'Content-Type': 'application/json',

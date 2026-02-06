@@ -16,13 +16,8 @@ const CouponSlider = async () => {
     ];
 
     try {
-<<<<<<< HEAD
-        const res = await fetch('https://data-smartbook.gamer.gd/api/coupons/get', {
+        const res = await fetch('https://smartbook-backend.tranminhdang.cloud/api/coupons/get', {
             next: { revalidate: 60 },
-=======
-        const res = await fetch('http://localhost:8000/api/coupons/get', {
-            cache: 'no-store',
->>>>>>> b236b22 (up group order)
         });
 
         const raw = await res.text(); // BE 500 đôi khi trả HTML

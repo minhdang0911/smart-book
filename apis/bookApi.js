@@ -1,4 +1,4 @@
-const BASE_URL = 'https://smartbook-backend.tranminhdang.cloud/0//api';
+const BASE_URL = 'https://smartbook-backend.tranminhdang.cloud/api';
 
 export const fetchBooks = async () => {
     const response = await fetch(`${BASE_URL}/books`, {

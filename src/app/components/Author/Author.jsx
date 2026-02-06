@@ -13,11 +13,8 @@ const AdvancedPartnersMarquee = () => {
     useEffect(() => {
         const fetchPublishers = async () => {
             try {
-<<<<<<< HEAD
-                const response = await fetch('https://data-smartbook.gamer.gd/api/publisher');
-=======
-                const response = await fetch('http://localhost:8000/api/publisher');
->>>>>>> b236b22 (up group order)
+                const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/publisher');
+
                 const data = await response.json();
                 if (data.status) {
                     setPartners(data.data);
@@ -290,7 +287,9 @@ const AdvancedPartnersMarquee = () => {
                 }
 
                 .partner-logo-container:hover {
-                    box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15), 0 4px 20px rgba(0, 0, 0, 0.08);
+                    box-shadow:
+                        0 10px 40px rgba(59, 130, 246, 0.15),
+                        0 4px 20px rgba(0, 0, 0, 0.08);
                 }
 
                 .partner-logo-container::after {

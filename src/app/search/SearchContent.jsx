@@ -669,11 +669,8 @@ const SearchContent = () => {
 
     const loadPublishers = async () => {
         try {
-<<<<<<< HEAD
-            const response = await fetch('https://data-smartbook.gamer.gd/api/publisher');
-=======
-            const response = await fetch('http://localhost:8000/api/publisher');
->>>>>>> b236b22 (up group order)
+            const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/publisher');
+
             const data = await response.json();
             if (data.status) setPublishers(data.data);
         } catch (error) {
@@ -697,11 +694,10 @@ const SearchContent = () => {
             params.page = currentPage;
             params.limit = pageSize;
 
-<<<<<<< HEAD
-            const response = await axios.get('https://data-smartbook.gamer.gd/api/books/search', { params });
-=======
-            const response = await axios.get('http://localhost:8000/api/books/search', { params });
->>>>>>> b236b22 (up group order)
+            const response = await axios.get('https://smartbook-backend.tranminhdang.cloud/api/books/search', {
+                params,
+            });
+
             if (response.data.status === 'success') {
                 setBooks(response.data.data);
                 if (response.data.pagination) setPagination(response.data.pagination);
@@ -1004,10 +1000,10 @@ const SearchContent = () => {
                                                 {aiSearchResults.currentSearchType === 'title'
                                                     ? 'Tên sách'
                                                     : aiSearchResults.currentSearchType === 'author'
-                                                    ? 'Tác giả'
-                                                    : aiSearchResults.currentSearchType === 'category'
-                                                    ? 'Thể loại'
-                                                    : 'Phân tích'}
+                                                      ? 'Tác giả'
+                                                      : aiSearchResults.currentSearchType === 'category'
+                                                        ? 'Thể loại'
+                                                        : 'Phân tích'}
                                             </Tag>
                                         )}
                                         {filters.selectedPublisher && (
@@ -1020,8 +1016,8 @@ const SearchContent = () => {
                                                 {filters.bookType === 'ebook'
                                                     ? 'Ebook'
                                                     : filters.bookType === 'paper'
-                                                    ? 'Sách giấy'
-                                                    : filters.bookType}
+                                                      ? 'Sách giấy'
+                                                      : filters.bookType}
                                             </Tag>
                                         )}
                                     </Text>
@@ -1063,12 +1059,12 @@ const SearchContent = () => {
                                         filters.selectedPublisher && filters.publisherName
                                             ? `Không tìm thấy sách nào từ nhà xuất bản "${filters.publisherName}"`
                                             : isAISearch
-                                            ? `OCR.space AI không tìm thấy sách phù hợp với "${
-                                                  aiSearchInfo?.bookTitle ||
-                                                  aiSearchInfo?.author ||
-                                                  aiSearchInfo?.category
-                                              }". Thử điều chỉnh bộ lọc hoặc tìm kiếm bằng từ khóa khác.`
-                                            : 'Không tìm thấy sách nào'
+                                              ? `OCR.space AI không tìm thấy sách phù hợp với "${
+                                                    aiSearchInfo?.bookTitle ||
+                                                    aiSearchInfo?.author ||
+                                                    aiSearchInfo?.category
+                                                }". Thử điều chỉnh bộ lọc hoặc tìm kiếm bằng từ khóa khác.`
+                                              : 'Không tìm thấy sách nào'
                                     }
                                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                                 />

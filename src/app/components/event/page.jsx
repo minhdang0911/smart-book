@@ -29,11 +29,8 @@ const OnlinePromotion = () => {
     useEffect(() => {
         const fetchEvents = async () => {
             try {
-<<<<<<< HEAD
-                const res = await fetch('https://data-smartbook.gamer.gd/api/events');
-=======
-                const res = await fetch('http://localhost:8000/api/events');
->>>>>>> b236b22 (up group order)
+                const res = await fetch('https://smartbook-backend.tranminhdang.cloud/api/events');
+
                 const data = await res.json();
                 setEvents(data);
                 categorizeEvents(data);

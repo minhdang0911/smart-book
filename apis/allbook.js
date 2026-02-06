@@ -1,8 +1,8 @@
-const BASE_URL = 'https://data-smartbook.gamer.gd/api';
+const BASE_URL = 'https://smartbook-backend.tranminhdang.cloud/api';
 
 export const apiGetAllBook = async () => {
     try {
-        const url = `${BASE_URL}/books`;
+        const url = `${BASE_URL}/v1/books`;
 
         const response = await fetch(url, {
             method: 'GET',

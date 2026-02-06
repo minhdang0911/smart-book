@@ -86,21 +86,14 @@ const ReactionButton = ({
 
             // Gọi API để lấy comments của post
             const commentsPromise = postId
-<<<<<<< HEAD
-                ? fetch(`https://data-smartbook.gamer.gd/api/comments?post_id=${postId}`, { headers })
-=======
-                ? fetch(`http://localhost:8000/api/comments?post_id=${postId}`, { headers })
->>>>>>> b236b22 (up group order)
-                : null;
+                 ? fetch(`https://smartbook-backend.tranminhdang.cloud/api/comments?post_id=${postId}`, { headers })
+ 
+                ? fetch(`https://smartbook-backend.tranminhdang.cloud/api/comments?post_id=${postId}`, { headers })
+ 
+                 : null;
 
             // Gọi API để lấy replies của comment
-            const repliesPromise = parentId
-<<<<<<< HEAD
-                ? fetch(`https://data-smartbook.gamer.gd/api/comments/replies?parent_id=${parentId}`, { headers })
-=======
-                ? fetch(`http://localhost:8000/api/comments/replies?parent_id=${parentId}`, { headers })
->>>>>>> b236b22 (up group order)
-                : null;
+            
 
             // Chờ cả 2 API được gọi (nếu có)
             const results = await Promise.allSettled([commentsPromise, repliesPromise].filter(Boolean));
@@ -129,11 +122,9 @@ const ReactionButton = ({
 
             // Nếu không có postId và parentId, gọi API cũ
             if (!postId) {
-<<<<<<< HEAD
-                const response = await fetch(`https://data-smartbook.gamer.gd/api/comments/${itemId}`, { headers });
-=======
-                const response = await fetch(`http://localhost:8000/api/comments/${itemId}`, { headers });
->>>>>>> b236b22 (up group order)
+ 
+                const response = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/comments/${itemId}`, { headers });
+ 
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success && onReactionUpdate) {

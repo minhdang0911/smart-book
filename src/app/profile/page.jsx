@@ -63,11 +63,7 @@ const ChangePassword = ({ token }) => {
         const token = localStorage?.getItem('token');
 
         try {
-<<<<<<< HEAD
-            const response = await fetch('https://data-smartbook.gamer.gd/api/user/change-password', {
-=======
-            const response = await fetch('http://localhost:8000/api/user/change-password', {
->>>>>>> b236b22 (up group order)
+            const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/user/change-password', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -269,10 +265,10 @@ const ChangePassword = ({ token }) => {
                                                         passwordStrength.level === 'weak'
                                                             ? '25%'
                                                             : passwordStrength.level === 'medium'
-                                                            ? '50%'
-                                                            : passwordStrength.level === 'good'
-                                                            ? '75%'
-                                                            : '100%',
+                                                              ? '50%'
+                                                              : passwordStrength.level === 'good'
+                                                                ? '75%'
+                                                                : '100%',
                                                     transition: 'all 0.3s ease',
                                                 }}
                                             />

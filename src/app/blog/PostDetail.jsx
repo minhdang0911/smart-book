@@ -23,11 +23,8 @@ const PostDetail = ({ slug, onBack }) => {
     const fetchPostDetail = async (postSlug) => {
         setLoading(true);
         try {
-<<<<<<< HEAD
-            const response = await fetch(`https://data-smartbook.gamer.gd/api/posts/${postSlug}`);
-=======
-            const response = await fetch(`http://localhost:8000/api/posts/${postSlug}`);
->>>>>>> b236b22 (up group order)
+            const response = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/posts/${postSlug}`);
+
             const result = await response.json();
 
             if (result.success) {
@@ -51,11 +48,7 @@ const PostDetail = ({ slug, onBack }) => {
         if (!token) return;
 
         try {
-<<<<<<< HEAD
-            const response = await fetch('https://data-smartbook.gamer.gd/api/posts/liked', {
-=======
-            const response = await fetch('http://localhost:8000/api/posts/liked', {
->>>>>>> b236b22 (up group order)
+            const response = await fetch('https://smartbook-backend.tranminhdang.cloud/api/posts/liked', {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
@@ -79,7 +72,6 @@ const PostDetail = ({ slug, onBack }) => {
 
     const fetchRelatedPosts = async (topicIds, currentPostId) => {
         try {
-
             const res = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/posts/related/${topicIds}`);
 
             const result = await res.json();
