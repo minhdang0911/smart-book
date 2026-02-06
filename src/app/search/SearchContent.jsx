@@ -56,7 +56,7 @@ const apiAddToGroupCart = async (groupToken, bookId, quantity = 1) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const base = process.env.NEXT_PUBLIC_API_BASE || 'https://smartbook-backend.tranminhdang.cloud/api';
 
-    const res = await fetch(`${base}/api/group-orders/${groupToken}/items`, {
+    const res = await fetch(`${base}/group-orders/${groupToken}/items`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
