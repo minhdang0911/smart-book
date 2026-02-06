@@ -7,7 +7,7 @@ import ReactionButton from './ReactionButton';
 import ReplyItem from './ReplyItem';
 import UserAvatar from './UserAvatar';
 
-const CommentItem = ({ comment, onReply, onCommentUpdate, onCommentDelete, currentUserId }) => {
+const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId }) => {
     const [replies, setReplies] = useState([]);
     const [showReplies, setShowReplies] = useState(false);
     const [loadingReplies, setLoadingReplies] = useState(false);

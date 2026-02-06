@@ -24,7 +24,7 @@ export const useComments = (postId) => {
         if (!postId) return;
         setLoading(true);
         try {
-            const url = `${API_BASE}/api/comments?post_id=${encodeURIComponent(postId)}`;
+            const url = `https://smartbook-backend.tranminhdang.cloud/api/comments?post_id=${encodeURIComponent(postId)}`;
             const res = await fetch(url, {
                 method: 'GET',
                 headers: {
