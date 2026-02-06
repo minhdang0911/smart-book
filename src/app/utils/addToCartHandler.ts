@@ -1,38 +1,54 @@
-// app/bookstore/utils/addToCartHandler.ts
+'use client';
+
 import { message } from 'antd';
+import type { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+
+/* ===== Types ===== */
+
+type User = {
+    id: number | string;
+    name?: string;
+};
+
+type AddToCartResponse = {
+    status: boolean;
+    message?: string;
+    data?: unknown;
+};
 
 interface AddToCartHelperParams {
-    user: any;
+    user?: User | null;
     bookId: number;
     quantity: number;
-    addToCart: (token: string, bookId: number, quantity: number) => Promise<any>;
+    addToCart: (token: string, bookId: number, quantity: number) => Promise<AddToCartResponse>;
     setIsAddingToCart: (loading: boolean) => void;
-    router: any;
+    router?: AppRouterInstance;
 }
 
+/* ===== Handler ===== */
+
 export const handleAddToCartHelper = async ({
-    user,
     bookId,
     quantity,
     addToCart,
     setIsAddingToCart,
     router,
 }: AddToCartHelperParams) => {
-    const token = localStorage.getItem('token');
+    // ✅ guard cho SSR / build
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
 
     if (!token) {
         message.warning('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng');
-        if (router) {
-            router.push('/login');
-        }
+        router?.push('/login');
         return;
     }
 
     try {
         setIsAddingToCart(true);
+
         const response = await addToCart(token, bookId, quantity);
 
-        if (response?.status === true) {
+        if (response?.status) {
             message.success('Đã thêm sản phẩm vào giỏ hàng');
         } else {
             message.error(response?.message || 'Không thể thêm sản phẩm vào giỏ hàng');
@@ -42,47 +58,5 @@ export const handleAddToCartHelper = async ({
         message.error('Lỗi khi thêm sản phẩm vào giỏ hàng');
     } finally {
         setIsAddingToCart(false);
-    }
-};
-
-// app/bookstore/utils/wishlist.ts
-
-interface ToggleWishlistParams {
-    bookId: number;
-    token: string;
-    wishlist: number[];
-    setWishlist: (wishlist: number[]) => void;
-}
-
-export const toggleWishlist = async ({ bookId, token, wishlist, setWishlist }: ToggleWishlistParams) => {
-    try {
-        const isCurrentlyFavorited = wishlist.includes(bookId);
-        const endpoint = isCurrentlyFavorited ? 'unfollow' : 'follow';
-
-        const response = await fetch(`https://smartbook-backend.tranminhdang.cloud/api/books/${endpoint}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ book_id: bookId }),
-        });
-
-        const data = await response.json();
-
-        if (data?.status === true) {
-            if (isCurrentlyFavorited) {
-                setWishlist(wishlist.filter((id) => id !== bookId));
-                message.success('Đã xóa khỏi danh sách yêu thích');
-            } else {
-                setWishlist([...wishlist, bookId]);
-                message.success('Đã thêm vào danh sách yêu thích');
-            }
-        } else {
-            message.error(data?.message || 'Không thể thực hiện thao tác');
-        }
-    } catch (error) {
-        console.error('Error toggling wishlist:', error);
-        message.error('Lỗi khi thực hiện thao tác');
     }
 };

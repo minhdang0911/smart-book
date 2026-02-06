@@ -460,9 +460,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                                     }}
                                     onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
                                     onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                >
-                                    ""
-                                </button>
+                                ></button>
                                 <button
                                     style={{
                                         background: 'none',
@@ -832,9 +830,7 @@ const CommentItem = ({ comment, onCommentUpdate, onCommentDelete, currentUserId 
                                             }}
                                             onMouseEnter={(e) => (e.target.style.backgroundColor = '#e4e6ea')}
                                             onMouseLeave={(e) => (e.target.style.backgroundColor = 'transparent')}
-                                        >
-                                            ""
-                                        </button>
+                                        ></button>
                                         <button
                                             style={{
                                                 background: 'none',
