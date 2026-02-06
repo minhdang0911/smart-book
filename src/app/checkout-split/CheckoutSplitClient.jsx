@@ -28,7 +28,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 const { Title, Text } = Typography;
-const API_BASE = 'https://smartbook-backend.tranminhdang.cloud';
+const API_BASE = 'https://smartbook-backend.tranminhdang.cloud/api';
 
 const formatVND = (n) =>
     new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(n ?? 0);
