@@ -135,7 +135,7 @@ const getQty = (item) => {
     return Number.isFinite(q) && q > 0 ? q : 1;
 };
 
-const API_BASE = 'http://localhost:8000/api';
+const API_BASE = 'https://smartbook-backend.tranminhdang.cloud/api';
 
 const CartGroup = () => {
     const router = useRouter();
