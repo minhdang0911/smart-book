@@ -1,5 +1,6 @@
 'use client';
 
+import { BookOutlined, FireOutlined, LaptopOutlined, ReadOutlined, StarOutlined } from '@ant-design/icons';
 import { message, Typography } from 'antd';
 import { useEffect, useState } from 'react';
 import { apiGetMe } from '../../../../../apis/user';
@@ -64,11 +65,11 @@ export function BookStoreClient({ initialBooks }) {
     }
 
     const sections = [
-        { title: 'Sách Nổi Bật', key: 'featured', icon: '📚' },
-        { title: 'Sách Được Yêu Thích Nhất', key: 'topRated', icon: '⭐' },
-        { title: 'Sách Được Xem Nhiều Nhất', key: 'mostViewed', icon: '🔥' },
-        { title: 'Sách Giấy Mới Nhất', key: 'ebooks', icon: '💻' },
-        { title: 'Sách Đọc Miễn Phí Mới Nhất', key: 'paperBooks', icon: '📖' },
+        { title: 'Sách Nổi Bật', key: 'featured', icon: <BookOutlined /> },
+        { title: 'Sách Được Yêu Thích Nhất', key: 'topRated', icon: <StarOutlined /> },
+        { title: 'Sách Được Xem Nhiều Nhất', key: 'mostViewed', icon: <FireOutlined /> },
+        { title: 'Sách Giấy Mới Nhất', key: 'ebooks', icon: <LaptopOutlined /> },
+        { title: 'Sách Đọc Miễn Phí Mới Nhất', key: 'paperBooks', icon: <ReadOutlined /> },
     ];
 
     return (
@@ -77,7 +78,12 @@ export function BookStoreClient({ initialBooks }) {
                 {sections.map(({ title, key, icon }) => (
                     <BookSection
                         key={key}
-                        title={`${icon} ${title}`}
+                        title={
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                                {icon}
+                                <span>{title}</span>
+                            </span>
+                        }
                         books={books[key]?.slice(0, 10) || []}
                         user={user}
                         wishlist={wishlist}

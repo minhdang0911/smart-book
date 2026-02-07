@@ -1,18 +1,17 @@
 'use client';
 
-import { CalendarOutlined, EyeOutlined, FireOutlined } from '@ant-design/icons';
-import { Card, Col, Row, Typography } from 'antd';
+import { CalendarOutlined, EyeOutlined, FireOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { Col, Row, Typography } from 'antd';
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import './post-swiper.css';
 
-const { Title, Text, Paragraph } = Typography;
-const { Meta } = Card;
+const { Title, Paragraph } = Typography;
 
 const PostSwiper = ({ posts }) => {
-    const swiperRef = useRef(null);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [progressPercent, setProgressPercent] = useState(0);
 
@@ -58,224 +57,86 @@ const PostSwiper = ({ posts }) => {
     }, [posts]);
 
     return (
-        <div className="post-swiper-container">
-            <style jsx>{`
-                .post-swiper-container {
-                    padding: 60px 0;
-                    position: relative;
-                    overflow: hidden;
-                }
-
-                .main-container {
-                    max-width: 80%;
-                    margin: 0 auto;
-                    padding: 0 24px;
-                    position: relative;
-                    z-index: 1;
-                }
-
-                .section-title .ant-typography h2 {
-                    color: #1f2937 !important;
-                    font-size: 2.5rem;
-                    font-weight: 700;
-                    margin-bottom: 16px;
-                }
-
-                .news-section {
-                    margin-top: 80px;
-                }
-
-                .latest-posts {
-                    background: rgba(255, 255, 255, 0.9);
-                    backdrop-filter: blur(15px);
-                    border-radius: 20px;
-                    padding: 32px;
-                    border: 1px solid rgba(0, 0, 0, 0.05);
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                }
-
-                .section-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-bottom: 32px;
-                }
-
-                .section-header .ant-typography h3 {
-                    color: #1f2937 !important;
-                    font-size: 1.5rem;
-                    font-weight: 600;
-                    margin: 0;
-                }
-
-                .latest-post-card {
-                    background: rgba(255, 255, 255, 0.8);
-                    backdrop-filter: blur(10px);
-                    border: 1px solid rgba(0, 0, 0, 0.08);
-                    border-radius: 16px;
-                    padding: 24px;
-                    height: 100%;
-                    transition: all 0.3s ease;
-                    cursor: pointer;
-                    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
-                }
-
-                .latest-post-card:hover {
-                    background: rgba(255, 255, 255, 0.95);
-                    transform: translateY(-4px);
-                    border-color: rgba(0, 0, 0, 0.15);
-                    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
-                }
-
-                .latest-post-card .post-date-text {
-                    color: #f59e0b;
-                    font-size: 14px;
-                    font-weight: 500;
-                    margin-bottom: 8px;
-                    display: flex;
-                    align-items: center;
-                    gap: 6px;
-                }
-
-                .latest-post-card .ant-typography h4 {
-                    color: #1f2937 !important;
-                    font-size: 16px;
-                    font-weight: 600;
-                    margin-bottom: 12px;
-                    line-height: 1.4;
-                }
-
-                .latest-post-card .ant-typography p {
-                    color: #4b5563 !important;
-                    line-height: 1.5;
-                    margin: 0;
-                }
-
-                .popular-posts {
-                    background: rgba(255, 255, 255, 0.9);
-                    backdrop-filter: blur(15px);
-                    border-radius: 20px;
-                    padding: 32px;
-                    border: 1px solid rgba(0, 0, 0, 0.05);
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                }
-
-                .popular-post-item {
-                    display: flex;
-                    align-items: flex-start;
-                    gap: 16px;
-                    padding: 16px;
-                    border-radius: 12px;
-                    transition: all 0.3s ease;
-                    background: rgba(255, 255, 255, 0.6);
-                    border: 1px solid rgba(0, 0, 0, 0.05);
-                    margin-bottom: 12px;
-                    cursor: pointer;
-                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
-                }
-
-                .popular-post-item:hover {
-                    background: rgba(255, 255, 255, 0.9);
-                    transform: translateX(8px);
-                    border-color: rgba(0, 0, 0, 0.1);
-                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-                }
-
-                .popular-post-thumbnail {
-                    width: 64px;
-                    height: 64px;
-                    border-radius: 12px;
-                    object-fit: cover;
-                    flex-shrink: 0;
-                    border: 2px solid rgba(0, 0, 0, 0.08);
-                    filter: brightness(0.9) contrast(1.1);
-                    transition: all 0.3s ease;
-                }
-
-                .popular-post-item:hover .popular-post-thumbnail {
-                    filter: brightness(1) contrast(1.2);
-                    border-color: rgba(0, 0, 0, 0.15);
-                }
-
-                .popular-post-content h4 {
-                    color: #1f2937 !important;
-                    font-size: 15px;
-                    font-weight: 500;
-                    margin-bottom: 8px;
-                    line-height: 1.3;
-                }
-
-                .popular-post-views {
-                    color: #6b7280;
-                    font-size: 13px;
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                }
-
-                @media (max-width: 768px) {
-                    .news-section .ant-row {
-                        flex-direction: column;
-                    }
-
-                    .section-title .ant-typography h2 {
-                        font-size: 2rem;
-                    }
-                }
-            `}</style>
-
-            <div className="main-container">
-                <Row gutter={[40, 32]} className="news-section">
+        <div className="ps-wrap">
+            <div className="ps-container">
+                <Row gutter={[24, 24]} className="ps-grid">
                     <Col xs={24} lg={16}>
-                        <div className="latest-posts">
-                            <div className="section-header">
-                                <span style={{ fontSize: '24px' }}>🆕</span>
-                                <Title level={3}>Bài viết mới nhất</Title>
-                            </div>
-                            <Row gutter={[24, 24]}>
+                        <section className="ps-panel">
+                            <header className="ps-header">
+                                <span className="ps-headerIcon ps-headerIcon--new">
+                                    <ThunderboltOutlined />
+                                </span>
+                                <div className="ps-headerText">
+                                    <Title level={3} className="ps-title">
+                                        Bài viết mới nhất
+                                    </Title>
+                                    <div className="ps-subtitle">Cập nhật theo thời gian gần nhất</div>
+                                </div>
+                            </header>
+
+                            <Row gutter={[16, 16]}>
                                 {latestPosts.map((post) => (
                                     <Col xs={24} md={12} key={post.id}>
-                                        <Link href={`/blog/${post.slug}`}>
-                                            <div className="latest-post-card">
-                                                <div className="post-date-text">
-                                                    <CalendarOutlined />
-                                                    {formatDate(post.created_at)}
+                                        <Link href={`/blog/${post.slug}`} className="ps-link">
+                                            <article className="ps-card">
+                                                <div className="ps-meta">
+                                                    <span className="ps-date">
+                                                        <CalendarOutlined />
+                                                        {formatDate(post.created_at)}
+                                                    </span>
                                                 </div>
-                                                <Title level={4}>{post.title}</Title>
-                                                <Paragraph>{truncateText(post.excerpt, 100)}</Paragraph>
-                                            </div>
+
+                                                <Title level={4} className="ps-cardTitle">
+                                                    {post.title}
+                                                </Title>
+
+                                                <Paragraph className="ps-cardDesc">
+                                                    {truncateText(post.excerpt, 100)}
+                                                </Paragraph>
+                                            </article>
                                         </Link>
                                     </Col>
                                 ))}
                             </Row>
-                        </div>
+                        </section>
                     </Col>
 
                     <Col xs={24} lg={8}>
-                        <div className="popular-posts">
-                            <div className="section-header">
-                                <FireOutlined style={{ fontSize: '24px', color: '#ef4444' }} />
-                                <Title level={3}>Được xem nhiều</Title>
-                            </div>
-                            {mostViewedPosts.map((post) => (
-                                <Link href={`/blog/${post.slug}`} key={post.id}>
-                                    <div className="popular-post-item">
-                                        <img
-                                            src={post.thumbnail || '/default-thumbnail.jpg'}
-                                            alt={post.title}
-                                            className="popular-post-thumbnail"
-                                        />
-                                        <div className="popular-post-content">
-                                            <Title level={4}>{post.title}</Title>
-                                            <div className="popular-post-views">
-                                                <EyeOutlined />
-                                                <span>{post.views} lượt xem</span>
+                        <aside className="ps-panel">
+                            <header className="ps-header">
+                                <span className="ps-headerIcon ps-headerIcon--hot">
+                                    <FireOutlined />
+                                </span>
+                                <div className="ps-headerText">
+                                    <Title level={3} className="ps-title">
+                                        Được xem nhiều
+                                    </Title>
+                                    <div className="ps-subtitle">Top bài viết theo lượt xem</div>
+                                </div>
+                            </header>
+
+                            <div className="ps-list">
+                                {mostViewedPosts.map((post) => (
+                                    <Link href={`/blog/${post.slug}`} key={post.id} className="ps-link">
+                                        <div className="ps-item">
+                                            <img
+                                                src={post.thumbnail || '/default-thumbnail.jpg'}
+                                                alt={post.title}
+                                                className="ps-thumb"
+                                                loading="lazy"
+                                            />
+                                            <div className="ps-itemBody">
+                                                <div className="ps-itemTitle">{post.title}</div>
+                                                <div className="ps-views">
+                                                    <EyeOutlined />
+                                                    <span>{post.views} lượt xem</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </aside>
                     </Col>
                 </Row>
             </div>
