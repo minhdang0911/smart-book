@@ -22,7 +22,7 @@ const SmartBookChatbot = () => {
 
     const API_BASE = 'https://smartbook-backend.tranminhdang.cloud/api';
 
-    const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY;
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
 
     // Load chat from localStorage on component mount
     useEffect(() => {
